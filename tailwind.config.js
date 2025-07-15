@@ -1,4 +1,5 @@
 module.exports = {
+  darkMode: 'class', // instead of 'media'
   content: [
     './app/**/*.{js,ts,jsx,tsx}',
     './pages/**/*.{js,ts,jsx,tsx}',
