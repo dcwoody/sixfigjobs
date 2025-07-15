@@ -23,11 +23,12 @@ export default function Signup() {
     setError(null);
     setSuccess(false);
 
-    const { data, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { name } },
-    });
+   const { error: authError } = await supabase.auth.signUp({
+  email,
+  password,
+  options: { data: { name } },
+});
+
 
     if (authError) {
       setError(authError.message);
