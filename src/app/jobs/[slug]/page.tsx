@@ -2,42 +2,14 @@
 import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-
-interface Job {
-  JobID: string;
-  JobTitle: string;
-  LongDescription: string;
-  ShortDescription: string;
-  Company: string;
-  Location: string;
-  Industry: string;
-  JobType: string;
-  SubmissionDate: string;
-  ExpirationDate: string;
-  CompanyLogo: string;
-  PostedDate: string;
-  is_remote: boolean;
-  Interval: string;
-  min_amount: number;
-  max_amount: number;
-  currency: string;
-  source: string;
-  formatted_salary: string;
-  job_url: string;
-  job_url_direct: string;
-  CreatedTime: string;
-  is_duplicate: boolean;
-  slug: string;
-}
+import Image from 'next/image'; // ✅ use Next.js image
 
 export async function generateStaticParams() {
   const { data } = await supabase.from('jobs_db').select('slug');
   return (data || []).map((job: { slug: string }) => ({ slug: job.slug }));
 }
 
-export async function generateMetadata(
-  input: { params: { slug: string } }
-): Promise<Metadata> {
+export async function generateMetadata(input: { params: { slug: string } }): Promise<Metadata> {
   const { params } = input;
 
   const { data: job } = await supabase
@@ -89,10 +61,8 @@ export default async function JobDetail({ params }: { params: { slug: string } }
       </script>
 
       <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-md grid grid-cols-1 md:grid-cols-4 gap-8 relative">
-
         {/* Main Content */}
         <div className="md:col-span-3 relative">
-
           {/* Floating buttons */}
           <div className="absolute top-0 right-0 flex space-x-2 mt-2 mr-2">
             <a
@@ -112,11 +82,14 @@ export default async function JobDetail({ params }: { params: { slug: string } }
           <div className="flex justify-between items-start">
             <h1 className="mb-4 text-3xl md:text-4xl leading-tight font-bold text-gray-600">{job.JobTitle}</h1>
             {job.CompanyLogo && (
-              <img
-                src={job.CompanyLogo}
-                alt={job.Company}
-                className="w-16 h-16 object-contain ml-4"
-              />
+              <div className="w-16 h-16 relative ml-4">
+                <Image
+                  src={job.CompanyLogo}
+                  alt={job.Company}
+                  fill
+                  className="object-contain"
+                />
+              </div>
             )}
           </div>
 
@@ -124,12 +97,13 @@ export default async function JobDetail({ params }: { params: { slug: string } }
           <p className="text-lg md:text-xl text-gray-600 font-medium">{job.Company}</p>
           <p className="text-lg md:text-xl text-gray-500 font-medium">{job.Location}</p>
           <p className="text-md md:text-md text-gray-400 font-medium mb-2"><strong>Posted:</strong> {job.PostedDate}</p>
+
           {/* Divider */}
           <hr className="my-4 border-gray-300" />
 
           <p className="text-lg md:text-xl text-gray-600 font-medium mb-4">Job Details:</p>
 
-          {/* Pills: salary + job type */}
+          {/* Pills */}
           <div className="flex flex-wrap items-center gap-3 mt-2 mb-4">
             {job.formatted_salary && (
               <span className="bg-gray-100 text-gray-800 text-sm font-medium px-3 py-1 rounded-full flex items-center">
@@ -142,8 +116,6 @@ export default async function JobDetail({ params }: { params: { slug: string } }
               </span>
             )}
           </div>
-
-
 
           {/* Divider */}
           <hr className="my-4 border-gray-300" />
