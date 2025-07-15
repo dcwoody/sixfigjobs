@@ -139,7 +139,7 @@ export default function Home() {
                   className="absolute top-4 right-4 w-16 h-16 object-contain rounded-md"
                 />
               )}
-              <h2 className="text-xl font-semibold text-gray-800"><Link href={`/jobs/${job.slug}`}>{formatJobTitle(job.JobTitle)}</Link></h2>
+              <h2 className="text-2xl font-bold text-gray-900"><Link href={`/jobs/${job.slug}`}>{formatJobTitle(job.JobTitle)}</Link></h2>
 
               {/* Badges */}
               <div className="flex gap-2 mt-2 flex-wrap">

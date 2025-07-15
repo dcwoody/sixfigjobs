@@ -80,17 +80,16 @@ export default async function JobDetail({ params }: { params: { slug: string } }
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 md:grid-cols-4 gap-8">
+  <div className="min-h-screen bg-gray-100 py-10 px-4">
+    <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-md grid grid-cols-1 md:grid-cols-4 gap-8">
       <script type="application/ld+json" suppressHydrationWarning>
         {JSON.stringify(structuredData)}
       </script>
 
       {/* Main Content */}
-      <div className="md:col-span-3 bg-white p-6 rounded-lg shadow-md">
+      <div className="md:col-span-3">
         <div className="flex justify-between items-start">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {job.JobTitle}
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{job.JobTitle}</h1>
           {job.CompanyLogo && (
             <img
               src={job.CompanyLogo}
@@ -107,7 +106,7 @@ export default async function JobDetail({ params }: { params: { slug: string } }
       </div>
 
       {/* Sidebar */}
-      <aside className="bg-gray-100 p-4 rounded-lg shadow-sm space-y-4">
+      <aside className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
         <div>
           <h2 className="font-semibold text-gray-800 mb-2">Quick Info</h2>
           <p><strong>Company:</strong> {job.Company}</p>
@@ -125,5 +124,6 @@ export default async function JobDetail({ params }: { params: { slug: string } }
         </a>
       </aside>
     </div>
+  </div>
   );
 }
