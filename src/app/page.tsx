@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Job {
   JobID: string;
@@ -133,7 +134,7 @@ export default function Home() {
           {filteredJobs.map((job) => (
             <div key={job.JobID} className="relative p-6 bg-white border border-gray-200 rounded-lg shadow-md">
               {job.CompanyLogo && (
-                <img
+                <Image
                   src={job.CompanyLogo}
                   alt={`${job.Company} logo`}
                   className="absolute top-4 right-4 w-16 h-16 object-contain rounded-md"
