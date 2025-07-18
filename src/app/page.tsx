@@ -87,11 +87,8 @@ export default function Home() {
               <div className="flex flex-wrap xl:items-center -mx-4">
                 {/* Left content */}
                 <div className="w-full md:w-1/2 px-4 mb-16 md:mb-0">
-                  <span className="inline-block py-px px-2 mb-4 text-xs leading-5 text-white bg-green-500 uppercase rounded-full">
-                    Header
-                  </span>
                   <h1 className="mb-6 text-3xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight text-gray-900">
-                    A small business is only as good as its tools.
+                    Six Figure Jobs
                   </h1>
                   <p className="mb-8 text-lg md:text-xl text-gray-500 font-medium">
                     We’re different. Flex is the only SaaS business platform that lets you run your business on one platform, seamlessly across all digital channels.
@@ -174,6 +171,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+
 
       )}
     </MainLayout>
