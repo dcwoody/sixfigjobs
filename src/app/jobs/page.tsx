@@ -55,8 +55,8 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
             {q || location ? (
               <>
                 {jobs?.length} jobs found
-                {q && <span> for "{q}"</span>}
-                {location && <span> in "{location}"</span>}
+                {q && <span> for &quot;{q}&quot;</span>}
+                {location && <span> in &quot;{location}&quot;</span>}
               </>
             ) : (
               'Browse all available six-figure opportunities'
