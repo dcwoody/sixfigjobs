@@ -1,8 +1,7 @@
 // src/app/jobs/[slug]/page.tsx
-
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
-import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 
 interface Job {
   JobID: string;
@@ -21,30 +20,13 @@ interface Job {
   slug: string;
 }
 
-// Remove custom PageProps interface and use Next.js params type
-// export async function generateStaticParams() and generateMetadata() will infer the correct params type
+export const dynamicParams = true;
 
-// For SSG with dynamic routes
 export async function generateStaticParams() {
   const { data } = await supabase.from('jobs_db').select('slug');
-
-  return (data || []).map((job) => ({
-    slug: job.slug,
-  }));
+  return (data || []).map((job) => ({ slug: job.slug }));
 }
 
-// Optional: SEO
-export async function generateMetadata({
-  params,
-}: {
-  params: { slug: string };
-}): Promise<Metadata> {
-  return {
-    title: `Job at ${params.slug} | SixFigHires`,
-  };
-}
-
-// Actual page
 export default async function JobDetailPage({
   params,
 }: {
@@ -56,8 +38,9 @@ export default async function JobDetailPage({
     .eq('slug', params.slug)
     .single<Job>();
 
-  if (error) return <div className="p-6 text-red-600">Error loading job: {error.message}</div>;
-  if (!job) return <div className="p-6 text-gray-600">Job not found.</div>;
+  if (error || !job) {
+    notFound();
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
@@ -71,6 +54,7 @@ export default async function JobDetailPage({
             className="absolute top-4 right-4 w-12 h-12 object-contain"
           />
         )}
+
         <h1 className="text-3xl font-bold text-gray-900 mb-2">{job.JobTitle}</h1>
         <p className="text-sm text-gray-500 mb-2">
           {job.Company} • {job.Location}
