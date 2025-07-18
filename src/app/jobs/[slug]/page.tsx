@@ -1,42 +1,15 @@
 // src/app/jobs/[slug]/page.tsx
+
 import { supabase } from '@/lib/supabaseClient';
-import Image from 'next/image';
 import { notFound } from 'next/navigation';
+import Image from 'next/image';
 
-interface Job {
-  JobID: string;
-  JobTitle: string;
-  LongDescription: string;
-  ShortDescription: string;
-  Company: string;
-  Location: string;
-  JobType: string;
-  formatted_salary: string;
-  job_url: string;
-  PostedDate: string;
-  source: string;
-  is_remote: boolean;
-  CompanyLogo?: string;
-  slug: string;
-}
-
-export const dynamicParams = true;
-
-export async function generateStaticParams() {
-  const { data } = await supabase.from('jobs_db').select('slug');
-  return (data || []).map((job) => ({ slug: job.slug }));
-}
-
-export default async function JobDetailPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
+export default async function Page({ params }: { params: { slug: string } }) {
   const { data: job, error } = await supabase
     .from('jobs_db')
     .select('*')
     .eq('slug', params.slug)
-    .single<Job>();
+    .single();
 
   if (error || !job) {
     notFound();
