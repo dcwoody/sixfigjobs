@@ -71,9 +71,8 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </section>
 
-      <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
+<div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
         <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4">
           {/* Job Input */}
           <div className="flex-1 relative">
@@ -140,6 +139,8 @@ export default function Home() {
           </button>
         </div>
       </div>
+
+      </section>
 
       <FeaturedJobs />
 

@@ -13,11 +13,11 @@ export default async function Page({ params }: PageProps) {
   // Await the params since it's now a Promise in Next.js 15
   const { slug } = await params;
   
-  const { data: job, error } = await supabase
-    .from('jobs_db')
-    .select('*')
-    .eq('slug', slug)
-    .single();
+const { data: job, error } = await supabase
+  .from('jobs_db')
+  .select('*')
+  .eq('slug', slug) // ✅ Correct slug-based fetch
+  .single();
 
   if (error || !job) {
     notFound();
