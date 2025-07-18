@@ -17,11 +17,28 @@ interface Job {
   CompanyLogo?: string;
 }
 
-export default async function JobsListingPage() {
-  const { data: jobs, error } = await supabase
+interface PageProps {
+  searchParams: Promise<{ q?: string; location?: string }>;
+}
+
+export default async function JobsListingPage({ searchParams }: PageProps) {
+  const { q, location } = await searchParams;
+  
+  let query = supabase
     .from('jobs_db')
     .select('*')
     .order('PostedDate', { ascending: false });
+
+  // Apply search filters
+  if (q) {
+    query = query.or(`JobTitle.ilike.%${q}%,ShortDescription.ilike.%${q}%,Company.ilike.%${q}%`);
+  }
+  
+  if (location) {
+    query = query.or(`Location.ilike.%${location}%,is_remote.eq.${location.toLowerCase().includes('remote')}`);
+  }
+
+  const { data: jobs, error } = await query;
 
   if (error) {
     return <div className="p-6 text-red-600">Error loading jobs: {error.message}</div>;
@@ -31,8 +48,20 @@ export default async function JobsListingPage() {
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">All Jobs</h1>
-          <p className="text-gray-600">Browse all available six-figure opportunities</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {q || location ? 'Search Results' : 'All Jobs'}
+          </h1>
+          <p className="text-gray-600">
+            {q || location ? (
+              <>
+                {jobs?.length} jobs found
+                {q && <span> for "{q}"</span>}
+                {location && <span> in "{location}"</span>}
+              </>
+            ) : (
+              'Browse all available six-figure opportunities'
+            )}
+          </p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
