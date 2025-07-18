@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import Hero from "@/components/Hero";
+import Footer from "@/components/Footer";
+
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -17,7 +20,6 @@ interface Job {
   SubmissionDate: string;
   ExpirationDate: string;
   CompanyLogo: string;
-  "Related Submissions": string;
   PostedDate: string;
   is_remote: boolean;
   Interval: string;
@@ -29,9 +31,10 @@ interface Job {
   job_url: string;
   job_url_direct: string;
   CreatedTime: string;
-  slug: string;
   is_duplicate: boolean;
+  slug: string;
 }
+
 
 export default function Home() {
   const [jobs, setJobs] = useState<Job[]>([]);
