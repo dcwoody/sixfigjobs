@@ -1,6 +1,8 @@
 // src/app/jobs/[slug]/page.tsx
+
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
+import { Metadata } from 'next';
 
 interface Job {
   JobID: string;
@@ -16,18 +18,33 @@ interface Job {
   source: string;
   is_remote: boolean;
   CompanyLogo?: string;
+  slug: string;
 }
 
+interface PageProps {
+  params: {
+    slug: string;
+  };
+}
+
+// For SSG with dynamic routes
 export async function generateStaticParams() {
   const { data } = await supabase.from('jobs_db').select('slug');
-  return (data || []).map((job: { slug: string }) => ({ slug: job.slug }));
+
+  return (data || []).map((job) => ({
+    slug: job.slug,
+  }));
 }
 
-export default async function JobDetailPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
+// Optional: SEO
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  return {
+    title: `Job at ${params.slug} | SixFigHires`,
+  };
+}
+
+// Actual page
+export default async function JobDetailPage({ params }: PageProps) {
   const { data: job, error } = await supabase
     .from('jobs_db')
     .select('*')
