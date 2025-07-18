@@ -4,11 +4,19 @@ import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 
-export default async function Page({ params }: { params: { slug: string } }) {
+// Update the interface to reflect that params is now a Promise
+interface PageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export default async function Page({ params }: PageProps) {
+  // Await the params since it's now a Promise in Next.js 15
+  const { slug } = await params;
+  
   const { data: job, error } = await supabase
     .from('jobs_db')
     .select('*')
-    .eq('slug', params.slug)
+    .eq('slug', slug)
     .single();
 
   if (error || !job) {
