@@ -1,83 +1,88 @@
-// src/app/jobs/[jobid]/page.tsx
+// src/app/jobs/page.tsx
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
+import Link from 'next/link';
 
 interface Job {
   JobID: string;
   JobTitle: string;
-  LongDescription: string;
   ShortDescription: string;
   Company: string;
   Location: string;
   JobType: string;
   formatted_salary: string;
-  job_url: string;
+  slug: string;
   PostedDate: string;
-  source: string;
   is_remote: boolean;
   CompanyLogo?: string;
 }
 
-export async function generateStaticParams() {
-  const { data } = await supabase.from('jobs_db').select('JobID');
-  return (data || []).map((job: { JobID: string }) => ({ jobid: job.JobID }));
-}
-
-export default async function JobDetail({ params }: { params: { jobid: string } }) {
-  const { data: job, error } = await supabase
+export default async function JobsListingPage() {
+  const { data: jobs, error } = await supabase
     .from('jobs_db')
     .select('*')
-    .eq('JobID', params.jobid)
-    .single<Job>();
+    .order('PostedDate', { ascending: false });
 
-  if (error) return <div className="p-6 text-red-600">Error loading job: {error.message}</div>;
-  if (!job) return <div className="p-6 text-gray-600">Job not found.</div>;
+  if (error) {
+    return <div className="p-6 text-red-600">Error loading jobs: {error.message}</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-md relative">
-        {/* Optional logo */}
-        {job.CompanyLogo && (
-          <Image
-            src={job.CompanyLogo}
-            alt={`${job.Company} logo`}
-            width={48} // required
-            height={48} // required
-            className="absolute top-4 right-4 object-contain"
-          />
-        )}
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">All Jobs</h1>
+          <p className="text-gray-600">Browse all available six-figure opportunities</p>
+        </div>
 
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">{job.JobTitle}</h1>
-        <p className="text-sm text-gray-500 mb-2">
-          {job.Company} • {job.Location}
-        </p>
-        <p className="text-gray-700 font-medium mb-4">
-          {job.formatted_salary || 'Salary not listed'}{' '}
-          <span className="ml-2 text-sm text-gray-500 uppercase">{job.JobType}</span>
-        </p>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {jobs?.map((job: Job) => (
+            <Link
+              key={job.JobID}
+              href={`/jobs/${job.slug}`}
+              className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    {job.JobTitle}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-2">
+                    {job.Company} • {job.Location}
+                  </p>
+                </div>
+                {job.CompanyLogo && (
+                  <Image
+                    src={job.CompanyLogo}
+                    alt={`${job.Company} logo`}
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 object-contain ml-4"
+                  />
+                )}
+              </div>
 
-        <div className="prose prose-sm text-gray-800 max-w-none">
-          {job.LongDescription?.split('\n').map((line: string, idx: number) => (
-            <p key={idx}>{line.trim()}</p>
+              <p className="text-sm text-gray-700 mb-4 line-clamp-3">
+                {job.ShortDescription}
+              </p>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-green-600">
+                  {job.formatted_salary || 'Salary not listed'}
+                </span>
+                <span className="text-xs text-gray-500 uppercase">
+                  {job.JobType}
+                </span>
+              </div>
+            </Link>
           ))}
         </div>
 
-        <div className="mt-6 flex space-x-3">
-          <a
-            href={job.job_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md text-sm font-semibold"
-          >
-            Apply Now
-          </a>
-          <button
-            onClick={() => navigator.clipboard.writeText(job.job_url)}
-            className="px-3 py-2 border border-gray-300 text-sm rounded-md bg-gray-100 hover:bg-gray-200"
-          >
-            Copy Link
-          </button>
-        </div>
+        {(!jobs || jobs.length === 0) && (
+          <div className="text-center py-12">
+            <p className="text-gray-600">No jobs found.</p>
+          </div>
+        )}
       </div>
     </div>
   );
