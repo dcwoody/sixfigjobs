@@ -21,11 +21,8 @@ interface Job {
   slug: string;
 }
 
-interface PageProps {
-  params: {
-    slug: string;
-  };
-}
+// Remove custom PageProps interface and use Next.js params type
+// export async function generateStaticParams() and generateMetadata() will infer the correct params type
 
 // For SSG with dynamic routes
 export async function generateStaticParams() {
@@ -37,14 +34,22 @@ export async function generateStaticParams() {
 }
 
 // Optional: SEO
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}): Promise<Metadata> {
   return {
     title: `Job at ${params.slug} | SixFigHires`,
   };
 }
 
 // Actual page
-export default async function JobDetailPage({ params }: PageProps) {
+export default async function JobDetailPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
   const { data: job, error } = await supabase
     .from('jobs_db')
     .select('*')
