@@ -3,19 +3,44 @@ import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import CopyLinkButton from '@/components/CopyLinkButton';
+import { use } from 'react';
 
-export default async function Page({ params }: { params: { slug: string } }) {
-  const { slug } = params;
+interface Job {
+  CompanyLogo: string;
+  JobTitle: string;
+  Company: string;
+  Location: string;
+  formatted_salary: string;
+  JobType: string;
+  LongDescription: string;
+  job_url: string;
+}
 
-  const { data: job, error } = await supabase
+interface PageProps {
+  params: { slug: string };
+}
+
+const fetchJob = async (slug: string): Promise<Job | null> => {
+  const { data, error } = await supabase
     .from('jobs_db')
     .select('*')
     .eq('slug', slug)
     .single();
 
-  if (error || !job) {
+  if (error || !data) {
     console.error('Job not found or Supabase error:', error);
-    notFound();
+    return null;
+  }
+
+  return data as Job;
+};
+
+export default function Page({ params }: PageProps) {
+  const { slug } = params;
+  const job = use(fetchJob(slug));
+
+  if (!job) {
+    return notFound();
   }
 
   return (
@@ -62,25 +87,4 @@ export default async function Page({ params }: { params: { slug: string } }) {
       </div>
     </div>
   );
-}
-
-export async function generateStaticParams() {
-  const { data: jobs, error } = await supabase
-    .from('jobs_db')
-    .select('slug')
-    .eq('is_published', true);
-
-  if (error || !jobs) {
-    console.error('Error fetching jobs:', error);
-    return [];
-  }
-
-  // Type guard to ensure TypeScript knows it's an array
-  if (!Array.isArray(jobs)) {
-    return [];
-  }
-
-  return jobs.map((job) => ({
-    slug: job.slug,
-  }));
 }
