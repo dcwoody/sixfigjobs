@@ -2,6 +2,7 @@
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import Link from 'next/link';
+import Footer from '@/components/Footer';
 
 interface Job {
   JobID: string;
@@ -111,8 +112,12 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
           <div className="text-center py-12">
             <p className="text-gray-600">No jobs found.</p>
           </div>
+          
         )}
+
       </div>
+      <Footer />
     </div>
+    
   );
 }

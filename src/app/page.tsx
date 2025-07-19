@@ -72,7 +72,7 @@ export default function Home() {
           </div>
         </div>
 
-<div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
+<div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto mb-8">
         <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4">
           {/* Job Input */}
           <div className="flex-1 relative">
@@ -82,7 +82,7 @@ export default function Home() {
               placeholder="Search job title or keyword"
               value={jobQuery}
               onChange={(e) => setJobQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none text-gray-600"
             />
           </div>
 
@@ -94,7 +94,7 @@ export default function Home() {
               placeholder="City, state, or remote"
               value={locationQuery}
               onChange={(e) => setLocationQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none text-gray-600"
             />
           </div>
 
@@ -145,7 +145,6 @@ export default function Home() {
       <FeaturedJobs />
 
       {/* Newsletter CTA */}
-      <div className="relative isolate overflow-hidden bg-gray-900 py-16 sm:py-24 lg:py-32">
         <div className="relative isolate overflow-hidden bg-gray-900 py-16 sm:py-24 lg:py-32">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="mx-auto grid max-w-2xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-2">
@@ -241,7 +240,6 @@ export default function Home() {
             ></div>
           </div>
         </div>
-      </div>
     </MainLayout>
   );
 }
