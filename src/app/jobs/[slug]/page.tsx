@@ -64,16 +64,19 @@ export default async function Page({ params }: { params: { slug: string } }) {
   );
 }
 
-// For static generation (SSG)
 export async function generateStaticParams() {
   const { data: jobs, error } = await supabase
     .from('jobs_db')
     .select('slug')
     .eq('is_published', true);
 
-  // Handle potential null/undefined values
   if (error || !jobs) {
-    console.error('Error fetching jobs for static generation:', error);
+    console.error('Error fetching jobs:', error);
+    return [];
+  }
+
+  // Type guard to ensure TypeScript knows it's an array
+  if (!Array.isArray(jobs)) {
     return [];
   }
 
@@ -81,5 +84,3 @@ export async function generateStaticParams() {
     slug: job.slug,
   }));
 }
-// Optional: For incremental static regeneration (ISR)
-export const revalidate = 3600; // Revalidate every hour
