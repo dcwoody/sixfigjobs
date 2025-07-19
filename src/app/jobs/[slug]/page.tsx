@@ -3,13 +3,43 @@ import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import CopyLinkButton from '@/components/CopyLinkButton';
-import { GetStaticProps, GetStaticPaths } from 'next';
+import { use } from 'react';
 
-interface PageProps {
-  job: any; // Adjust the type according to your job data structure
+interface Job {
+  // Define the structure of your job data
+  CompanyLogo: string;
+  JobTitle: string;
+  Company: string;
+  Location: string;
+  formatted_salary: string;
+  JobType: string;
+  LongDescription: string;
+  job_url: string;
 }
 
-export default function Page({ job }: PageProps) {
+interface PageProps {
+  params: { slug: string };
+}
+
+const fetchJob = async (slug: string): Promise<Job | null> => {
+  const { data, error } = await supabase
+    .from('jobs_db')
+    .select('*')
+    .eq('slug', slug)
+    .single();
+
+  if (error || !data) {
+    console.error('Job not found or Supabase error:', error);
+    return null;
+  }
+
+  return data as Job;
+};
+
+export default async function Page({ params }: PageProps) {
+  const { slug } = params;
+  const job = use(fetchJob(slug));
+
   if (!job) {
     return notFound();
   }
@@ -59,41 +89,3 @@ export default function Page({ job }: PageProps) {
     </div>
   );
 }
-
-export const getStaticPaths: GetStaticPaths = async () => {
-  const { data: jobs, error } = await supabase
-    .from('jobs_db')
-    .select('slug');
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return { paths: [], fallback: false };
-  }
-
-  const paths = jobs.map((job) => ({
-    params: { slug: job.slug },
-  }));
-
-  return { paths, fallback: false };
-};
-
-export const getStaticProps: GetStaticProps = async (context) => {
-  const { slug } = context.params as { slug: string };
-
-  const { data: job, error } = await supabase
-    .from('jobs_db')
-    .select('*')
-    .eq('slug', slug)
-    .single();
-
-  if (error || !job) {
-    console.error('Job not found or Supabase error:', error);
-    return { notFound: true };
-  }
-
-  return {
-    props: {
-      job,
-    },
-  };
-};
