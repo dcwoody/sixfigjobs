@@ -3,19 +3,15 @@ import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import CopyLinkButton from '@/components/CopyLinkButton';
+import { GetServerSideProps } from 'next';
 
-export default async function Page({ params }: { params: { slug: string } }) {
-  const { slug } = params;
+interface PageProps {
+  job: any; // Adjust the type according to your job data structure
+}
 
-  const { data: job, error } = await supabase
-    .from('jobs_db')
-    .select('*')
-    .eq('slug', slug)
-    .single();
-
-  if (error || !job) {
-    console.error('Job not found or Supabase error:', error);
-    notFound();
+export default function Page({ job }: PageProps) {
+  if (!job) {
+    return notFound();
   }
 
   return (
@@ -63,3 +59,24 @@ export default async function Page({ params }: { params: { slug: string } }) {
     </div>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { slug } = context.params as { slug: string };
+
+  const { data: job, error } = await supabase
+    .from('jobs_db')
+    .select('*')
+    .eq('slug', slug)
+    .single();
+
+  if (error || !job) {
+    console.error('Job not found or Supabase error:', error);
+    return { notFound: true };
+  }
+
+  return {
+    props: {
+      job,
+    },
+  };
+};
