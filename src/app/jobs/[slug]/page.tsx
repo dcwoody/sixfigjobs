@@ -3,45 +3,19 @@ import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import CopyLinkButton from '@/components/CopyLinkButton';
-import { use } from 'react';
 
-interface Job {
-  // Define the structure of your job data
-  CompanyLogo: string;
-  JobTitle: string;
-  Company: string;
-  Location: string;
-  formatted_salary: string;
-  JobType: string;
-  LongDescription: string;
-  job_url: string;
-}
+export default async function Page({ params }: { params: { slug: string } }) {
+  const { slug } = params;
 
-interface PageProps {
-  params: { slug: string };
-}
-
-const fetchJob = async (slug: string): Promise<Job | null> => {
-  const { data, error } = await supabase
+  const { data: job, error } = await supabase
     .from('jobs_db')
     .select('*')
     .eq('slug', slug)
     .single();
 
-  if (error || !data) {
+  if (error || !job) {
     console.error('Job not found or Supabase error:', error);
-    return null;
-  }
-
-  return data as Job;
-};
-
-export default async function Page({ params }: PageProps) {
-  const { slug } = params;
-  const job = use(fetchJob(slug));
-
-  if (!job) {
-    return notFound();
+    notFound();
   }
 
   return (
@@ -89,3 +63,23 @@ export default async function Page({ params }: PageProps) {
     </div>
   );
 }
+
+// For static generation (SSG)
+export async function generateStaticParams() {
+  const { data: jobs, error } = await supabase
+    .from('jobs_db')
+    .select('slug')
+    .eq('is_published', true);
+
+  // Handle potential null/undefined values
+  if (error || !jobs) {
+    console.error('Error fetching jobs for static generation:', error);
+    return [];
+  }
+
+  return jobs.map((job) => ({
+    slug: job.slug,
+  }));
+}
+// Optional: For incremental static regeneration (ISR)
+export const revalidate = 3600; // Revalidate every hour
