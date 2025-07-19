@@ -1,15 +1,19 @@
 // src/components/CopyLinkButton.tsx
-'use client';
+'use client'; // Mark this as a client component
 
 import { useState } from 'react';
 
-export default function CopyLinkButton({ url }: { url: string }) {
+interface CopyLinkButtonProps {
+  url: string;
+}
+
+export default function CopyLinkButton({ url }: CopyLinkButtonProps) {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(url);
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(url);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
   };
 
   return (

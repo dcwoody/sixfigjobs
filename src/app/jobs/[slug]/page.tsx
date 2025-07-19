@@ -1,15 +1,27 @@
 // src/app/jobs/[slug]/page.tsx
-
 import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
+import CopyLinkButton from '@/components/CopyLinkButton';
 
-interface PageProps {
-  params: { slug: string };
+interface Job {
+  CompanyLogo: string;
+  JobTitle: string;
+  Company: string;
+  Location: string;
+  formatted_salary: string;
+  JobType: string;
+  LongDescription: string;
+  job_url: string;
 }
 
-export default async function JobDetailPage({ params }: PageProps) {
-  const { slug } = params;
+interface PageProps {
+  params: { slug: string } | Promise<{ slug: string }>;  // Updated to handle potential promise
+}
+
+export default async function Page({ params }: PageProps) {
+  const resolvedParams = await params;  // Await params to resolve it
+  const { slug } = resolvedParams;  // Now safely access slug
 
   const { data: job, error } = await supabase
     .from('jobs_db')
@@ -18,6 +30,7 @@ export default async function JobDetailPage({ params }: PageProps) {
     .single();
 
   if (error || !job) {
+    console.error('Job not found or Supabase error:', error);
     notFound();
   }
 
@@ -44,21 +57,23 @@ export default async function JobDetailPage({ params }: PageProps) {
         </p>
 
         <div className="prose prose-sm text-gray-800 max-w-none">
-          {job.LongDescription?.split('\n').map((line: string, idx: number) => (
+          {(job.LongDescription || '').split('\n').map((line: string, idx: number) => (
             <p key={idx}>{line.trim()}</p>
           ))}
         </div>
 
         <div className="mt-6 flex space-x-3">
-          <a
-            href={job.job_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md text-sm font-semibold"
-          >
-            Apply Now
-          </a>
-          {/* Copy link button must be moved to a client component if needed */}
+          {job.job_url && (
+            <a
+              href={job.job_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md text-sm font-semibold"
+            >
+              Apply Now
+            </a>
+          )}
+          {job.job_url && <CopyLinkButton url={job.job_url} />}
         </div>
       </div>
     </div>
