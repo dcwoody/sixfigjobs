@@ -1,45 +1,24 @@
 // src/app/jobs/[slug]/page.tsx
+
 import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
-import { use } from 'react';
-
-interface Job {
-  CompanyLogo: string;
-  JobTitle: string;
-  Company: string;
-  Location: string;
-  formatted_salary: string;
-  JobType: string;
-  LongDescription: string;
-  job_url: string;
-}
 
 interface PageProps {
   params: { slug: string };
 }
 
-const fetchJob = async (slug: string): Promise<Job | null> => {
-  const { data, error } = await supabase
+export default async function JobDetailPage({ params }: PageProps) {
+  const { slug } = params;
+
+  const { data: job, error } = await supabase
     .from('jobs_db')
     .select('*')
     .eq('slug', slug)
     .single();
 
-  if (error || !data) {
-    console.error('Job not found or Supabase error:', error);
-    return null;
-  }
-
-  return data as Job;
-};
-
-export default function Page({ params }: PageProps) {
-  const { slug } = params;
-  const job = use(fetchJob(slug));
-
-  if (!job) {
-    return notFound();
+  if (error || !job) {
+    notFound();
   }
 
   return (
@@ -65,30 +44,21 @@ export default function Page({ params }: PageProps) {
         </p>
 
         <div className="prose prose-sm text-gray-800 max-w-none">
-          {(job.LongDescription || '').split('\n').map((line: string, idx: number) => (
+          {job.LongDescription?.split('\n').map((line: string, idx: number) => (
             <p key={idx}>{line.trim()}</p>
           ))}
         </div>
 
         <div className="mt-6 flex space-x-3">
-          {job.job_url && (
-            <a
-              href={job.job_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md text-sm font-semibold"
-            >
-              Apply Now
-            </a>
-          )}
-          {job.job_url && (
-            <button
-              onClick={() => navigator.clipboard.writeText(job.job_url)}
-              className="px-3 py-2 border border-gray-300 text-sm rounded-md bg-gray-100 hover:bg-gray-200"
-            >
-              Copy Link
-            </button>
-          )}
+          <a
+            href={job.job_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md text-sm font-semibold"
+          >
+            Apply Now
+          </a>
+          {/* Copy link button must be moved to a client component if needed */}
         </div>
       </div>
     </div>
