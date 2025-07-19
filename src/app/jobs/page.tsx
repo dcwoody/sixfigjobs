@@ -19,11 +19,12 @@ interface Job {
 }
 
 interface PageProps {
-  searchParams: { q?: string; location?: string };
+  searchParams: Promise<{ q?: string; location?: string }>;
 }
 
 export default async function JobsListingPage({ searchParams }: PageProps) {
-  const { q, location } = searchParams;
+  const resolvedSearchParams = await searchParams;
+  const { q, location } = resolvedSearchParams;
 
   let query = supabase
     .from('jobs_db')
