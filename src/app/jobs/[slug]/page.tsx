@@ -2,10 +2,9 @@
 import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
-import CopyLinkButton from '@/components/CopyLinkButton'; // Optional, if you're using it
 
 interface PageProps {
-  params: { slug: string }; // ✅ NOT a Promise
+  params: { slug: string }; // ✅ No Promise here
 }
 
 export default async function Page({ params }: PageProps) {
@@ -58,8 +57,12 @@ export default async function Page({ params }: PageProps) {
           >
             Apply Now
           </a>
-          {/* If using a client component to copy */}
-          <CopyLinkButton url={job.job_url} />
+          <button
+            onClick={() => navigator.clipboard.writeText(job.job_url)}
+            className="px-3 py-2 border border-gray-300 text-sm rounded-md bg-gray-100 hover:bg-gray-200"
+          >
+            Copy Link
+          </button>
         </div>
       </div>
     </div>
