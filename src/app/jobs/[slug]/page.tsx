@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import CopyLinkButton from '@/components/CopyLinkButton';
-import { GetServerSideProps } from 'next';
+import { GetStaticProps, GetStaticPaths } from 'next';
 
 interface PageProps {
   job: any; // Adjust the type according to your job data structure
@@ -60,7 +60,24 @@ export default function Page({ job }: PageProps) {
   );
 }
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
+export const getStaticPaths: GetStaticPaths = async () => {
+  const { data: jobs, error } = await supabase
+    .from('jobs_db')
+    .select('slug');
+
+  if (error) {
+    console.error('Supabase error:', error);
+    return { paths: [], fallback: false };
+  }
+
+  const paths = jobs.map((job) => ({
+    params: { slug: job.slug },
+  }));
+
+  return { paths, fallback: false };
+};
+
+export const getStaticProps: GetStaticProps = async (context) => {
   const { slug } = context.params as { slug: string };
 
   const { data: job, error } = await supabase
