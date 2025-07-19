@@ -1,31 +1,46 @@
 // src/app/jobs/[slug]/page.tsx
+
 import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
-import CopyLinkButton from '@/components/CopyLinkButton';
+import { use } from 'react';
 
-// Correct interface - params is a plain object
+interface Job {
+  CompanyLogo: string;
+  JobTitle: string;
+  Company: string;
+  Location: string;
+  formatted_salary: string;
+  JobType: string;
+  LongDescription: string;
+  job_url: string;
+}
+
 interface PageProps {
   params: { slug: string };
 }
 
-export default async function Page({ params }: PageProps) {
-  const { slug } = params; // No need to await
-
-  const { data: job, error } = await supabase
+const fetchJob = async (slug: string): Promise<Job | null> => {
+  const { data, error } = await supabase
     .from('jobs_db')
     .select('*')
     .eq('slug', slug)
     .single();
 
-  if (error || !job) {
+  if (error || !data) {
     console.error('Job not found or Supabase error:', error);
-    notFound();
+    return null;
   }
 
-  if (!job.is_published) {
-    console.log('Job is not published:', slug);
-    notFound();
+  return data as Job;
+};
+
+export default function Page({ params }: PageProps) {
+  const { slug } = params;
+  const job = use(fetchJob(slug));
+
+  if (!job) {
+    return notFound();
   }
 
   return (
@@ -38,7 +53,6 @@ export default async function Page({ params }: PageProps) {
             width={48}
             height={48}
             className="absolute top-4 right-4 w-12 h-12 object-contain"
-            priority
           />
         )}
 
@@ -52,50 +66,28 @@ export default async function Page({ params }: PageProps) {
         </p>
 
         <div className="prose prose-sm text-gray-800 max-w-none">
-          {(job.LongDescription || '').split('\n').map((line: string, idx: number) => (
+          {job.LongDescription?.split('\n').map((line: string, idx: number) => (
             <p key={idx}>{line.trim()}</p>
           ))}
         </div>
 
         <div className="mt-6 flex space-x-3">
-          {job.job_url && (
-            <a
-              href={job.job_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md text-sm font-semibold"
-            >
-              Apply Now
-            </a>
-          )}
-          {job.job_url && <CopyLinkButton url={job.job_url} />}
+          <a
+            href={job.job_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md text-sm font-semibold"
+          >
+            Apply Now
+          </a>
+          <button
+            onClick={() => navigator.clipboard.writeText(job.job_url)}
+            className="px-3 py-2 border border-gray-300 text-sm rounded-md bg-gray-100 hover:bg-gray-200"
+          >
+            Copy Link
+          </button>
         </div>
       </div>
     </div>
   );
 }
-
-// Add static params generation
-export async function generateStaticParams() {
-  try {
-    const { data: jobs, error } = await supabase
-      .from('jobs_db')
-      .select('slug')
-      .eq('is_published', true);
-
-    if (error || !jobs) {
-      console.error('Static params error:', error);
-      return [];
-    }
-
-    return (jobs as { slug: string }[]).map((job) => ({
-      slug: job.slug,
-    }));
-  } catch (error) {
-    console.error('Failed to generate static params:', error);
-    return [];
-  }
-}
-
-// Optional: Incremental Static Regeneration
-export const revalidate = 3600; // Revalidate every hour
