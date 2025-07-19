@@ -4,11 +4,7 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import CopyLinkButton from '@/components/CopyLinkButton';
 
-interface PageProps {
-  params: { slug: string };
-}
-
-export default async function Page({ params }: PageProps) {
+export default async function Page({ params }: { params: { slug: string } }) {
   const { slug } = params;
 
   const { data: job, error } = await supabase
