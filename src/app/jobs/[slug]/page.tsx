@@ -3,44 +3,29 @@ import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import CopyLinkButton from '@/components/CopyLinkButton';
-import { use } from 'react';
 
-interface Job {
-  CompanyLogo: string;
-  JobTitle: string;
-  Company: string;
-  Location: string;
-  formatted_salary: string;
-  JobType: string;
-  LongDescription: string;
-  job_url: string;
-}
-
+// Correct interface - params is a plain object
 interface PageProps {
   params: { slug: string };
 }
 
-const fetchJob = async (slug: string): Promise<Job | null> => {
-  const { data, error } = await supabase
+export default async function Page({ params }: PageProps) {
+  const { slug } = params; // No need to await
+
+  const { data: job, error } = await supabase
     .from('jobs_db')
     .select('*')
     .eq('slug', slug)
     .single();
 
-  if (error || !data) {
+  if (error || !job) {
     console.error('Job not found or Supabase error:', error);
-    return null;
+    notFound();
   }
 
-  return data as Job;
-};
-
-export default function Page({ params }: PageProps) {
-  const { slug } = params;
-  const job = use(fetchJob(slug));
-
-  if (!job) {
-    return notFound();
+  if (!job.is_published) {
+    console.log('Job is not published:', slug);
+    notFound();
   }
 
   return (
@@ -53,6 +38,7 @@ export default function Page({ params }: PageProps) {
             width={48}
             height={48}
             className="absolute top-4 right-4 w-12 h-12 object-contain"
+            priority
           />
         )}
 
@@ -88,3 +74,28 @@ export default function Page({ params }: PageProps) {
     </div>
   );
 }
+
+// Add static params generation
+export async function generateStaticParams() {
+  try {
+    const { data: jobs, error } = await supabase
+      .from('jobs_db')
+      .select('slug')
+      .eq('is_published', true);
+
+    if (error || !jobs) {
+      console.error('Static params error:', error);
+      return [];
+    }
+
+    return (jobs as { slug: string }[]).map((job) => ({
+      slug: job.slug,
+    }));
+  } catch (error) {
+    console.error('Failed to generate static params:', error);
+    return [];
+  }
+}
+
+// Optional: Incremental Static Regeneration
+export const revalidate = 3600; // Revalidate every hour
