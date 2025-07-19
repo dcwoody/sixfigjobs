@@ -108,7 +108,7 @@ export default function Home() {
         </form>
 
         {/* Popular filters */}
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-2 mb-8">
           <span className="text-sm text-gray-600">Popular:</span>
           <button
             onClick={() => {
