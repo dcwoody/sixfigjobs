@@ -17,12 +17,11 @@ interface Job {
 }
 
 interface PageProps {
-  params: { slug: string } | Promise<{ slug: string }>;
+  params: { slug: string };  // Simplified to match Next.js expectations
 }
 
 export default async function Page({ params }: PageProps) {
-  const resolvedParams = await params;
-  const { slug } = resolvedParams;
+  const { slug } = params;  // Directly destructure params
 
   const { data: job, error }: { data: Job | null; error: PostgrestError | null } = await supabase
     .from('jobs_db')
