@@ -5,6 +5,9 @@ import Image from 'next/image';
 import CopyLinkButton from '@/components/CopyLinkButton';
 import { PostgrestError } from '@supabase/supabase-js';
 
+import Hero from '@/components/Hero';
+import Footer from '@/components/Footer'
+
 interface Job {
   CompanyLogo: string;
   JobTitle: string;
@@ -36,6 +39,8 @@ export default async function Page({ params }: PageProps) {
   }
 
   return (
+    <>
+    <Hero />
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-md relative">
         {job.CompanyLogo && (
@@ -78,5 +83,7 @@ export default async function Page({ params }: PageProps) {
         </div>
       </div>
     </div>
+    <Footer />
+  </>
   );
 }
