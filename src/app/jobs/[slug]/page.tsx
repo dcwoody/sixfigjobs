@@ -2,9 +2,10 @@
 import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
+import CopyLinkButton from '@/components/CopyLinkButton';
 
 interface PageProps {
-  params: { slug: string }; // ✅ No Promise here
+  params: { slug: string };
 }
 
 export default async function Page({ params }: PageProps) {
@@ -17,6 +18,7 @@ export default async function Page({ params }: PageProps) {
     .single();
 
   if (error || !job) {
+    console.error('Job not found or Supabase error:', error);
     notFound();
   }
 
@@ -43,26 +45,23 @@ export default async function Page({ params }: PageProps) {
         </p>
 
         <div className="prose prose-sm text-gray-800 max-w-none">
-          {job.LongDescription?.split('\n').map((line: string, idx: number) => (
+          {(job.LongDescription || '').split('\n').map((line: string, idx: number) => (
             <p key={idx}>{line.trim()}</p>
           ))}
         </div>
 
         <div className="mt-6 flex space-x-3">
-          <a
-            href={job.job_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md text-sm font-semibold"
-          >
-            Apply Now
-          </a>
-          <button
-            onClick={() => navigator.clipboard.writeText(job.job_url)}
-            className="px-3 py-2 border border-gray-300 text-sm rounded-md bg-gray-100 hover:bg-gray-200"
-          >
-            Copy Link
-          </button>
+          {job.job_url && (
+            <a
+              href={job.job_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md text-sm font-semibold"
+            >
+              Apply Now
+            </a>
+          )}
+          {job.job_url && <CopyLinkButton url={job.job_url} />}
         </div>
       </div>
     </div>
