@@ -16,14 +16,14 @@ interface Job {
 }
 
 interface PageProps {
-  params: { slug: string } | Promise<{ slug: string }>;  // Updated to handle potential promise
+  params: { slug: string } | Promise<{ slug: string }>;
 }
 
 export default async function Page({ params }: PageProps) {
-  const resolvedParams = await params;  // Await params to resolve it
-  const { slug } = resolvedParams;  // Now safely access slug
+  const resolvedParams = await params;
+  const { slug } = resolvedParams;
 
-  const { data: job, error } = await supabase
+  const { data: job, error }: { data: Job | null; error: any } = await supabase  // Explicitly type the response
     .from('jobs_db')
     .select('*')
     .eq('slug', slug)
