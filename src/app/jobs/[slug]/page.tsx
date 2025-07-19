@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import CopyLinkButton from '@/components/CopyLinkButton';
+import { PostgrestError } from '@supabase/supabase-js';
 
 interface Job {
   CompanyLogo: string;
@@ -23,7 +24,7 @@ export default async function Page({ params }: PageProps) {
   const resolvedParams = await params;
   const { slug } = resolvedParams;
 
-  const { data: job, error }: { data: Job | null; error: any } = await supabase  // Explicitly type the response
+  const { data: job, error }: { data: Job | null; error: PostgrestError | null } = await supabase
     .from('jobs_db')
     .select('*')
     .eq('slug', slug)
