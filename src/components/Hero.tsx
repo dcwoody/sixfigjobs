@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const Hero = () => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -23,9 +24,11 @@ const Hero = () => {
           </div>
           <div className="hidden xl:block xl:w-1/3">
             <div className="flex items-center justify-end">
-              <a className="inline-block py-2 px-4 mr-2 leading-5 text-gray-500 hover:text-gray-900 font-medium rounded-md" href="#">
-                Log In
-              </a>
+              <Link href="/login" passHref>
+                <button className="inline-block py-2 px-4 mr-2 leading-5 text-gray-500 hover:text-gray-900 font-medium rounded-md">
+                  Log In
+                </button>
+              </Link>
               <a className="inline-block py-2 px-4 text-sm leading-5 text-white bg-green-500 hover:bg-green-600 font-medium rounded-md" href="#">
                 Sign Up
               </a>
@@ -79,12 +82,11 @@ const Hero = () => {
               </div>
               <div className="flex flex-wrap">
                 <div className="w-full mb-2">
-                  <a
-                    className="block py-2 px-4 w-full text-sm text-center text-gray-500 hover:text-gray-900 font-medium rounded-md"
-                    href="#"
-                  >
-                    Log In
-                  </a>
+                  <Link href="/login" passHref>
+                    <button className="inline-block py-2 px-4 mr-2 leading-5 text-gray-500 hover:text-gray-900 font-medium rounded-md">
+                      Log In
+                    </button>
+                  </Link>
                 </div>
                 <div className="w-full">
                   <a

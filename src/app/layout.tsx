@@ -1,3 +1,5 @@
+// src/app/layout.tsx
+import { AuthProvider } from '@/components/AuthProvider';
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -23,7 +25,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-       
     <html lang="en" className="light">
       <head>
         {/* Embed Google Fonts */}
@@ -34,10 +35,10 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
