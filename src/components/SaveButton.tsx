@@ -3,10 +3,10 @@
 import { useState } from 'react';
 
 interface SaveButtonProps {
-  jobId: string;
+  JobID: string;
 }
 
-export default function SaveButton({ jobId }: SaveButtonProps) {
+export default function SaveButton({ JobID }: SaveButtonProps) {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
 
