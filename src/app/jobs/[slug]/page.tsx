@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import CopyLinkButton from '@/components/CopyLinkButton';
 import { PostgrestError } from '@supabase/supabase-js';
 import { Metadata } from 'next';
 
