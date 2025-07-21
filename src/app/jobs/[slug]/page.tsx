@@ -11,6 +11,7 @@ import Footer from '@/components/Footer'
 import SaveButton from '@/components/SaveButton'
 
 interface Job {
+  JobID: string;
   CompanyLogo: string;
   JobTitle: string;
   Company: string;
@@ -233,7 +234,7 @@ export default async function Page({ params }: PageProps) {
                       </svg>
                     </a>
                   )}
-                  <SaveButton jobId={job.id} />
+                  <SaveButton JobID={job.JobID} />
                 </div>
               </div>
             </div>
