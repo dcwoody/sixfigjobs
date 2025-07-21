@@ -14,6 +14,8 @@ export default function SaveButton({ JobID }: SaveButtonProps) {
     setLoading(true);
     try {
       // Replace with your save-to-database logic (e.g. Supabase or API call)
+      // For now, just log the JobID to the console
+      console.log("Saving job with ID:", JobID);
       await new Promise((res) => setTimeout(res, 500)); // Simulate delay
       setSaved(true);
     } catch (err) {
