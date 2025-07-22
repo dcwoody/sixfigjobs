@@ -6,6 +6,6 @@ export interface UserProfile {
   email: string;
   first_name?: string;
   last_name?: string;
-  preferences?: any; // Optional: replace `any` with a more specific type if you know the shape
+  preferences?: Record<string, unknown>;
   created_at?: string;
 }
