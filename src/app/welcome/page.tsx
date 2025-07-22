@@ -6,7 +6,8 @@ import Hero from '@/components/Hero';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
 import { AuthContext, AuthContextType } from '@/components/AuthProvider';
-import { UserProfile } from '@/types/user';
+
+//import { UserProfile } from '@/types/user';
 
 export default function WelcomePage() {
   const context = useContext(AuthContext) as AuthContextType;
@@ -42,6 +43,7 @@ export default function WelcomePage() {
           {/* Welcome Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-6">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome, {firstName}!</h1>
+            {/* eslint-disable-next-line react/no-unescaped-entities */}
             <p className="text-gray-600 text-lg">
               You can manage your preferences, view saved jobs, and explore new opportunities below.
             </p>
