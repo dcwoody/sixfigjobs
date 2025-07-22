@@ -6,6 +6,7 @@ import Hero from '@/components/Hero';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
 import { AuthContext, AuthContextType } from '@/components/AuthProvider';
+import { UserProfile } from '@/types/user';
 
 export default function WelcomePage() {
   const context = useContext(AuthContext) as AuthContextType;
