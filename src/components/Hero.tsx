@@ -3,16 +3,23 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useAuth } from '@/components/AuthProvider';
+import { supabase } from '@/lib/supabaseClient';
 
 const Hero = () => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { session } = useAuth();
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
 
   return (
     <section className="bg-white">
       <nav className="flex justify-between p-6 px-4">
         <div className="flex justify-between items-center w-full">
           <div className="xl:w-1/3">
-            <a className="block max-w-max" href="#">
+            <Link href="/">
               <Image
                 className="h-8"
                 src="/flex-ui-assets/logos/flex-ui-green-light.svg"
@@ -20,18 +27,33 @@ const Hero = () => {
                 width={120}
                 height={40}
               />
-            </a>
+            </Link>
           </div>
           <div className="hidden xl:block xl:w-1/3">
             <div className="flex items-center justify-end">
-              <Link href="/login" passHref>
-                <button className="inline-block py-2 px-4 mr-2 leading-5 text-gray-500 hover:text-gray-900 font-medium rounded-md">
-                  Log In
+              {session ? (
+                <button
+                  onClick={handleSignOut}
+                  className="py-2 px-4 mr-2 leading-5 text-gray-500 hover:text-gray-900 font-medium rounded-md"
+                >
+                  Sign Out
                 </button>
-              </Link>
-              <a className="inline-block py-2 px-4 text-sm leading-5 text-white bg-green-500 hover:bg-green-600 font-medium rounded-md" href="#">
-                Sign Up
-              </a>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="py-2 px-4 mr-2 leading-5 text-gray-500 hover:text-gray-900 font-medium rounded-md"
+                  >
+                    Log In
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="py-2 px-4 text-sm leading-5 text-white bg-green-500 hover:bg-green-600 font-medium rounded-md"
+                  >
+                    Sign Up
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -58,7 +80,7 @@ const Hero = () => {
           <div className="fixed top-0 left-0 bottom-0 w-4/6 max-w-xs bg-white">
             <nav className="relative p-6 h-full overflow-y-auto flex flex-col justify-between">
               <div>
-                <a className="inline-block mb-6" href="#">
+                <Link className="inline-block mb-6" href="/">
                   <Image
                     className="h-8"
                     src="/flex-ui-assets/logos/flex-ui-green-light.svg"
@@ -66,7 +88,7 @@ const Hero = () => {
                     width={120}
                     height={40}
                   />
-                </a>
+                </Link>
                 <ul className="py-6">
                   {['Product', 'Features', 'Pricing', 'Resources'].map((item) => (
                     <li key={item}>
@@ -81,21 +103,35 @@ const Hero = () => {
                 </ul>
               </div>
               <div className="flex flex-wrap">
-                <div className="w-full mb-2">
-                  <Link href="/login" passHref>
-                    <button className="inline-block py-2 px-4 mr-2 leading-5 text-gray-500 hover:text-gray-900 font-medium rounded-md">
-                      Log In
+                {session ? (
+                  <div className="w-full mb-2">
+                    <button
+                      onClick={handleSignOut}
+                      className="block py-2 px-4 w-full text-sm text-center text-gray-500 hover:text-gray-900 font-medium rounded-md"
+                    >
+                      Sign Out
                     </button>
-                  </Link>
-                </div>
-                <div className="w-full">
-                  <a
-                    className="block py-2 px-4 w-full text-sm text-center text-white bg-green-500 hover:bg-green-600 font-medium rounded-md"
-                    href="#"
-                  >
-                    Sign Up
-                  </a>
-                </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-full mb-2">
+                      <Link
+                        href="/login"
+                        className="block py-2 px-4 w-full text-sm text-center text-gray-500 hover:text-gray-900 font-medium rounded-md"
+                      >
+                        Log In
+                      </Link>
+                    </div>
+                    <div className="w-full">
+                      <Link
+                        href="/signup"
+                        className="block py-2 px-4 w-full text-sm text-center text-white bg-green-500 hover:bg-green-600 font-medium rounded-md"
+                      >
+                        Sign Up
+                      </Link>
+                    </div>
+                  </>
+                )}
               </div>
             </nav>
 
