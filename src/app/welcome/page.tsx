@@ -46,7 +46,7 @@ export default function WelcomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Link href="/saved" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
               <h2 className="text-lg font-semibold text-gray-900 mb-2">Saved Jobs</h2>
-              <p className="text-gray-600 text-sm">View jobs you've bookmarked.</p>
+              <p className="text-gray-600 text-sm">View jobs you bookmarked!</p>
             </Link>
 
             <Link href="/preferences" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">

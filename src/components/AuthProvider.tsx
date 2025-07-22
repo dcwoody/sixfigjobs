@@ -10,11 +10,11 @@ import {
 
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
+import { UserProfile } from '@/types/user'; // ✅ Import correct type
 
-// ✅ Exporting the interface
 export interface AuthContextType {
   session: Session | null;
-  userInfo: any;
+  userInfo: UserProfile | null;
   loading: boolean;
 }
 
@@ -23,7 +23,7 @@ export { AuthContext };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
-  const [userInfo, setUserInfo] = useState<any>(null);
+  const [userInfo, setUserInfo] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .eq('auth_user_id', currentSession.user.id)
           .single();
 
-        setUserInfo(userDbData);
+        setUserInfo(userDbData ?? null);
       }
 
       setLoading(false);
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .eq('auth_user_id', newSession.user.id)
           .single()
           .then(({ data }) => {
-            setUserInfo(data);
+            setUserInfo(data ?? null);
           });
       } else {
         setUserInfo(null);
