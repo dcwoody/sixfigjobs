@@ -1,123 +1,134 @@
-// app/signup/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import Image from 'next/image';
 import Link from 'next/link';
 
-export default function Signup() {
+export default function SignupPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<boolean>(false);
-  const [hasMounted, setHasMounted] = useState(false);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(false);
+    setLoading(true);
+    setErrorMsg('');
 
-   const { error: authError } = await supabase.auth.signUp({
-  email,
-  password,
-  options: { data: { name } },
-});
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
 
+    if (error) {
+      setErrorMsg(error.message);
+      setLoading(false);
+      return;
+    }
 
-    if (authError) {
-      setError(authError.message);
-    } else {
-      const { error: dbError } = await supabase
-        .from('Subscribers_DB')
-        .insert({
-          Email: email,
-          Name: name,
-          'Subscription Status': 'Subscribed',
-          'Timestamp of Last Send': new Date().toISOString().split('T')[0],
-          Interests: '',
-          'Location or Zip Code': '',
-          'Days Since Last Send': 0,
-          'Is Subscribed': true,
-          'Interest Match Score': 0,
-          'Newsletter Content Suggestion': '',
-        });
+    // Insert into users_db after successful signup
+    const userId = data?.user?.id;
+    if (userId) {
+      const { error: dbError } = await supabase.from('users_db').insert([
+        {
+          auth_user_id: userId,
+          email,
+          first_name: firstName,
+          last_name: lastName,
+        },
+      ]);
 
       if (dbError) {
-        setError(dbError.message);
-      } else {
-        setSuccess(true);
+        setErrorMsg('Signup succeeded, but failed to save user info.');
+        console.error(dbError);
       }
     }
+
+    router.push('/welcome');
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white shadow-lg rounded-lg">
-        {/* Logo */}
-        <div className="flex justify-center mb-6">
-          <Image src="/logo.png" alt="SixFigHires Logo" width={100} height={50} />
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <div className="max-w-md w-full bg-white shadow-md rounded-lg p-8">
+        <h1 className="text-2xl font-bold mb-6 text-center">Sign Up</h1>
 
-        <h1 className="text-3xl font-bold text-center text-gray-800">Sign Up</h1>
-
-        {hasMounted && error && (
-          <p className="text-red-500 text-center">{error}</p>
-        )}
-
-        {hasMounted && success && (
-          <p className="text-green-500 text-center">
-            Signup successful! Check your email to verify.
-          </p>
+        {errorMsg && (
+          <div className="text-red-600 text-sm mb-4 text-center">{errorMsg}</div>
         )}
 
         <form onSubmit={handleSignup} className="space-y-4">
           <div>
+            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+              First Name
+            </label>
             <input
+              id="firstName"
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Full Name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
               required
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
           <div>
+            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+              Last Name
+            </label>
             <input
+              id="lastName"
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              Email
+            </label>
+            <input
+              id="email"
               type="email"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email Address"
-              required
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
             />
           </div>
+
           <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              Password
+            </label>
             <input
+              id="password"
               type="password"
+              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              required
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
             />
           </div>
+
           <button
             type="submit"
-            className="w-full p-3 bg-blue-900 text-white rounded-lg hover:bg-blue-700 transition duration-200"
+            disabled={loading}
+            className="w-full py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md"
           >
-            Sign Up
+            {loading ? 'Signing up...' : 'Create Account'}
           </button>
         </form>
 
-        <p className="text-center text-gray-600 text-sm">
+        <p className="mt-4 text-sm text-center">
           Already have an account?{' '}
-          <Link href="/login" className="text-blue-600 hover:underline">
+          <Link href="/login" className="text-green-600 hover:underline">
             Log in
           </Link>
         </p>
