@@ -5,27 +5,23 @@ import { useContext } from 'react';
 import Hero from '@/components/Hero';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
-import { AuthContext, AuthContextType } from '@/components/AuthProvider';
-
-//import { UserProfile } from '@/types/user';
+import { AuthContext } from '@/components/AuthProvider';
 
 export default function WelcomePage() {
-  const context = useContext(AuthContext) as AuthContextType;
+  const auth = useContext(AuthContext);
 
-  if (!context || context.loading || !context.session || !context.userInfo) {
+  if (!auth || auth.loading || !auth.session || !auth.userInfo) {
     return <div className="min-h-screen bg-gray-50 p-10 text-gray-600">Loading...</div>;
   }
 
-  const email = context.userInfo.email;
-  const firstName = context.userInfo.first_name || email?.split('@')[0];
+  const email = auth.userInfo.email;
+  const firstName = auth.userInfo.first_name || email?.split('@')[0];
 
   return (
     <>
       <Hero />
       <div className="min-h-screen bg-gray-50 py-12 px-4">
         <div className="max-w-4xl mx-auto">
-
-          {/* Breadcrumb */}
           <nav className="mb-6" aria-label="Breadcrumb">
             <ol className="flex items-center space-x-2 text-sm text-gray-600">
               <li>
@@ -40,7 +36,6 @@ export default function WelcomePage() {
             </ol>
           </nav>
 
-          {/* Welcome Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-6">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome, {firstName}!</h1>
             <p className="text-gray-600 text-lg">
@@ -51,7 +46,7 @@ export default function WelcomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Link href="/saved" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
               <h2 className="text-lg font-semibold text-gray-900 mb-2">Saved Jobs</h2>
-              <p className="text-gray-600 text-sm">View jobs you bookmarked.</p>
+              <p className="text-gray-600 text-sm">View jobs you've bookmarked.</p>
             </Link>
 
             <Link href="/preferences" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
