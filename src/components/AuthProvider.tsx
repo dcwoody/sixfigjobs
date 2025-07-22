@@ -7,31 +7,63 @@ import {
   useContext,
   ReactNode,
 } from 'react';
+
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
 
-interface AuthContextType {
+// ✅ Exporting the interface
+export interface AuthContextType {
   session: Session | null;
+  userInfo: any;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export { AuthContext };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get current session
-    const getSession = async () => {
+    const init = async () => {
       const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-    };
-    getSession();
+      const currentSession = data.session;
+      setSession(currentSession);
 
-    // Listen for changes
+      if (currentSession) {
+        const { data: userDbData } = await supabase
+          .from('users_db')
+          .select('*')
+          .eq('auth_user_id', currentSession.user.id)
+          .single();
+
+        setUserInfo(userDbData);
+      }
+
+      setLoading(false);
+    };
+
+    init();
+
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+
+      if (newSession) {
+        supabase
+          .from('users_db')
+          .select('*')
+          .eq('auth_user_id', newSession.user.id)
+          .single()
+          .then(({ data }) => {
+            setUserInfo(data);
+          });
+      } else {
+        setUserInfo(null);
+      }
     });
 
     return () => {
@@ -40,7 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session }}>
+    <AuthContext.Provider value={{ session, userInfo, loading }}>
       {children}
     </AuthContext.Provider>
   );
