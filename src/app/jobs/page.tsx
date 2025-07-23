@@ -7,11 +7,6 @@ import Link from 'next/link';
 import Footer from '@/components/Footer';
 import Hero from '@/components/Hero';
 
-// This is a client component that will handle the search and filter UI.
-// You will need to create this component separately.
-// The form in this component should update the URL's searchParams.
-// import SearchAndFilterForm from '@/components/SearchAndFilterForm';
-
 // Define the shape of a single job object
 interface Job {
   JobID: string;
@@ -27,7 +22,7 @@ interface Job {
   CompanyLogo?: string;
 }
 
-// Define the properties passed to the page, including search and pagination params
+// Corrected: searchParams is a plain object, not a Promise
 interface PageProps {
   searchParams: {
     q?: string;
@@ -37,6 +32,7 @@ interface PageProps {
 }
 
 export default async function JobsListingPage({ searchParams }: PageProps) {
+  // Corrected: searchParams is already an object, no need to await it
   const { q, location, page } = searchParams;
 
   const LIMIT = 10;
@@ -46,7 +42,7 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
   // Build the initial Supabase query
   let query = supabase
     .from('jobs_db')
-    .select('*, count()', { count: 'exact' }) // Select all fields and also get the total count
+    .select('*, count()', { count: 'exact' })
     .order('PostedDate', { ascending: false });
 
   // Add search filters
