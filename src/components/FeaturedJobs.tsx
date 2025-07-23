@@ -36,7 +36,7 @@ export default function FeaturedJobs() {
       <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">Featured Jobs</h1>
 
       <div className="max-w-screen-lg mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
           {jobs.map((job) => (
             <div key={job.JobID} className="flex flex-col bg-white border border-gray-200 shadow-2xs rounded-xl">
               <div className="p-4 md:p-5">
