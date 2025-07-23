@@ -92,7 +92,7 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
     <>
       <Hero />
       <div className="min-h-screen bg-gray-50 py-10 px-4">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto mb-8">
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
