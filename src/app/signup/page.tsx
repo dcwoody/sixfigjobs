@@ -14,30 +14,30 @@ export default function SignupPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrorMsg('');
+const handleSignup = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setErrorMsg('');
 
-  const { data: { user }, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-        },
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        first_name: firstName,
+        last_name: lastName,
       },
-    });
+    },
+  });
 
-    if (error) {
-      setErrorMsg(error.message);
-      setLoading(false);
-      return;
-    }
+  if (error) {
+    setErrorMsg(error.message);
+    setLoading(false);
+    return;
+  }
 
-    router.push('/welcome');
-  };
+  router.push('/welcome');
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
