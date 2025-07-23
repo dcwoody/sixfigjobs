@@ -7,26 +7,6 @@ import Footer from '@/components/Footer';
 import Link from 'next/link';
 import { AuthContext } from '@/components/AuthProvider';
 
-import { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'SixFigHires.com | High-Paying Jobs in the DC Area',
-  description: 'Discover six-figure remote, hybrid, and government jobs in tech, policy, and public service. Curated and updated daily.',
-  keywords: 'six figure jobs, remote jobs, government jobs, tech jobs, high paying jobs, policy jobs, hybrid jobs, 100k jobs, six figure salary',
-  openGraph: {
-    title: 'SixFigHires | High-Paying Jobs in the DC Area',
-    description: 'Discover six-figure remote, hybrid jobs in government, tech, policy, and public service.',
-    url: 'https://sixfighires.com',
-    siteName: 'SixFigHires',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'SixFigHires | High-Paying Remote & Government Jobs',
-    description: 'Explore six-figure job listings updated daily.',
-  },
-};
-
 export default function WelcomePage() {
   const auth = useContext(AuthContext);
 
