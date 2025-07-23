@@ -38,14 +38,17 @@ export default function FeaturedJobs() {
       <div className="max-w-screen-lg mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
           {jobs.map((job) => (
-            <div key={job.JobID} className="flex flex-col bg-white border border-gray-200 shadow-2xs rounded-xl">
+            <div key={job.JobID} className="flex flex-col bg-white border border-gray-200 shadow-2xs rounded-xl h-full">
               <div className="p-4 md:p-5">
-                <h3 className="text-lg font-bold text-gray-800 line-clamp-2">
-                  {job.JobTitle}
-                </h3>
-                <p className="mt-2 text-gray-500 line-clamp-3">
-                  {job.ShortDescription}
-                </p>
+                {/* Text content wrapper with a min-height to ensure consistent card size */}
+                <div className="min-h-[120px]">
+                  <h3 className="text-lg font-bold text-gray-800 line-clamp-2">
+                    {job.JobTitle}
+                  </h3>
+                  <p className="mt-2 text-gray-500 line-clamp-3">
+                    {job.ShortDescription}
+                  </p>
+                </div>
                 <Link
                   className="mt-3 inline-flex items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-blue-600 decoration-2 hover:text-blue-700 hover:underline focus:underline focus:outline-hidden focus:text-blue-700 disabled:opacity-50 disabled:pointer-events-none"
                   href={`/jobs/${job.slug}`}
