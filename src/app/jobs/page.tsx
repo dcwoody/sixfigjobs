@@ -1,7 +1,9 @@
 // src/app/jobs/page.tsx
 import { supabase } from '@/lib/supabaseClient';
+import { PostgrestError } from '@supabase/supabase-js';
 import Image from 'next/image';
 import Link from 'next/link';
+
 import Footer from '@/components/Footer';
 import Hero from '@/components/Hero';
 
@@ -40,7 +42,11 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
     query = query.or(`Location.ilike.%${location}%,is_remote.eq.${location.toLowerCase().includes('remote')}`);
   }
 
-  const { data: jobs, error } = await query;
+const { data: jobs, error }: { data: Job[] | null; error: PostgrestError | null } = await query;
+
+  if (error) {
+    return <div className="p-6 text-red-600">Error loading jobs: {error.message}</div>;
+  }
 
   return (
     <>
@@ -64,13 +70,8 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
             </p>
           </div>
 
-          {error && (
-            <div className="p-6 text-red-600 bg-white rounded-lg shadow border border-red-200">
-              Error loading jobs: {error.message}
-            </div>
-          )}
-
-          {!jobs?.length && !error && (
+          {/* This check is now correct as it only runs if no jobs are found. */}
+          {!jobs?.length && (
             <div className="text-center text-gray-600 py-12">
               <p>No jobs found. Try adjusting your search.</p>
             </div>
