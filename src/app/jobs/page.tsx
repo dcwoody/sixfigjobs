@@ -7,7 +7,6 @@ import Link from 'next/link';
 import Footer from '@/components/Footer';
 import Hero from '@/components/Hero';
 
-// Define the shape of a single job object
 interface Job {
   JobID: string;
   JobTitle: string;
@@ -22,30 +21,29 @@ interface Job {
   CompanyLogo?: string;
 }
 
-// Corrected: searchParams is a plain object, not a Promise
+// CORRECTED: searchParams is now typed as a Promise
 interface PageProps {
-  searchParams: {
+  searchParams: Promise<{
     q?: string;
     location?: string;
     page?: string;
-  };
+  }>;
 }
 
 export default async function JobsListingPage({ searchParams }: PageProps) {
-  // Corrected: searchParams is already an object, no need to await it
-  const { q, location, page } = searchParams;
+  // CORRECTED: Await the searchParams Promise before destructuring
+  const resolvedSearchParams = await searchParams;
+  const { q, location, page } = resolvedSearchParams;
 
   const LIMIT = 10;
   const currentPage = Number(page) || 1;
   const offset = (currentPage - 1) * LIMIT;
 
-  // Build the initial Supabase query
   let query = supabase
     .from('jobs_db')
     .select('*, count()', { count: 'exact' })
     .order('PostedDate', { ascending: false });
 
-  // Add search filters
   if (q) {
     query = query.or(`JobTitle.ilike.%${q}%,ShortDescription.ilike.%${q}%,Company.ilike.%${q}%`);
   }
@@ -53,7 +51,6 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
     query = query.or(`Location.ilike.%${location}%,is_remote.eq.${location.toLowerCase().includes('remote')}`);
   }
 
-  // Add pagination
   query = query.range(offset, offset + LIMIT - 1);
 
   const { data: jobs, error, count }: { data: Job[] | null; error: PostgrestError | null; count: number | null } = await query;
@@ -69,7 +66,6 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
       <Hero />
       <div className="min-h-screen bg-gray-50 py-10 px-4">
         <div className="max-w-6xl mx-auto">
-          {/* Header */}
           <div className="mb-8 text-center">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               {q || location ? 'Search Results' : 'Explore Top Jobs'}
@@ -86,14 +82,10 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
               )}
             </p>
           </div>
-
           {/* Search and Filter UI Placeholder */}
           <div className="mb-6">
-            {/* You would place your search and filter form here.
-                Example: <SearchAndFilterForm initialQuery={q} initialLocation={location} /> */}
+            {/* You would place your search and filter form here. */}
           </div>
-
-          {/* Jobs Table */}
           {(!jobs || jobs.length === 0) ? (
             <div className="text-center text-gray-600 py-12">
               <p>No jobs found. Try adjusting your search.</p>
@@ -169,16 +161,14 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
               </table>
             </div>
           )}
-
           {/* Pagination */}
           {count && count > LIMIT && (
             <div className="mt-12 flex justify-center">
               <div className="inline-flex items-center space-x-2">
-                {/* Previous Page Button */}
                 <Link
                   href={{
                     pathname: '/jobs',
-                    query: { ...searchParams, page: currentPage - 1 },
+                    query: { ...resolvedSearchParams, page: currentPage - 1 },
                   }}
                   className={`px-4 py-2 rounded-lg border text-sm text-gray-600 hover:bg-gray-100 ${
                     currentPage === 1 ? 'pointer-events-none opacity-50' : ''
@@ -187,17 +177,13 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
                 >
                   Previous
                 </Link>
-
-                {/* Page Number Display */}
                 <span className="text-sm text-gray-700">
                   Page {currentPage} of {totalPages}
                 </span>
-
-                {/* Next Page Button */}
                 <Link
                   href={{
                     pathname: '/jobs',
-                    query: { ...searchParams, page: currentPage + 1 },
+                    query: { ...resolvedSearchParams, page: currentPage + 1 },
                   }}
                   className={`px-4 py-2 rounded-lg border text-sm text-gray-600 hover:bg-gray-100 ${
                     currentPage === totalPages ? 'pointer-events-none opacity-50' : ''
