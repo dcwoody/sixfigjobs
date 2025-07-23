@@ -22,30 +22,18 @@ export default function SignupPage() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+        },
+      },
     });
 
     if (error) {
       setErrorMsg(error.message);
       setLoading(false);
       return;
-    }
-
-    // Insert into users_db after successful signup
-    const userId = data?.user?.id;
-    if (userId) {
-      const { error: dbError } = await supabase.from('users_db').insert([
-        {
-          auth_user_id: userId,
-          email,
-          first_name: firstName,
-          last_name: lastName,
-        },
-      ]);
-
-      if (dbError) {
-        setErrorMsg('Signup succeeded, but failed to save user info.');
-        console.error(dbError);
-      }
     }
 
     router.push('/welcome');
