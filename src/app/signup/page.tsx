@@ -19,7 +19,7 @@ export default function SignupPage() {
     setLoading(true);
     setErrorMsg('');
 
-    const { data, error } = await supabase.auth.signUp({
+  const { data: { user }, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -50,7 +50,7 @@ export default function SignupPage() {
 
         <form onSubmit={handleSignup} className="space-y-4">
           <div>
-            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="firstName" className="block text-sm font-medium text-gray-800">
               First Name
             </label>
             <input
@@ -58,7 +58,7 @@ export default function SignupPage() {
               type="text"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              className="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+              className="mt-1 w-full border-gray-800 text-gray-900 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
               required
             />
           </div>
@@ -72,7 +72,7 @@ export default function SignupPage() {
               type="text"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+              className="mt-1 w-full border-gray-800 text-gray-900 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
               required
             />
           </div>
@@ -87,7 +87,7 @@ export default function SignupPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+              className="mt-1 w-full border-gray-800 text-gray-900 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
             />
           </div>
 
@@ -101,7 +101,7 @@ export default function SignupPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+              className="mt-1 w-full border-gray-800 text-gray-900 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
             />
           </div>
 
