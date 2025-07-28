@@ -42,23 +42,34 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!job) {
     return {
-      title: 'Job Not Found',
+      title: 'Job Not Found | SixFigHires.com',
       description: 'The requested job posting could not be found.'
     };
   }
 
+  const brand = ' | SixFigHires.com';
+  const maxTotalLength = 60;
+
+  const rawTitle = `${job.JobTitle} @ ${job.Company}`;
+  const truncatedTitle = 
+    rawTitle.length + brand.length > maxTotalLength
+      ? rawTitle.slice(0, maxTotalLength - brand.length - 1).trim().replace(/[\s.,-]+$/, '') + '…'
+      : rawTitle;
+
+  const finalTitle = `${truncatedTitle}${brand}`;
+
   return {
-    title: `${job.JobTitle} at ${job.Company} | Six Figure Jobs`,
+    title: finalTitle,
     description: job.ShortDescription || `Join ${job.Company} as a ${job.JobTitle} in ${job.Location}. ${job.formatted_salary ? `Salary: ${job.formatted_salary}` : 'Competitive salary offered.'}`,
     keywords: `${job.JobTitle}, ${job.Company}, ${job.Location}, six figure jobs, high paying jobs, ${job.JobType}`,
     openGraph: {
-      title: `${job.JobTitle} at ${job.Company}`,
+      title: finalTitle,
       description: job.ShortDescription || `Join ${job.Company} as a ${job.JobTitle}`,
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${job.JobTitle} at ${job.Company}`,
+      title: finalTitle,
       description: job.ShortDescription || `Join ${job.Company} as a ${job.JobTitle}`,
     }
   };
