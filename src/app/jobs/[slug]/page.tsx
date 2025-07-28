@@ -107,7 +107,12 @@ export default async function Page({ params }: PageProps) {
   }
 
   // Get similar jobs
-  const similarJobs = await getSimilarJobs(job.id, job.Company, job.JobTitle);
+  const { data: similarJobs, error: similarJobsError } = await supabase
+    .from('jobs_db')
+    .select('*')
+    .neq('JobID', job.JobID)
+    .eq('JobType', job.JobType) // You could use Location, Industry, or fuzzy match
+    .limit(4);
 
   // Determine work arrangement
   const workArrangement = getWorkArrangement(job.Location, job.JobType);
@@ -415,47 +420,26 @@ export default async function Page({ params }: PageProps) {
           </div>
 
           {/* Similar Jobs Section */}
-          {similarJobs.length > 0 && (
-            <div className="mt-12">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Similar Jobs</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {similarJobs.map((similarJob) => (
-                  <Link
-                    key={similarJob.slug}
-                    href={`/jobs/${similarJob.slug}`}
-                    className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200"
-                  >
-                    <div className="flex items-start gap-3 mb-4">
-                      {similarJob.CompanyLogo && (
-                        <Image
-                          src={similarJob.CompanyLogo}
-                          alt={`${similarJob.Company} logo`}
-                          width={40}
-                          height={40}
-                          className="w-10 h-10 object-contain rounded border border-gray-200 p-1"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 line-clamp-2 mb-1">
-                          {similarJob.JobTitle}
-                        </h3>
-                        <p className="text-blue-600 font-medium text-sm">
-                          {similarJob.Company}
-                        </p>
-                        <p className="text-gray-500 text-sm">
-                          {similarJob.Location}
-                        </p>
-                      </div>
-                    </div>
-                    {similarJob.formatted_salary && (
-                      <div className="bg-green-50 text-green-700 px-3 py-2 rounded-lg text-sm font-medium">
-                        {similarJob.formatted_salary}
-                      </div>
-                    )}
-                  </Link>
+          {similarJobs && similarJobs.length > 0 && (
+            <section className="mt-16">
+              <h2 className="text-xl font-bold mb-4 text-gray-700">Similar Jobs</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {similarJobs.map((related) => (
+                  <div key={related.JobID} className="border rounded-xl p-4 shadow-sm hover:shadow-md transition">
+                    <h3 className="text-md font-semibold mb-1 text-gray-700">{related.JobTitle}</h3>
+                    <p className="text-sm text-gray-600">{related.Company}</p>
+                    <p className="text-sm text-gray-500">{related.Location}</p>
+                    <p className="text-sm font-medium text-green-700">{related.formatted_salary}</p>
+                    <Link
+                      href={`/jobs/${related.slug}`}
+                      className="text-sm mt-2 inline-block text-blue-600 hover:underline"
+                    >
+                      View Job →
+                    </Link>
+                  </div>
                 ))}
               </div>
-            </div>
+            </section>
           )}
         </div>
       </div>
