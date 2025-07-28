@@ -25,6 +25,19 @@ interface Job {
   id: string;
 }
 
+// Title case utility (cleans up title)
+function toTitleCase(str: string): string {
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word =>
+      word.length > 2
+        ? word.charAt(0).toUpperCase() + word.slice(1)
+        : word // leave short words (like "at", "of", etc.) lowercase if desired
+    )
+    .join(' ');
+}
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
@@ -50,8 +63,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const brand = ' | SixFigHires.com';
   const maxTotalLength = 60;
 
-  const rawTitle = `${job.JobTitle} @ ${job.Company}`;
-  const truncatedTitle = 
+const formattedJobTitle = toTitleCase(job.JobTitle);
+const rawTitle = `${formattedJobTitle} @ ${job.Company}`;
+
+const truncatedTitle = 
     rawTitle.length + brand.length > maxTotalLength
       ? rawTitle.slice(0, maxTotalLength - brand.length - 1).trim().replace(/[\s.,-]+$/, '') + '…'
       : rawTitle;
@@ -208,7 +223,7 @@ export default async function Page({ params }: PageProps) {
                     </div>
                   )}
                   <div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-1">{job.JobTitle}</h1>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-1">{toTitleCase(job.JobTitle)}</h1>
                     <h2 className="text-xl text-blue-600 font-semibold">{job.Company}</h2>
                     <div className="flex items-center text-gray-600 mt-1">
                       <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -248,13 +263,13 @@ export default async function Page({ params }: PageProps) {
 
               {/* Overview Section */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Overview</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Role Overview:</h3>
                 <p className="text-gray-700 leading-relaxed">{job.ShortDescription}</p>
               </div>
 
               {/* Job Description */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Job Description</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Job Description:</h3>
                 <div className="prose prose-gray max-w-none">
                   {(job.LongDescription || '').split('\n').map((line: string, idx: number) => (
                     <p key={idx} className="text-gray-700 leading-relaxed mb-3 last:mb-0">
