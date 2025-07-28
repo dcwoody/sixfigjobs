@@ -6,10 +6,9 @@ import Link from 'next/link';
 import { PostgrestError } from '@supabase/supabase-js';
 import { Metadata } from 'next';
 
-import SaveButton from '@/components/SaveButton'
-
+import SaveButton from '@/components/SaveButton';
 import Hero from '@/components/Hero';
-import Footer from '@/components/Footer'
+import Footer from '@/components/Footer';
 
 interface Job {
   JobID: string;
@@ -79,18 +78,6 @@ function getWorkArrangement(location: string, jobType: string): { type: 'remote'
   return { type: 'onsite', label: 'On-site' };
 }
 
-// Helper function to fetch similar jobs
-async function getSimilarJobs(currentJobId: string, company: string, jobTitle: string) {
-  const { data: similarJobs } = await supabase
-    .from('jobs_db')
-    .select('slug, JobTitle, Company, Location, formatted_salary, CompanyLogo')
-    .neq('id', currentJobId)
-    .or(`Company.ilike.%${company}%,JobTitle.ilike.%${jobTitle.split(' ')[0]}%`)
-    .limit(3);
-
-  return similarJobs || [];
-}
-
 export default async function Page({ params }: PageProps) {
   const resolvedParams = await params;
   const { slug } = resolvedParams;
@@ -107,17 +94,15 @@ export default async function Page({ params }: PageProps) {
   }
 
   // Get similar jobs
-  const { data: similarJobs, error: similarJobsError } = await supabase
+  const { data: similarJobs } = await supabase
     .from('jobs_db')
-    .select('*')
+    .select('JobID, JobTitle, Company, Location, formatted_salary, slug')
     .neq('JobID', job.JobID)
-    .eq('JobType', job.JobType) // You could use Location, Industry, or fuzzy match
+    .eq('JobType', job.JobType)
     .limit(4);
 
-  // Determine work arrangement
   const workArrangement = getWorkArrangement(job.Location, job.JobType);
 
-  // SEO: Structured data for rich snippets
   const structuredData = {
     "@context": "https://schema.org/",
     "@type": "JobPosting",
@@ -157,7 +142,6 @@ export default async function Page({ params }: PageProps) {
 
   return (
     <>
-      {/* SEO: Add structured data */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -426,7 +410,7 @@ export default async function Page({ params }: PageProps) {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {similarJobs.map((related) => (
                   <div key={related.JobID} className="border rounded-xl p-4 shadow-sm hover:shadow-md transition">
-                    <h3 className="text-md font-semibold mb-1 text-gray-700">{related.JobTitle}</h3>
+                    <h3 className="text-md font-semibold mb-1 text-gray-900">{related.JobTitle}</h3>
                     <p className="text-sm text-gray-600">{related.Company}</p>
                     <p className="text-sm text-gray-500">{related.Location}</p>
                     <p className="text-sm font-medium text-green-700">{related.formatted_salary}</p>
