@@ -5,12 +5,6 @@ import Image from 'next/image';
 import Hero from '@/components/Hero';
 import Footer from '@/components/Footer';
 
-interface Company {
-  slug: string;
-  company_name: string;
-  logo_url?: string;
-  overall_rating?: number;
-}
 
 export default async function CompaniesListPage() {
   const { data: companies, error } = await supabase
