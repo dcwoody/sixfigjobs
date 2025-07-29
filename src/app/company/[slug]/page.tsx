@@ -33,7 +33,6 @@ interface Company {
     updated_at?: string;
 }
 
-
 // Create URL-friendly slug from company name
 function createSlug(name: string): string {
     return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
