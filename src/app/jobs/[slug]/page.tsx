@@ -25,6 +25,14 @@ interface Job {
   id: string;
 }
 
+interface Company {
+  company_name: string;
+  overall_rating?: number;
+  website?: string;
+  ceo?: string;
+  // add any other fields you want to use
+}
+
 // Title case utility (cleans up title)
 function toTitleCase(str: string): string {
   return str
@@ -63,10 +71,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const brand = ' | SixFigHires.com';
   const maxTotalLength = 60;
 
-const formattedJobTitle = toTitleCase(job.JobTitle);
-const rawTitle = `${formattedJobTitle} @ ${job.Company}`;
+  const formattedJobTitle = toTitleCase(job.JobTitle);
+  const rawTitle = `${formattedJobTitle} @ ${job.Company}`;
 
-const truncatedTitle = 
+  const truncatedTitle =
     rawTitle.length + brand.length > maxTotalLength
       ? rawTitle.slice(0, maxTotalLength - brand.length - 1).trim().replace(/[\s.,-]+$/, '') + '…'
       : rawTitle;
@@ -127,6 +135,14 @@ export default async function Page({ params }: PageProps) {
     .eq('JobType', job.JobType)
     .limit(4);
 
+  // Get company data from companies_db
+  const { data: companyData }: { data: Company | null } = await supabase
+    .from('companies_db')
+    .select('*')
+    .or(`company_name.ilike."${job.Company}",website.ilike."%${job.Company}%"`)
+    .limit(1)
+    .single();
+
   const workArrangement = getWorkArrangement(job.Location, job.JobType);
 
   const structuredData = {
@@ -161,12 +177,17 @@ export default async function Page({ params }: PageProps) {
         "unitText": "YEAR"
       }
     },
+    "aggregateRating": companyData?.overall_rating ? {
+      "@type": "AggregateRating",
+      "ratingValue": companyData.overall_rating,
+      "ratingCount": 100 // optional estimate
+    } : undefined,
     "employmentType": job.JobType.toUpperCase()
   };
 
   const currentUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://yoursite.com'}/jobs/${slug}`;
 
-if (!job || error) {
+  if (!job || error) {
     notFound(); // 👈 this triggers the actual 404 page
   }
 
@@ -228,7 +249,16 @@ if (!job || error) {
                   )}
                   <div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-1">{toTitleCase(job.JobTitle)}</h1>
-                    <h2 className="text-xl text-blue-600 font-semibold">{job.Company}</h2>
+                    {companyData?.website ? (
+                      <Link
+                        href={`/company/${encodeURIComponent(job.Company.toLowerCase().replace(/\s+/g, '-') || '')}`}
+                        className="text-xl text-blue-600 font-semibold hover:underline"
+                      >
+                        {job.Company}
+                      </Link>
+                    ) : (
+                      <h2 className="text-xl text-blue-600 font-semibold">{job.Company}</h2>
+                    )}
                     <div className="flex items-center text-gray-600 mt-1">
                       <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -348,7 +378,7 @@ if (!job || error) {
                     {[1, 2, 3, 4, 5].map((star) => (
                       <svg
                         key={star}
-                        className={`w-5 h-5 ${star <= 4 ? 'text-yellow-400' : 'text-gray-300'}`}
+                        className={`w-5 h-5 ${companyData?.overall_rating && star <= Math.round(companyData.overall_rating) ? 'text-yellow-400' : 'text-gray-300'}`}
                         fill="currentColor"
                         viewBox="0 0 22 20"
                       >
@@ -356,13 +386,20 @@ if (!job || error) {
                       </svg>
                     ))}
                   </div>
-
-                  <div className="text-2xl font-bold text-gray-900 mb-1">4.0</div>
-                  <div className="text-sm text-gray-600">out of 5 stars</div>
-
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="text-xs text-gray-500">Based on employee reviews</div>
-                  </div>
+                  {companyData?.overall_rating ? (
+                    <>
+                      <div className="text-2xl font-bold text-gray-900 mb-1">{companyData.overall_rating.toFixed(1)}</div>
+                      <div className="text-sm text-gray-600">out of 5 stars</div>
+                      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                        <div className="text-xs text-gray-500">Based on employee reviews</div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-gray-500 text-sm italic mb-1">Not yet rated</div>
+                      <div className="text-sm text-gray-400">No available Glassdoor rating</div>
+                    </>
+                  )}
                 </div>
               </div>
 
