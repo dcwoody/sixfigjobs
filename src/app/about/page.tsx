@@ -27,23 +27,23 @@ export default function AboutPage() {
 
         <h2 className="text-2xl font-semibold mt-10 mb-4">Our Mission</h2>
         <p className="mb-4">
-          We believe that great jobs shouldn’t be buried behind vague listings and confusing platforms. Our mission is
+          We believe that great jobs shouldn&rsquo;t be buried behind vague listings and confusing platforms. Our mission is
           to surface clear, high-quality job opportunities that offer transparency, impact, and growth.
         </p>
 
         <h2 className="text-2xl font-semibold mt-10 mb-4">Who We Serve</h2>
         <p className="mb-4">
-          Whether you're a policy expert, tech lead, nonprofit strategist, or cleared professional, we help ambitious
-          people find roles that match their value — and pay them what they're worth.
+          Whether you&rsquo;re a policy expert, tech lead, nonprofit strategist, or cleared professional, we help ambitious
+          people find roles that match their value — and pay them what they&rsquo;re worth.
         </p>
 
-        <h2 className="text-2xl font-semibold mt-10 mb-4">Let’s Connect</h2>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">Let&rsquo;s Connect</h2>
         <p className="mb-6">
           Have questions or want to partner with us?{' '}
           <Link href="/contact" className="text-blue-600 underline">
             Contact us
           </Link>{' '}
-          — we'd love to hear from you.
+          — we&rsquo;d love to hear from you.
         </p>
 
         <p className="text-sm text-gray-500">© {new Date().getFullYear()} SixFigHires.com</p>
