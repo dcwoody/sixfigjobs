@@ -1,14 +1,13 @@
-// /src/app/sitemap.xml/route.ts
 import { supabase } from '@/lib/supabaseClient';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
   const { data: jobs, error } = await supabase
     .from('jobs_db')
-    .select('slug, UpdatedTime') // or 'UpdatedAt' if your field is named differently
+    .select('slug, UpdatedTime');
 
   if (error) {
-    console.error('Sitemap fetch error:', error);
+    console.error('❌ Supabase error in sitemap:', error.message, error.details || '');
     return new Response('Error generating sitemap', { status: 500 });
   }
 
@@ -26,7 +25,6 @@ export async function GET() {
   const staticUrls = `
     <url><loc>${baseUrl}</loc></url>
     <url><loc>${baseUrl}/jobs</loc></url>
-    <url><loc>${baseUrl}/about</loc></url>
   `;
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
