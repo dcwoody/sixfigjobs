@@ -1,8 +1,8 @@
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseServer } from '@/lib/supabaseServer'; // ✅ Use the secure client
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const { data: jobs, error } = await supabase
+  const { data: jobs, error } = await supabaseServer
     .from('jobs_db')
     .select('slug, UpdatedTime')
     .order('UpdatedTime', { ascending: false });
@@ -14,10 +14,7 @@ export async function GET() {
 
   const baseUrl = 'https://sixfighires.com';
 
-  const staticUrls = [
-    '/',
-    '/jobs'
-  ];
+  const staticUrls = ['/', '/jobs'];
 
   const staticXml = staticUrls
     .map(
