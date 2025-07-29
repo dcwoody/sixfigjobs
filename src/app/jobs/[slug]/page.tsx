@@ -136,12 +136,12 @@ export default async function Page({ params }: PageProps) {
     .limit(4);
 
   // Get company data from companies_db
-  const { data: companyData }: { data: Company | null } = await supabase
+  const { data: companyData } = await supabase
     .from('companies_db')
-    .select('*')
-    .or(`company_name.ilike."${job.Company}",website.ilike."%${job.Company}%"`)
+    .select('overall_rating, ceo_name, ceo_photo, website, company_name, short_name')
+    .ilike('company_name', `%${job.Company}%`)
     .limit(1)
-    .single();
+    .single();  
 
   const workArrangement = getWorkArrangement(job.Location, job.JobType);
 
