@@ -136,12 +136,12 @@ export default async function Page({ params }: PageProps) {
     .limit(4);
 
   // Get company data from companies_db
- const { data: companyData }: { data: Company | null } = await supabase
-  .from('companies_db')
-  .select('overall_rating, ceo_name, ceo_photo, website, company_name, short_name')
-  .ilike('company_name', `%${job.Company}%`)
-  .limit(1)
-  .single();
+  const { data: companyData }: { data: Company | null } = await supabase
+    .from('companies_db')
+    .select('overall_rating, ceo_name, ceo_photo, website, company_name, short_name')
+    .ilike('company_name', `%${job.Company}%`)
+    .limit(1)
+    .single();
 
   const workArrangement = getWorkArrangement(job.Location, job.JobType);
 
@@ -386,11 +386,10 @@ export default async function Page({ params }: PageProps) {
                       </svg>
                     ))}
                   </div>
+
                   {companyData?.overall_rating !== undefined && companyData?.overall_rating !== null ? (
                     <>
-                      <div className="text-2xl font-bold text-gray-900 mb-1">
-                        {companyData.overall_rating.toFixed(1)}
-                      </div>
+                      <div className="text-2xl font-bold text-gray-900 mb-1">{companyData.overall_rating.toFixed(1)}</div>
                       <div className="text-sm text-gray-600">out of 5 stars</div>
                       <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                         <div className="text-xs text-gray-500">Based on employee reviews</div>
