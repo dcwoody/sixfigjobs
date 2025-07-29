@@ -10,18 +10,6 @@ interface PageProps {
   params: { slug: string };
 }
 
-interface Company {
-  id: string;
-  company_name: string;
-  overall_rating?: number;
-  website?: string;
-  logo?: string;
-  ceo_name?: string;
-  headquarters?: string;
-  industry?: string;
-  description?: string;
-}
-
 export default async function Page({ params }: PageProps) {
   const { slug } = params;
   const companyName = decodeURIComponent(slug).replace(/-/g, ' ');
