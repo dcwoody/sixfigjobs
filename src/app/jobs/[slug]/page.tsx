@@ -166,6 +166,10 @@ export default async function Page({ params }: PageProps) {
 
   const currentUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://yoursite.com'}/jobs/${slug}`;
 
+if (!job || error) {
+    notFound(); // 👈 this triggers the actual 404 page
+  }
+
   return (
     <>
       <script
