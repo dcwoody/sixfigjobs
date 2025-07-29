@@ -33,17 +33,6 @@ interface Company {
     updated_at?: string;
 }
 
-interface Job {
-    JobID: string;
-    CompanyLogo: string;
-    JobTitle: string;
-    Company: string;
-    Location: string;
-    formatted_salary: string;
-    JobType: string;
-    ShortDescription: string;
-    slug: string;
-}
 
 // Create URL-friendly slug from company name
 function createSlug(name: string): string {
