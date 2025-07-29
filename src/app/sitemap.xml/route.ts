@@ -1,11 +1,5 @@
-// /src/app/sitemap.xml/route.ts
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { NextResponse } from 'next/server';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function GET() {
   const { data: jobs, error } = await supabase
@@ -14,32 +8,48 @@ export async function GET() {
     .order('UpdatedTime', { ascending: false });
 
   if (error || !jobs) {
-    console.error('❌ Sitemap error:', error?.message || 'No jobs returned');
-    return new Response('Error generating sitemap', { status: 500 });
+    console.error('❌ Sitemap generation error:', error?.message || 'No jobs found');
+    return new Response('Failed to generate sitemap.', { status: 500 });
   }
 
   const baseUrl = 'https://sixfighires.com';
 
-  const urls = jobs.map((job) => {
-    return `
-      <url>
-        <loc>${baseUrl}/jobs/${job.slug}</loc>
-        <lastmod>${new Date(job.UpdatedTime || new Date()).toISOString()}</lastmod>
-      </url>`;
-  });
+  const staticUrls = [
+    '/',
+    '/jobs'
+  ];
 
-  const staticUrls = `
-    <url><loc>${baseUrl}</loc></url>
-    <url><loc>${baseUrl}/jobs</loc></url>
-  `;
+  const staticXml = staticUrls
+    .map(
+      (path) => `
+    <url>
+      <loc>${baseUrl}${path}</loc>
+      <changefreq>weekly</changefreq>
+      <priority>0.7</priority>
+    </url>`
+    )
+    .join('\n');
 
-  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+  const jobXml = jobs
+    .map((job) => {
+      const lastMod = new Date(job.UpdatedTime || new Date()).toISOString();
+      return `
+    <url>
+      <loc>${baseUrl}/jobs/${job.slug}</loc>
+      <lastmod>${lastMod}</lastmod>
+      <changefreq>weekly</changefreq>
+      <priority>0.9</priority>
+    </url>`;
+    })
+    .join('\n');
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
   <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-    ${staticUrls}
-    ${urls.join('\n')}
+  ${staticXml}
+  ${jobXml}
   </urlset>`;
 
-  return new NextResponse(sitemap, {
+  return new NextResponse(xml.trim(), {
     headers: {
       'Content-Type': 'application/xml',
     },
