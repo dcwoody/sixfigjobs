@@ -28,8 +28,12 @@ interface Job {
 interface Company {
   company_name: string;
   overall_rating?: number;
+  career_rating?: number;
   website?: string;
-  ceo?: string;
+  ceo_name?: string;
+  ceo_photo?: string;
+  created_at?: string;
+  updated_at?: string;
   // add any other fields you want to use
 }
 
@@ -41,9 +45,23 @@ function toTitleCase(str: string): string {
     .map(word =>
       word.length > 2
         ? word.charAt(0).toUpperCase() + word.slice(1)
-        : word // leave short words (like "at", "of", etc.) lowercase if desired
+        : word
     )
     .join(' ');
+}
+
+// Add this helper function for time formatting
+function formatTimeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffInDays === 0) return 'today';
+  if (diffInDays === 1) return 'yesterday';
+  if (diffInDays < 7) return `${diffInDays} days ago`;
+  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+  if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`;
+  return `${Math.floor(diffInDays / 365)} years ago`;
 }
 
 interface PageProps {
@@ -138,8 +156,8 @@ export default async function Page({ params }: PageProps) {
   // Get company data from companies_db
   const { data: companyData }: { data: Company | null } = await supabase
     .from('companies_db')
-    .select('overall_rating, ceo_name, ceo_photo, website, company_name, short_name')
-    .ilike('company_name', `%${job.Company}%`)
+    .select('overall_rating, career_rating, ceo_name, ceo_photo, website, name, short_name, updated_at')
+    .ilike('name', `%${job.Company}%`)
     .limit(1)
     .single();
 
@@ -184,6 +202,8 @@ export default async function Page({ params }: PageProps) {
     } : undefined,
     "employmentType": job.JobType.toUpperCase()
   };
+
+
 
   const currentUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://yoursite.com'}/jobs/${slug}`;
 
@@ -378,7 +398,9 @@ export default async function Page({ params }: PageProps) {
                     {[1, 2, 3, 4, 5].map((star) => (
                       <svg
                         key={star}
-                        className={`w-5 h-5 ${companyData?.overall_rating && star <= Math.round(companyData.overall_rating) ? 'text-yellow-400' : 'text-gray-300'}`}
+                        className={`w-5 h-5 ${companyData?.overall_rating && star <= Math.round(companyData.overall_rating)
+                          ? 'text-yellow-400'
+                          : 'text-gray-300'}`}
                         fill="currentColor"
                         viewBox="0 0 22 20"
                       >
@@ -389,16 +411,64 @@ export default async function Page({ params }: PageProps) {
 
                   {companyData?.overall_rating !== undefined && companyData?.overall_rating !== null ? (
                     <>
-                      <div className="text-2xl font-bold text-gray-900 mb-1">{companyData.overall_rating.toFixed(1)}</div>
-                      <div className="text-sm text-gray-600">out of 5 stars</div>
-                      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                        <div className="text-xs text-gray-500">Based on employee reviews</div>
+                      <div className="text-2xl font-bold text-gray-900 mb-1">
+                        {companyData.overall_rating.toFixed(1)}
+                      </div>
+                      <div className="text-sm text-gray-600 mb-2">out of 5 stars</div>
+
+                      {/* Enhanced info section */}
+                      <div className="mt-4 p-3 bg-gray-50 rounded-lg space-y-2">
+                        <div className="text-xs text-gray-500">
+                          Based on employee reviews
+                        </div>
+
+                        {/* Data freshness indicator */}
+                        {companyData.updated_at && (
+                          <div className="text-xs text-gray-400">
+                            Updated {formatTimeAgo(companyData.updated_at)}
+                          </div>
+                        )}
+
+                        {/* Career Rating if available */}
+                        {companyData.career_rating && (
+                          <div className="text-xs text-gray-600 mt-2">
+                            Career Opportunities: {companyData.career_rating.toFixed(1)}/5
+                          </div>
+                        )}
+
+                        {/* Link to search Glassdoor */}
+                        <a
+                          href={`https://www.glassdoor.com/Search/results.htm?keyword=${encodeURIComponent(job.Company)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 mt-2"
+                        >
+                          View on Glassdoor
+                          <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
                       </div>
                     </>
                   ) : (
                     <>
                       <div className="text-gray-500 text-sm italic mb-1">Not yet rated</div>
                       <div className="text-sm text-gray-400">No available Glassdoor rating</div>
+
+                      {/* Encourage users to check Glassdoor directly */}
+                      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                        <div className="text-xs text-gray-500 mb-2">
+                          Want to know more about this company?
+                        </div>
+                        <a
+                          href={`https://www.glassdoor.com/Search/results.htm?keyword=${encodeURIComponent(job.Company)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:text-blue-800"
+                        >
+                          Search on Glassdoor →
+                        </a>
+                      </div>
                     </>
                   )}
                 </div>
