@@ -94,8 +94,8 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
               {q || location ? (
                 <>
                   {totalJobs} jobs found
-                  {q && <span> for "{q}"</span>}
-                  {location && <span> in "{location}"</span>}
+                  {q && <span> for &quot;{q}&quot;</span>}
+                  {location && <span> in &quot;{location}&quot;</span>}
                 </>
               ) : (
                 `Browse ${totalJobs} available six-figure opportunities`
@@ -222,18 +222,17 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
                     Previous
                   </Link>
                 )}
-                
+
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   const pageNum = i + 1;
                   return (
                     <Link
                       key={pageNum}
                       href={createPageUrl(pageNum)}
-                      className={`px-3 py-2 text-sm font-medium rounded-md ${
-                        pageNum === currentPage
+                      className={`px-3 py-2 text-sm font-medium rounded-md ${pageNum === currentPage
                           ? 'bg-blue-600 text-white'
                           : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                      }`}
+                        }`}
                     >
                       {pageNum}
                     </Link>
@@ -252,7 +251,7 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
             </div>
           )}
         </div>
-        
+
         {/* Footer */}
         <Footer />
       </div>
