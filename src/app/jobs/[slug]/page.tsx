@@ -146,7 +146,7 @@ export default async function Page({ params }: PageProps) {
 
   const { data: companyData } = await supabase
     .from('companies_db')
-    .select('overall_rating, career_rating, ceo_name, ceo_photo, website, name, short_name, updated_at, id')
+    .select('slug, overall_rating, career_rating, ceo_name, ceo_photo, website, name, short_name, updated_at, id')
     .eq('slug', companySlug)
     .single();
 
