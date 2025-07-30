@@ -167,8 +167,6 @@ export default async function Page({ params }: PageProps) {
     .ilike('name', job.Company)
     .maybeSingle();
 
-  const companySlug = companyMeta?.slug;
-
   // Add this helper function at the top with your other utility functions:
   function createCompanySlug(companyName: string): string {
     return companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
