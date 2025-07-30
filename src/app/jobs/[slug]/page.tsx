@@ -166,12 +166,6 @@ export default async function Page({ params }: PageProps) {
     .limit(1)
     .single();
 
-  const { data: companyMeta } = await supabase
-    .from('companies_db')
-    .select('slug')
-    .ilike('name', job.Company)
-    .maybeSingle();
-
   const workArrangement = getWorkArrangement(job.Location, job.JobType);
 
   const structuredData = {
