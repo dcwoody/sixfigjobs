@@ -64,10 +64,10 @@ function formatTimeAgo(dateString: string): string {
   return `${Math.floor(diffInDays / 365)} years ago`;
 }
 
-  // Add this helper function at the top with your other utility functions:
-  function createCompanySlug(companyName: string): string {
-    return companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-  }
+// Add this helper function at the top with your other utility functions:
+function createCompanySlug(companyName: string): string {
+  return companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -159,9 +159,9 @@ export default async function Page({ params }: PageProps) {
     .limit(4);
 
   // Get company data from companies_db
-  const { data: companyData }: { data: Company | null } = await supabase
+  const { data: companyData } = await supabase
     .from('companies_db')
-    .select('overall_rating, career_rating, ceo_name, ceo_photo, website, name, short_name, updated_at')
+    .select('overall_rating, career_rating, ceo_name, ceo_photo, website, name, short_name, updated_at, id')
     .ilike('name', `%${job.Company}%`)
     .limit(1)
     .single();
@@ -275,7 +275,7 @@ export default async function Page({ params }: PageProps) {
                   <div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-1">{toTitleCase(job.JobTitle)}</h1>
                     <Link
-                      href={`/company/${createCompanySlug(job.Company)}`}
+                      href={`/company/${companyData?.id || createCompanySlug(job.Company)}`}
                       className="text-xl text-blue-600 font-semibold hover:underline transition-colors duration-200"
                     >
                       {job.Company}
