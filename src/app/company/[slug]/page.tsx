@@ -169,7 +169,7 @@ export default async function CompanyPage({ params }: PageProps) {
                                 <svg className="w-4 h-4 mx-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                 </svg>
-                                <Link href="/companies" className="hover:text-blue-600 transition-colors">
+                                <Link href="/company" className="hover:text-blue-600 transition-colors">
                                     Companies
                                 </Link>
                             </li>
