@@ -22,7 +22,7 @@ const Hero = () => {
             <Link href="/">
               <Image
                 className="h-8"
-                src="/flex-ui-assets/logos/flex-ui-green-light.svg"
+                src="/img/logo.png"
                 alt="Logo"
                 width={120}
                 height={40}
