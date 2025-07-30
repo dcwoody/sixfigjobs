@@ -25,7 +25,7 @@ const Hero = () => {
                 src="/img/logo.png"
                 alt="Logo"
                 width={120}
-                height={40}
+                height={43}
               />
             </Link>
           </div>
