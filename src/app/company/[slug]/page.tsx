@@ -121,11 +121,10 @@ export default async function CompanyPage({ params }: PageProps) {
     const { slug } = resolvedParams;
 
     // Try to find company by ID first, then by slug-like matching
-    const { data: company, error }: { data: Company | null; error: PostgrestError | null } = await supabase
+    const { data: company, error } = await supabase
         .from('companies_db')
         .select('*')
-        .eq('id', slug)
-        .or(`short_name.ilike.%${slug}%,name.ilike.%${decodeURIComponent(slug).replace(/-/g, ' ')}%`)
+        .eq('slug', slug)
         .single();
 
     if (error || !company) {
