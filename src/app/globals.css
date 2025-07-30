@@ -19,3 +19,9 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), sans-serif;
 }
+
+/* globals.css or just inline with @apply */
+.input {
+  @apply w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-blue-300;
+}
+
