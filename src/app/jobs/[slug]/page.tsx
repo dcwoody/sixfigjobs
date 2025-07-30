@@ -25,18 +25,6 @@ interface Job {
   id: string;
 }
 
-interface Company {
-  company_name: string;
-  overall_rating?: number;
-  career_rating?: number;
-  website?: string;
-  ceo_name?: string;
-  ceo_photo?: string;
-  created_at?: string;
-  updated_at?: string;
-  // add any other fields you want to use
-}
-
 // Title case utility (cleans up title)
 function toTitleCase(str: string): string {
   return str
