@@ -3,35 +3,11 @@ import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { PostgrestError } from '@supabase/supabase-js';
 import { Metadata } from 'next';
 
 import Hero from '@/components/Hero';
 import Footer from '@/components/Footer';
 
-interface Company {
-    id: string;
-    name: string;
-    short_name: string;
-    website?: string;
-    headquarters?: string;
-    industry?: string;
-    size?: string;
-    type?: string;
-    year_founded?: number;
-    revenue?: string;
-    description?: string;
-    mission?: string;
-    company_logo?: string;
-    cover_photo?: string;
-    overall_rating?: number;
-    career_rating?: number;
-    ceo_name?: string;
-    ceo_photo?: string;
-    ceo_title?: string;
-    created_at?: string;
-    updated_at?: string;
-}
 
 // Create URL-friendly slug from company name
 function createSlug(name: string): string {

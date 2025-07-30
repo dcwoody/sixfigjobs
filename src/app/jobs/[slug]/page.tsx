@@ -50,10 +50,6 @@ function toTitleCase(str: string): string {
     .join(' ');
 }
 
-function createCompanySlug(companyName: string): string {
-  return companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-}
-
 // Add this helper function for time formatting
 function formatTimeAgo(dateString: string): string {
   const date = new Date(dateString);
@@ -166,7 +162,7 @@ export default async function Page({ params }: PageProps) {
     .single();
 
   // Fetch company slug by matching company name
-  const { data: companyMeta, error: companyError } = await supabase
+  const { data: companyMeta } = await supabase
     .from('companies_db')
     .select('slug')
     .ilike('name', job.Company)
