@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
 import Hero from '@/components/Hero';
-import { Search, MapPin, Building2, DollarSign, Calendar, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, MapPin, Building2, DollarSign, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Job {
   JobID: string;
@@ -70,11 +70,11 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    
+
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -124,8 +124,9 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
                 {q || location ? (
                   <>
                     <strong className="text-gray-900">{totalJobs}</strong> jobs found
-                    {q && <span> for "{q}"</span>}
-                    {location && <span> in "{location}"</span>}
+                    {q && <span> for &quot;{q}&quot;</span>}
+                    {location && <span> in &quot;{location}&quot;</span>}
+
                   </>
                 ) : (
                   <>Browse <strong className="text-gray-900">{totalJobs}</strong> curated high-paying opportunities from top companies</>
@@ -157,7 +158,7 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="flex flex-wrap gap-2">
                       <span className="text-sm text-gray-500 font-medium">Popular:</span>
@@ -171,7 +172,7 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
                         Data Scientist
                       </Link>
                     </div>
-                    
+
                     <div className="flex gap-3">
                       <button
                         type="submit"
@@ -208,12 +209,12 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
                       <div className="flex items-center space-x-3 flex-1">
                         {job.CompanyLogo && (
                           <div className="flex-shrink-0">
-                            <Image 
-                              src={job.CompanyLogo} 
-                              alt={`${job.Company} logo`} 
-                              width={48} 
-                              height={48} 
-                              className="w-12 h-12 object-contain rounded-lg bg-gray-50 p-1" 
+                            <Image
+                              src={job.CompanyLogo}
+                              alt={`${job.Company} logo`}
+                              width={48}
+                              height={48}
+                              className="w-12 h-12 object-contain rounded-lg bg-gray-50 p-1"
                             />
                           </div>
                         )}
@@ -245,14 +246,14 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
                           </span>
                         )}
                       </div>
-                      
+
                       {job.formatted_salary && (
                         <div className="flex items-center text-gray-600">
                           <DollarSign className="w-4 h-4 mr-2 flex-shrink-0" />
                           <span className="text-sm font-semibold text-[#31C7FF]">{job.formatted_salary}</span>
                         </div>
                       )}
-                      
+
                       <div className="flex items-center text-gray-600">
                         <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
                         <span className="text-sm">{formatDate(job.PostedDate)}</span>
@@ -297,7 +298,7 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
                   <span className="font-semibold text-gray-900">{Math.min(offset + JOBS_PER_PAGE, totalJobs || 0)}</span> of{' '}
                   <span className="font-semibold text-gray-900">{totalJobs}</span> results
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   {currentPage > 1 && (
                     <Link
@@ -313,16 +314,15 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                       const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
                       if (pageNum > totalPages) return null;
-                      
+
                       return (
                         <Link
                           key={pageNum}
                           href={createPageUrl(pageNum)}
-                          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                            pageNum === currentPage
+                          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${pageNum === currentPage
                               ? 'bg-[#31C7FF] text-white'
                               : 'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-900'
-                          }`}
+                            }`}
                         >
                           {pageNum}
                         </Link>
