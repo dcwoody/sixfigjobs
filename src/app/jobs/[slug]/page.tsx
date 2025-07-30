@@ -64,6 +64,11 @@ function formatTimeAgo(dateString: string): string {
   return `${Math.floor(diffInDays / 365)} years ago`;
 }
 
+  // Add this helper function at the top with your other utility functions:
+  function createCompanySlug(companyName: string): string {
+    return companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  }
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
@@ -166,11 +171,6 @@ export default async function Page({ params }: PageProps) {
     .select('slug')
     .ilike('name', job.Company)
     .maybeSingle();
-
-  // Add this helper function at the top with your other utility functions:
-  function createCompanySlug(companyName: string): string {
-    return companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-  }
 
   const workArrangement = getWorkArrangement(job.Location, job.JobType);
 
