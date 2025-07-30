@@ -1,73 +1,120 @@
-'use client';
+// src/components/FeaturedJobs.tsx
+import React from 'react';
+import { ArrowRight, MapPin, Clock, Building2 } from 'lucide-react';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import Link from 'next/link';
-
-interface Job {
-  JobID: string;
-  JobTitle: string;
-  ShortDescription: string;
-  slug: string;
-}
-
-export default function FeaturedJobs() {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchJobs = async () => {
-      const { data, error } = await supabase.rpc('get_random_jobs');
-      if (!error && data) setJobs(data);
-      setLoading(false);
-    };
-
-    fetchJobs();
-  }, []);
-
-  if (!loading && jobs.length === 0) {
-    return <div className="text-center text-gray-600">No featured jobs found.</div>;
-  }
-
-  if (loading) return <div className="p-4 text-center">Loading featured jobs...</div>;
+const FeaturedJobs = () => {
+  const jobs = [
+    {
+      id: 1,
+      title: 'Human Services Benefits Programs Coordinator',
+      company: 'City of Alexandria',
+      location: 'Alexandria, VA',
+      salary: '$65k - $75k',
+      type: 'Full-time',
+      description: 'Supports the City of Alexandria\'s operations, providing administrative support and coordination for benefits programs.',
+      posted: 'Posted recently',
+      tags: ['Government', 'Benefits', 'Coordination']
+    },
+    {
+      id: 2,  
+      title: 'Graphic Designer (Junior)',
+      company: 'Creative Agency',
+      location: 'Remote',
+      salary: '$45k - $55k',
+      type: 'Full-time',
+      description: 'A Graphics Designer is sought to develop communication products, marketing materials, and visual content.',
+      posted: 'Posted recently',
+      tags: ['Design', 'Marketing', 'Creative']
+    },
+    {
+      id: 3,
+      title: 'Registered Nurse - Neurology',
+      company: 'Medical Center',
+      location: 'Washington, DC',
+      salary: '$80k - $95k', 
+      type: 'Part-time/Full-time',
+      description: 'A Registered Nurse in Neurology is sought for a part-time, full-time, or per diem position in our specialty unit.',
+      posted: 'Posted recently',
+      tags: ['Healthcare', 'Nursing', 'Neurology']
+    },
+    {
+      id: 4,
+      title: 'Budget Analyst',
+      company: 'Financial Services',
+      location: 'Arlington, VA',
+      salary: '$70k - $85k',
+      type: 'Full-time', 
+      description: 'Budget analyst responsible for assessing budget impacts, tracking expenditures, and financial planning.',
+      posted: 'Posted recently',
+      tags: ['Finance', 'Analysis', 'Budgeting']
+    }
+  ];
 
   return (
-    <section className="py-12 px-4">
-      <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">Featured Jobs</h1>
-
-      <div className="max-w-screen-lg mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-          {jobs.map((job) => (
-            <div key={job.JobID} className="flex flex-col bg-white border border-gray-200 shadow-2xs rounded-xl h-full">
-              <div className="p-4 md:p-5">
-                {/* Text content wrapper with a min-height to ensure consistent card size */}
-                <div className="min-h-[120px]">
-                  <h3 className="text-lg font-bold text-gray-800 line-clamp-2">
-                    {job.JobTitle}
-                  </h3>
-                  <p className="mt-2 text-gray-500 line-clamp-3">
-                    {job.ShortDescription}
-                  </p>
-                </div>
-                <Link
-                  className="mt-3 inline-flex items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-blue-600 decoration-2 hover:text-blue-700 hover:underline focus:underline focus:outline-hidden focus:text-blue-700 disabled:opacity-50 disabled:pointer-events-none"
-                  href={`/jobs/${job.slug}`}
-                >
-                  View Job
-                  <svg className="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m9 18 6-6-6-6"></path>
-                  </svg>
-                </Link>
-              </div>
-              <div className="bg-gray-100 border-t border-gray-200 rounded-b-xl py-3 px-4 md:py-4 md:px-5">
-                <p className="mt-1 text-sm text-gray-500">
-                  Posted recently
-                </p>
-              </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {jobs.map((job) => (
+        <div 
+          key={job.id} 
+          className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-all duration-200 group h-full flex flex-col"
+        >
+          {/* Header */}
+          <div className="flex-shrink-0 mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 min-h-[3.5rem] group-hover:text-[#31C7FF] transition-colors">
+              {job.title}
+            </h3>
+            <div className="flex items-center text-gray-600 mb-1">
+              <Building2 className="w-4 h-4 mr-2 flex-shrink-0" />
+              <span className="font-medium text-sm truncate">{job.company}</span>
             </div>
-          ))}
+            <div className="flex items-center text-gray-600 mb-1">
+              <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
+              <span className="text-sm truncate">{job.location}</span>
+            </div>
+            <div className="text-[#31C7FF] font-semibold text-sm mb-2">
+              {job.salary}
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="flex-grow mb-4">
+            <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
+              {job.description}
+            </p>
+          </div>
+
+          {/* Tags */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {job.tags.slice(0, 2).map((tag, index) => (
+              <span 
+                key={index} 
+                className="px-2 py-1 text-xs font-medium bg-[#31C7FF]/10 text-[#31C7FF] rounded-md"
+              >
+                {tag}
+              </span>
+            ))}
+            {job.tags.length > 2 && (
+              <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-md">
+                +{job.tags.length - 2}
+              </span>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex-shrink-0 space-y-3">
+            <div className="flex items-center text-gray-500 text-xs">
+              <Clock className="w-3 h-3 mr-1" />
+              <span>{job.posted}</span>
+            </div>
+            
+            <button className="w-full bg-[#31C7FF] hover:bg-[#28B4E6] text-white py-2 px-4 rounded-lg font-medium transition-all duration-200 hover:shadow-md flex items-center justify-center group">
+              View Job
+              <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
         </div>
-      </div>
-    </section>
+      ))}
+    </div>
   );
-}
+};
+
+export default FeaturedJobs;

@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
 import Hero from '@/components/Hero';
+import { Search, MapPin, Building2, DollarSign, Calendar, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Job {
   JobID: string;
@@ -23,7 +24,7 @@ interface PageProps {
   searchParams: Promise<{ q?: string; location?: string; page?: string }>;
 }
 
-const JOBS_PER_PAGE = 20;
+const JOBS_PER_PAGE = 12;
 
 export default async function JobsListingPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
@@ -66,6 +67,14 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return '—';
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -81,178 +90,261 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
     return `/jobs${params.toString() ? `?${params.toString()}` : ''}`;
   };
 
+  const getJobTypeColor = (jobType: string) => {
+    switch (jobType.toLowerCase()) {
+      case 'full-time':
+        return 'bg-[#31C7FF]/10 text-[#31C7FF]';
+      case 'part-time':
+        return 'bg-orange-100 text-orange-800';
+      case 'contract':
+        return 'bg-purple-100 text-purple-800';
+      case 'remote':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <>
       <Hero />
       <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto py-10 px-4">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {q || location ? 'Search Results' : 'All Jobs'}
-            </h1>
-            <p className="text-gray-600 mb-6">
-              {q || location ? (
-                <>
-                  {totalJobs} jobs found
-                  {q && <span> for &quot;{q}&quot;</span>}
-                  {location && <span> in &quot;{location}&quot;</span>}
-                </>
-              ) : (
-                `Browse ${totalJobs} available six-figure opportunities`
-              )}
-            </p>
-
-            {/* Search Bar */}
-            <form method="GET" action="/jobs" className="flex flex-col lg:flex-row gap-4">
-              <div className="relative w-full lg:w-1/2">
-                <input
-                  type="text"
-                  name="q"
-                  defaultValue={q || ''}
-                  placeholder="Search for jobs, companies, or keywords..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 placeholder-gray-500"
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-              </div>
-              <div className="w-full lg:w-1/3">
-                <input
-                  type="text"
-                  name="location"
-                  defaultValue={location || ''}
-                  placeholder="Location or 'remote'"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 placeholder-gray-500"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium"
-                >
-                  Search
-                </button>
-                {(q || location) && (
-                  <Link
-                    href="/jobs"
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors font-medium"
-                  >
-                    Clear
-                  </Link>
+        {/* Header Section */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                {q || location ? (
+                  <>Find Your Next <span className="text-[#31C7FF]">Six-Figure Role</span></>
+                ) : (
+                  <>Premium <span className="text-[#31C7FF]">Job Opportunities</span></>
                 )}
-              </div>
-            </form>
-          </div>
+              </h1>
+              <p className="text-xl text-gray-600 mb-8">
+                {q || location ? (
+                  <>
+                    <strong className="text-gray-900">{totalJobs}</strong> jobs found
+                    {q && <span> for "{q}"</span>}
+                    {location && <span> in "{location}"</span>}
+                  </>
+                ) : (
+                  <>Browse <strong className="text-gray-900">{totalJobs}</strong> curated high-paying opportunities from top companies</>
+                )}
+              </p>
 
-          {/* Jobs Table */}
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-8">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job Details</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posted</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {jobs.map((job: Job) => (
-                    <tr key={job.JobID} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <Link href={`/jobs/${job.slug}`} className="block group">
-                          <div className="flex items-start">
-                            <div className="flex-1">
-                              <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1">{job.JobTitle}</h3>
-                              <p className="text-sm text-gray-600 mt-1 line-clamp-2">{job.ShortDescription}</p>
-                            </div>
-                          </div>
+              {/* Enhanced Search Bar */}
+              <div className="bg-white rounded-2xl shadow-lg p-6 border">
+                <form method="GET" action="/jobs" className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <input
+                        type="text"
+                        name="q"
+                        defaultValue={q || ''}
+                        placeholder="Job title, keywords, or company"
+                        className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#31C7FF] focus:border-transparent outline-none text-gray-700 text-lg"
+                      />
+                    </div>
+                    <div className="relative">
+                      <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <input
+                        type="text"
+                        name="location"
+                        defaultValue={location || ''}
+                        placeholder="City, state, or 'remote'"
+                        className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#31C7FF] focus:border-transparent outline-none text-gray-700 text-lg"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex flex-wrap gap-2">
+                      <span className="text-sm text-gray-500 font-medium">Popular:</span>
+                      <Link href="/jobs?q=Software Engineer&location=Remote" className="text-sm px-3 py-1 rounded-full border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-800 transition-colors">
+                        Remote Software Engineer
+                      </Link>
+                      <Link href="/jobs?q=Product Manager" className="text-sm px-3 py-1 rounded-full border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-800 transition-colors">
+                        Product Manager
+                      </Link>
+                      <Link href="/jobs?q=Data Scientist&location=San Francisco" className="text-sm px-3 py-1 rounded-full border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-800 transition-colors">
+                        Data Scientist
+                      </Link>
+                    </div>
+                    
+                    <div className="flex gap-3">
+                      <button
+                        type="submit"
+                        className="px-8 py-4 bg-[#31C7FF] hover:bg-[#28B4E6] text-white font-semibold rounded-xl transition-all duration-200 hover:shadow-lg flex items-center whitespace-nowrap"
+                      >
+                        Search Jobs
+                        <Search className="w-5 h-5 ml-2" />
+                      </button>
+                      {(q || location) && (
+                        <Link
+                          href="/jobs"
+                          className="px-6 py-4 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all duration-200 flex items-center"
+                        >
+                          Clear Filters
                         </Link>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          {job.CompanyLogo && (
-                            <div className="flex-shrink-0 mr-3">
-                              <Image src={job.CompanyLogo} alt={`${job.Company} logo`} width={32} height={32} className="w-8 h-8 object-contain rounded" />
-                            </div>
-                          )}
-                          <div className="text-sm font-medium text-gray-900 line-clamp-1">{job.Company}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <span className="text-sm text-gray-900">{job.Location}</span>
-                          {job.is_remote && (
-                            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Remote</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-semibold text-green-600">{job.formatted_salary || '—'}</span>
-                      </td>
-                      <td className="px-6 py-4 w-32">
-                        <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
-                          {job.JobType}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{formatDate(job.PostedDate)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      )}
+                    </div>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mb-8">
-              <div className="text-sm text-gray-700">
-                Showing {offset + 1} to {Math.min(offset + JOBS_PER_PAGE, totalJobs || 0)} of {totalJobs} results
+        {/* Jobs Grid */}
+        <div className="max-w-7xl mx-auto px-4 py-12">
+          {jobs && jobs.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              {jobs.map((job: Job) => (
+                <Link key={job.JobID} href={`/jobs/${job.slug}`} className="block group">
+                  <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-200 h-full">
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-3 flex-1">
+                        {job.CompanyLogo && (
+                          <div className="flex-shrink-0">
+                            <Image 
+                              src={job.CompanyLogo} 
+                              alt={`${job.Company} logo`} 
+                              width={48} 
+                              height={48} 
+                              className="w-12 h-12 object-contain rounded-lg bg-gray-50 p-1" 
+                            />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-lg font-semibold text-gray-900 group-hover:text-[#31C7FF] transition-colors line-clamp-2 mb-1">
+                            {job.JobTitle}
+                          </h3>
+                          <div className="flex items-center text-gray-600">
+                            <Building2 className="w-4 h-4 mr-1 flex-shrink-0" />
+                            <span className="font-medium text-sm truncate">{job.Company}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <p className="text-gray-600 text-sm line-clamp-2 mb-4 leading-relaxed">
+                      {job.ShortDescription}
+                    </p>
+
+                    {/* Details */}
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-gray-600">
+                        <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
+                        <span className="text-sm">{job.Location}</span>
+                        {job.is_remote && (
+                          <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                            Remote
+                          </span>
+                        )}
+                      </div>
+                      
+                      {job.formatted_salary && (
+                        <div className="flex items-center text-gray-600">
+                          <DollarSign className="w-4 h-4 mr-2 flex-shrink-0" />
+                          <span className="text-sm font-semibold text-[#31C7FF]">{job.formatted_salary}</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center text-gray-600">
+                        <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
+                        <span className="text-sm">{formatDate(job.PostedDate)}</span>
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getJobTypeColor(job.JobType)}`}>
+                        {job.JobType}
+                      </span>
+                      <span className="text-[#31C7FF] text-sm font-medium group-hover:text-[#28B4E6] transition-colors">
+                        View Details →
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+                <Search className="w-8 h-8 text-gray-400" />
               </div>
-              <div className="flex items-center space-x-2">
-                {currentPage > 1 && (
-                  <Link
-                    href={createPageUrl(currentPage - 1)}
-                    className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Previous
-                  </Link>
-                )}
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No jobs found</h3>
+              <p className="text-gray-600 mb-6">Try adjusting your search criteria or browse all available positions.</p>
+              <Link
+                href="/jobs"
+                className="inline-flex items-center px-6 py-3 bg-[#31C7FF] hover:bg-[#28B4E6] text-white font-semibold rounded-lg transition-all duration-200"
+              >
+                Browse All Jobs
+              </Link>
+            </div>
+          )}
 
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const pageNum = i + 1;
-                  return (
+          {/* Enhanced Pagination */}
+          {totalPages > 1 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-sm text-gray-600">
+                  Showing <span className="font-semibold text-gray-900">{offset + 1}</span> to{' '}
+                  <span className="font-semibold text-gray-900">{Math.min(offset + JOBS_PER_PAGE, totalJobs || 0)}</span> of{' '}
+                  <span className="font-semibold text-gray-900">{totalJobs}</span> results
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  {currentPage > 1 && (
                     <Link
-                      key={pageNum}
-                      href={createPageUrl(pageNum)}
-                      className={`px-3 py-2 text-sm font-medium rounded-md ${pageNum === currentPage
-                          ? 'bg-blue-600 text-white'
-                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                        }`}
+                      href={createPageUrl(currentPage - 1)}
+                      className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-colors"
                     >
-                      {pageNum}
+                      <ChevronLeft className="w-4 h-4 mr-1" />
+                      Previous
                     </Link>
-                  );
-                })}
+                  )}
 
-                {currentPage < totalPages && (
-                  <Link
-                    href={createPageUrl(currentPage + 1)}
-                    className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Next
-                  </Link>
-                )}
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                      if (pageNum > totalPages) return null;
+                      
+                      return (
+                        <Link
+                          key={pageNum}
+                          href={createPageUrl(pageNum)}
+                          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            pageNum === currentPage
+                              ? 'bg-[#31C7FF] text-white'
+                              : 'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-900'
+                          }`}
+                        >
+                          {pageNum}
+                        </Link>
+                      );
+                    })}
+                  </div>
+
+                  {currentPage < totalPages && (
+                    <Link
+                      href={createPageUrl(currentPage + 1)}
+                      className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                    >
+                      Next
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Link>
+                  )}
+                </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer */}
         <Footer />
       </div>
     </>
