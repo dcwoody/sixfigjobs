@@ -169,6 +169,11 @@ export default async function Page({ params }: PageProps) {
 
   const companySlug = companyMeta?.slug;
 
+  // Add this helper function at the top with your other utility functions:
+  function createCompanySlug(companyName: string): string {
+    return companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  }
+
   const workArrangement = getWorkArrangement(job.Location, job.JobType);
 
   const structuredData = {
@@ -277,15 +282,12 @@ export default async function Page({ params }: PageProps) {
                   )}
                   <div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-1">{toTitleCase(job.JobTitle)}</h1>
-                    {companySlug ? (
-                      <Link href={`/company/${companySlug}`}
-                        className="text-xl text-blue-600 font-semibold hover:underline transition-colors duration-200"
-                      >
-                        {job.Company}
-                      </Link>
-                    ) : (
-                      <span className="text-xl text-gray-600">{job.Company}</span>
-                    )}
+                    <Link
+                      href={`/company/${createCompanySlug(job.Company)}`}
+                      className="text-xl text-blue-600 font-semibold hover:underline transition-colors duration-200"
+                    >
+                      {job.Company}
+                    </Link>
                     <div className="flex items-center text-gray-600 mt-1">
                       <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
