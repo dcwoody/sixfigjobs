@@ -147,11 +147,12 @@ export default async function Page({ params }: PageProps) {
     .limit(4);
 
   // Get company data from companies_db
+  const companySlug = job.Company.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
   const { data: companyData } = await supabase
     .from('companies_db')
     .select('overall_rating, career_rating, ceo_name, ceo_photo, website, name, short_name, updated_at, id')
-    .ilike('name', `%${job.Company}%`)
-    .limit(1)
+    .eq('slug', companySlug)
     .single();
 
   const workArrangement = getWorkArrangement(job.Location, job.JobType);
@@ -262,12 +263,16 @@ export default async function Page({ params }: PageProps) {
                   )}
                   <div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-1">{toTitleCase(job.JobTitle)}</h1>
-                    <Link
-                      href={`/company/${companyData?.id || createCompanySlug(job.Company)}`}
-                      className="text-xl text-blue-600 font-semibold hover:underline transition-colors duration-200"
-                    >
-                      {job.Company}
-                    </Link>
+                    {companyData?.slug ? (
+                      <Link
+                        href={`/company/${companyData.slug}`}
+                        className="text-blue-600 font-medium hover:underline"
+                      >
+                        {companyData.name}
+                      </Link>
+                    ) : (
+                      <span className="text-blue-600 font-medium">{job.Company}</span>
+                    )}
                     <div className="flex items-center text-gray-600 mt-1">
                       <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />

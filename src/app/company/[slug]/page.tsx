@@ -51,11 +51,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const { slug } = resolvedParams;
 
     const { data: company } = await supabase
-        .from('companies_db')
-        .select('name, description, industry, headquarters')
-        .eq('id', slug)
-        .or(`short_name.ilike.%${slug}%,name.ilike.%${decodeURIComponent(slug).replace(/-/g, ' ')}%`)
-        .single();
+    .from('companies_db')
+    .select('name, description, industry, headquarters')
+    .eq('slug', slug)
+    .single();
 
     if (!company) {
         return {
