@@ -161,12 +161,11 @@ export default async function Page({ params }: PageProps) {
     .limit(1)
     .single();
 
-  // Fetch company slug by matching company name
   const { data: companyMeta } = await supabase
     .from('companies_db')
     .select('slug')
     .ilike('name', job.Company)
-    .single();
+    .maybeSingle();
 
   const companySlug = companyMeta?.slug;
 
@@ -279,8 +278,7 @@ export default async function Page({ params }: PageProps) {
                   <div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-1">{toTitleCase(job.JobTitle)}</h1>
                     {companySlug ? (
-                      <Link
-                        href={`/company/${companySlug}`}
+                      <Link href={`/company/${companySlug}`}
                         className="text-xl text-blue-600 font-semibold hover:underline transition-colors duration-200"
                       >
                         {job.Company}
