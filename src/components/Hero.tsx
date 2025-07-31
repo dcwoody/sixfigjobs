@@ -22,8 +22,8 @@ const Hero = () => {
             <Link href="/">
               <Image
                 className="h-8"
-                src="/img/logo.png"
-                alt="Logo"
+                src="/img/logo.svg"
+                alt="SixFigJobs.com Logo"
                 width={120}
                 height={43}
               />
