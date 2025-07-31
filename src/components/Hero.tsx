@@ -25,7 +25,6 @@ const Hero = () => {
                 src="/img/logo.svg"
                 alt="SixFigJobs.com Logo"
                 width={120}
-                height={43}
               />
             </Link>
           </div>
