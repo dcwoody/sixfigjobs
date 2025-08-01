@@ -3,151 +3,266 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabaseClient';
+import { Search, Menu, X, Briefcase, Building2, Users } from 'lucide-react';
 
 const Hero = () => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { session } = useAuth();
+  const router = useRouter();
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/jobs?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    }
+  };
+
+  const navigationLinks = [
+    { name: 'Browse Jobs', href: '/jobs', icon: Briefcase },
+    { name: 'Companies', href: '/companies', icon: Building2 },
+    { name: 'About', href: '/about', icon: Users },
+  ];
+
   return (
-    <section className="bg-white">
-      <nav className="flex justify-between p-6 px-4">
-        <div className="flex justify-between items-center w-full">
-          <div className="xl:w-1/3">
-            <Link href="/">
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <div className="flex items-center">
+            <Link href="/" className="flex-shrink-0">
               <Image
-                className="h-8"
+                className="h-8 w-auto"
                 src="/img/logo.svg"
                 alt="SixFigJobs.com Logo"
+                width={120}
+                height={32}
               />
             </Link>
           </div>
-          <div className="hidden xl:block xl:w-1/3">
-            <div className="flex items-center justify-end">
-              {session ? (
+
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex items-center space-x-8">
+            {navigationLinks.map((link) => (
+              <Link
+                key={link.name}
+                href={link.href}
+                className="flex items-center text-gray-700 hover:text-[#31C7FF] font-medium transition-colors duration-200"
+              >
+                <link.icon className="w-4 h-4 mr-2" />
+                {link.name}
+              </Link>
+            ))}
+          </div>
+
+          {/* Search Bar - Desktop */}
+          <div className="hidden md:flex flex-1 max-w-md mx-8">
+            <form onSubmit={handleSearch} className="w-full">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search jobs, companies..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#31C7FF] focus:border-transparent outline-none text-gray-700 placeholder-gray-500"
+                />
+              </div>
+            </form>
+          </div>
+
+          {/* Desktop Auth Buttons */}
+          <div className="hidden lg:flex items-center space-x-4">
+            {session ? (
+              <div className="flex items-center space-x-4">
+                <Link
+                  href="/dashboard"
+                  className="text-gray-700 hover:text-[#31C7FF] font-medium transition-colors duration-200"
+                >
+                  Dashboard
+                </Link>
                 <button
                   onClick={handleSignOut}
-                  className="py-2 px-4 mr-2 leading-5 text-gray-500 hover:text-gray-900 font-medium rounded-md"
+                  className="text-gray-700 hover:text-gray-900 font-medium transition-colors duration-200"
                 >
                   Sign Out
                 </button>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    className="py-2 px-4 mr-2 leading-5 text-gray-500 hover:text-gray-900 font-medium rounded-md"
-                  >
-                    Log In
-                  </Link>
-                  <Link
-                    href="/signup"
-                    className="py-2 px-4 text-sm leading-5 text-white bg-green-500 hover:bg-green-600 font-medium rounded-md"
-                  >
-                    Sign Up
-                  </Link>
-                </>
-              )}
-            </div>
+              </div>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-gray-700 hover:text-gray-900 font-medium transition-colors duration-200"
+                >
+                  Log In
+                </Link>
+                <Link
+                  href="/sign-up"
+                  className="bg-[#31C7FF] hover:bg-[#28B4E6] text-white px-6 py-2 rounded-lg font-semibold transition-all duration-200 hover:shadow-lg"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
+          </div>
+
+          {/* Mobile menu button */}
+          <div className="lg:hidden flex items-center space-x-2">
+            {/* Mobile Search Button */}
+            <Link
+              href="/jobs"
+              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <Search className="w-5 h-5" />
+            </Link>
+            
+            <button
+              onClick={() => setMobileNavOpen(true)}
+              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
           </div>
         </div>
-        <button
-          onClick={() => setMobileNavOpen(true)}
-          className="navbar-burger self-center xl:hidden"
-        >
-          <svg width="35" height="35" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="32" height="32" rx="6" fill="currentColor" className="text-gray-100" />
-            <path
-              d="M7 12H25M7 16H25M7 20H25"
-              stroke="currentColor"
-              className="text-gray-500"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
+
+        {/* Mobile Search Bar */}
+        <div className="md:hidden pb-4">
+          <form onSubmit={handleSearch}>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search jobs, companies..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#31C7FF] focus:border-transparent outline-none text-gray-700 placeholder-gray-500"
+              />
+            </div>
+          </form>
+        </div>
       </nav>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu Overlay */}
       {mobileNavOpen && (
-        <div className="navbar-menu fixed top-0 left-0 z-50 w-full h-full bg-gray-900 bg-opacity-50">
-          <div className="fixed top-0 left-0 bottom-0 w-4/6 max-w-xs bg-white">
-            <nav className="relative p-6 h-full overflow-y-auto flex flex-col justify-between">
-              <div>
-                <Link className="inline-block mb-6" href="/">
-                  <Image
-                    className="h-8"
-                    src="/flex-ui-assets/logos/flex-ui-green-light.svg"
-                    alt="Logo"
-                    width={120}
-                    height={40}
-                  />
-                </Link>
-                <ul className="py-6">
-                  {['Product', 'Features', 'Pricing', 'Resources'].map((item) => (
-                    <li key={item}>
-                      <a
-                        className="block py-3 px-4 text-gray-500 hover:text-gray-900 font-medium hover:bg-gray-50 rounded-md"
-                        href="#"
-                      >
-                        {item}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="flex flex-wrap">
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 bg-black bg-opacity-25" onClick={() => setMobileNavOpen(false)} />
+          
+          <div className="fixed top-0 right-0 bottom-0 w-full max-w-sm bg-white shadow-xl">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <Link href="/" className="flex-shrink-0" onClick={() => setMobileNavOpen(false)}>
+                <Image
+                  className="h-8 w-auto"
+                  src="/img/logo.svg"
+                  alt="SixFigJobs.com Logo"
+                  width={120}
+                  height={32}
+                />
+              </Link>
+              <button
+                onClick={() => setMobileNavOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="px-6 py-6 space-y-6">
+              {/* Mobile Navigation */}
+              <nav className="space-y-4">
+                {navigationLinks.map((link) => (
+                  <Link
+                    key={link.name}
+                    href={link.href}
+                    onClick={() => setMobileNavOpen(false)}
+                    className="flex items-center text-gray-700 hover:text-[#31C7FF] font-medium transition-colors duration-200 py-2"
+                  >
+                    <link.icon className="w-5 h-5 mr-3" />
+                    {link.name}
+                  </Link>
+                ))}
+              </nav>
+
+              {/* Mobile Auth */}
+              <div className="border-t border-gray-200 pt-6">
                 {session ? (
-                  <div className="w-full mb-2">
+                  <div className="space-y-4">
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setMobileNavOpen(false)}
+                      className="block text-gray-700 hover:text-[#31C7FF] font-medium transition-colors duration-200 py-2"
+                    >
+                      Dashboard
+                    </Link>
                     <button
-                      onClick={handleSignOut}
-                      className="block py-2 px-4 w-full text-sm text-center text-gray-500 hover:text-gray-900 font-medium rounded-md"
+                      onClick={() => {
+                        handleSignOut();
+                        setMobileNavOpen(false);
+                      }}
+                      className="block w-full text-left text-gray-700 hover:text-gray-900 font-medium transition-colors duration-200 py-2"
                     >
                       Sign Out
                     </button>
                   </div>
                 ) : (
-                  <>
-                    <div className="w-full mb-2">
-                      <Link
-                        href="/login"
-                        className="block py-2 px-4 w-full text-sm text-center text-gray-500 hover:text-gray-900 font-medium rounded-md"
-                      >
-                        Log In
-                      </Link>
-                    </div>
-                    <div className="w-full">
-                      <Link
-                        href="/signup"
-                        className="block py-2 px-4 w-full text-sm text-center text-white bg-green-500 hover:bg-green-600 font-medium rounded-md"
-                      >
-                        Sign Up
-                      </Link>
-                    </div>
-                  </>
+                  <div className="space-y-4">
+                    <Link
+                      href="/login"
+                      onClick={() => setMobileNavOpen(false)}
+                      className="block text-gray-700 hover:text-gray-900 font-medium transition-colors duration-200 py-2"
+                    >
+                      Log In
+                    </Link>
+                    <Link
+                      href="/sign-up"
+                      onClick={() => setMobileNavOpen(false)}
+                      className="block w-full text-center bg-[#31C7FF] hover:bg-[#28B4E6] text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200"
+                    >
+                      Sign Up
+                    </Link>
+                  </div>
                 )}
               </div>
-            </nav>
 
-            <button
-              onClick={() => setMobileNavOpen(false)}
-              className="navbar-close absolute top-5 right-3 p-4"
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path
-                  d="M6.94 6L11.14 1.80667C11.266 1.68113 11.3361 1.51087 11.3361 1.33333C11.3361 1.1558 11.266 0.985537 11.14 0.860002C11.0145 0.734466 10.8442 0.66394 10.6667 0.66394C10.4892 0.66394 10.3189 0.734466 10.1934 0.860002L6 5.06L1.80671 0.860002C1.68117 0.734466 1.51091 0.663941 1.33337 0.663941C1.15584 0.663941 0.985576 0.734466 0.860041 0.860002C0.734505 0.985537 0.66398 1.1558 0.66398 1.33333C0.66398 1.51087 0.734505 1.68113 0.860041 1.80667L5.06 6L0.860041 10.1933C0.797555 10.2553 0.747959 10.329 0.714113 10.4103C0.680267 10.4915 0.662842 10.5787 0.662842 10.6667C0.662842 10.7547 0.680267 10.8418 0.714113 10.9231C0.747959 11.0043 0.797555 11.078 0.860041 11.14C0.922016 11.2025 0.99575 11.2521 1.07699 11.2859C1.15823 11.3198 1.24537 11.3372 1.33337 11.3372C1.42138 11.3372 1.50852 11.3198 1.58976 11.2859C1.671 11.2521 1.74473 11.2025 1.80671 11.14L6 6.94L10.1934 11.14C10.2554 11.2025 10.3291 11.2521 10.4103 11.2859C10.4916 11.3198 10.5787 11.3372 10.6667 11.3372C10.7547 11.3372 10.8419 11.3198 10.9231 11.2859C11.0043 11.2521 11.0781 11.2025 11.14 11.14C11.2025 11.078 11.2521 11.0043 11.286 10.9231C11.3198 10.8418 11.3372 10.7547 11.3372 10.6667C11.3372 10.5787 11.3198 10.4915 11.286 10.4103C11.2521 10.329 11.2025 10.2553 11.14 10.1933L6.94 6Z"
-                  fill="#556987"
-                />
-              </svg>
-            </button>
+              {/* Mobile Quick Actions */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Quick Actions</h3>
+                <div className="space-y-2">
+                  <Link
+                    href="/jobs?location=remote"
+                    onClick={() => setMobileNavOpen(false)}
+                    className="block text-sm text-gray-600 hover:text-[#31C7FF] transition-colors py-1"
+                  >
+                    Remote Jobs
+                  </Link>
+                  <Link
+                    href="/jobs?q=senior"
+                    onClick={() => setMobileNavOpen(false)}
+                    className="block text-sm text-gray-600 hover:text-[#31C7FF] transition-colors py-1"
+                  >
+                    Senior Positions
+                  </Link>
+                  <Link
+                    href="/jobs"
+                    onClick={() => setMobileNavOpen(false)}
+                    className="block text-sm text-gray-600 hover:text-[#31C7FF] transition-colors py-1"
+                  >
+                    All Jobs
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
-    </section>
+    </header>
   );
 };
 
