@@ -105,6 +105,29 @@ const FeaturedJobs = async () => {
   };
 
   try {
+    // Add connection test
+    console.log('Testing Supabase connection...');
+    
+    // Test basic connection first
+    const { data: testData, error: testError } = await supabase
+      .from('job_listings_db')
+      .select('count')
+      .limit(1);
+    
+    if (testError) {
+      console.error('Supabase connection test failed:', testError);
+      return (
+        <div className="text-red-600 p-4 border border-red-200 rounded-lg">
+          <h3 className="font-semibold mb-2">Database Connection Error</h3>
+          <p className="text-sm mb-2">Error: {testError.message}</p>
+          <p className="text-xs text-gray-600">Code: {testError.code}</p>
+          <p className="text-xs text-gray-600">Details: {testError.details}</p>
+        </div>
+      );
+    }
+
+    console.log('Connection test successful, fetching jobs...');
+
     // Fetch all recent jobs
     const { data: allJobs, error } = await supabase
       .from('job_listings_db')
@@ -114,11 +137,30 @@ const FeaturedJobs = async () => {
 
     if (error) {
       console.error('Error fetching jobs:', error);
-      return <div className="text-red-600">Error loading featured jobs</div>;
+      return (
+        <div className="text-red-600 p-4 border border-red-200 rounded-lg">
+          <h3 className="font-semibold mb-2">Error Loading Jobs</h3>
+          <p className="text-sm mb-2">Error: {error.message}</p>
+          <p className="text-xs text-gray-600">Code: {error.code}</p>
+          <p className="text-xs text-gray-600">Details: {error.details || 'No additional details'}</p>
+        </div>
+      );
     }
 
+    console.log(`Fetched ${allJobs?.length || 0} jobs from database`);
+
     if (!allJobs || allJobs.length === 0) {
-      return <div className="text-gray-600">No featured jobs available</div>;
+      return (
+        <div className="text-center py-8">
+          <p className="text-gray-600">No jobs found in the database</p>
+          <Link 
+            href="/jobs" 
+            className="inline-block mt-4 px-6 py-2 bg-[#31C7FF] text-white rounded-lg hover:bg-[#28B4E6] transition-colors"
+          >
+            View All Jobs
+          </Link>
+        </div>
+      );
     }
 
     // Filter for jobs over $100k
@@ -127,6 +169,8 @@ const FeaturedJobs = async () => {
       const { min } = getSalaryRange(job.formatted_salary);
       return min >= 100000;
     });
+
+    console.log(`Found ${highPayingJobs.length} high-paying jobs`);
 
     // Separate remote and non-remote jobs
     const remoteJobs = highPayingJobs.filter(job => job.is_remote);
@@ -166,6 +210,7 @@ const FeaturedJobs = async () => {
       return (
         <div className="text-center py-8">
           <p className="text-gray-600">No high-paying jobs available at the moment.</p>
+          <p className="text-sm text-gray-500 mt-2">Found {allJobs.length} total jobs, but none meet the $100k+ criteria.</p>
           <Link 
             href="/jobs" 
             className="inline-block mt-4 px-6 py-2 bg-[#31C7FF] text-white rounded-lg hover:bg-[#28B4E6] transition-colors"
@@ -175,6 +220,8 @@ const FeaturedJobs = async () => {
         </div>
       );
     }
+
+    console.log(`Displaying ${featuredJobs.length} featured jobs`);
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -275,7 +322,10 @@ const FeaturedJobs = async () => {
     console.error('Error in FeaturedJobs component:', error);
     return (
       <div className="text-center py-8">
-        <p className="text-red-600">Error loading featured jobs</p>
+        <div className="text-red-600 p-4 border border-red-200 rounded-lg">
+          <h3 className="font-semibold mb-2">Unexpected Error</h3>
+          <p className="text-sm">Error: {error instanceof Error ? error.message : 'Unknown error'}</p>
+        </div>
         <Link 
           href="/jobs" 
           className="inline-block mt-4 px-6 py-2 bg-[#31C7FF] text-white rounded-lg hover:bg-[#28B4E6] transition-colors"
