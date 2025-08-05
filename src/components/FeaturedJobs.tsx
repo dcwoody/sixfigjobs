@@ -109,9 +109,9 @@ const FeaturedJobs = async () => {
     console.log('Testing Supabase connection...');
     
     // Test basic connection first
-    const { data: testData, error: testError } = await supabase
+    const { error: testError } = await supabase
       .from('job_listings_db')
-      .select('count')
+      .select('JobID')
       .limit(1);
     
     if (testError) {
