@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabaseClient';
-import { Search, Menu, X, Briefcase, Building2, Users } from 'lucide-react';
+import { Search, Menu, X, Briefcase, } from 'lucide-react';
 
 const Hero = () => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
