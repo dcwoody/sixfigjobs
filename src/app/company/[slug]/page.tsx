@@ -109,7 +109,7 @@ export default async function CompanyPage({ params }: PageProps) {
 
     // Get jobs for this company
     const { data: companyJobs } = await supabase
-        .from('jobs_db')
+        .from('job_listings_db')
         .select('JobID, CompanyLogo, JobTitle, Company, Location, formatted_salary, JobType, ShortDescription, slug')
         .ilike('Company', `%${company.name}%`)
         .limit(10);

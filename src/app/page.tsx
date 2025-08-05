@@ -46,7 +46,7 @@ export default function Home() {
   const stats = [
     { label: 'Active Jobs', value: '12,500+', icon: Briefcase },
     { label: 'Companies Hiring', value: '2,800+', icon: Building2 },
-    { label: 'Successful Placements', value: '45,000+', icon: Users },
+    { label: 'Successful Placements', value: '3,000+', icon: Users },
     { label: 'Average Salary', value: '$125k', icon: DollarSign }
   ];
 

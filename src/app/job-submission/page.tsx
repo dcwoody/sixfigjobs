@@ -60,7 +60,7 @@ export default function JobSubmissionPage() {
       return;
     }
 
-    const { error } = await supabase.from('jobs_db').insert([
+    const { error } = await supabase.from('job_listings_db').insert([
       {
         JobTitle: form.JobTitle,
         Company: form.Company,

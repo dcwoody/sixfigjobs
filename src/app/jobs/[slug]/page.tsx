@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = resolvedParams;
 
   const { data: job } = await supabase
-    .from('jobs_db')
+    .from('job_listings_db')
     .select('JobTitle, Company, ShortDescription, Location, formatted_salary, JobType')
     .eq('slug', slug)
     .single();
@@ -123,7 +123,7 @@ export default async function Page({ params }: PageProps) {
   const { slug } = resolvedParams;
 
   const { data: job, error }: { data: Job | null; error: PostgrestError | null } = await supabase
-    .from('jobs_db')
+    .from('job_listings_db')
     .select('*')
     .eq('slug', slug)
     .single();
@@ -135,7 +135,7 @@ export default async function Page({ params }: PageProps) {
 
   // Get similar jobs
   const { data: similarJobs } = await supabase
-    .from('jobs_db')
+    .from('job_listings_db')
     .select('JobID, JobTitle, Company, Location, formatted_salary, slug')
     .neq('JobID', job.JobID)
     .eq('JobType', job.JobType)

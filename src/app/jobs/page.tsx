@@ -32,7 +32,7 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
   const currentPage = parseInt(page || '1', 10);
   const offset = (currentPage - 1) * JOBS_PER_PAGE;
 
-  let countQuery = supabase.from('jobs_db').select('*', { count: 'exact', head: true });
+  let countQuery = supabase.from('job_listings_db').select('*', { count: 'exact', head: true });
 
   if (q) {
     countQuery = countQuery.or(`JobTitle.ilike.%${q}%,ShortDescription.ilike.%${q}%,Company.ilike.%${q}%`);
@@ -47,7 +47,7 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
   const totalPages = Math.ceil((totalJobs || 0) / JOBS_PER_PAGE);
 
   let query = supabase
-    .from('jobs_db')
+    .from('job_listings_db')
     .select('*')
     .order('PostedDate', { ascending: false })
     .range(offset, offset + JOBS_PER_PAGE - 1);

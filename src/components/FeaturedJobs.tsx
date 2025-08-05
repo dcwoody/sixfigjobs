@@ -107,7 +107,7 @@ const FeaturedJobs = async () => {
   try {
     // Fetch all recent jobs
     const { data: allJobs, error } = await supabase
-      .from('jobs_db')
+      .from('job_listings_db')
       .select('*')
       .order('PostedDate', { ascending: false })
       .limit(50); // Get more jobs to filter from

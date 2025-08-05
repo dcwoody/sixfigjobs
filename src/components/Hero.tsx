@@ -28,8 +28,8 @@ const Hero = () => {
 
   const navigationLinks = [
     { name: 'Browse Jobs', href: '/jobs', icon: Briefcase },
-    { name: 'Companies', href: '/companies', icon: Building2 },
-    { name: 'About', href: '/about', icon: Users },
+  //  { name: 'Companies', href: '/company', icon: Building2 },
+//    { name: 'About', href: '/about', icon: Users },
   ];
 
   return (
