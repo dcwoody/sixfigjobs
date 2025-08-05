@@ -17,8 +17,8 @@ interface Job {
   PostedDate: string;
   is_remote: boolean;
   CompanyLogo?: string;
-  salary_min?: number;
-  salary_max?: number;
+  min_amount?: number;  // Changed from salary_min
+  max_amount?: number;  // Changed from salary_max
 }
 
 const FeaturedJobs = async () => {
@@ -110,7 +110,7 @@ const FeaturedJobs = async () => {
     
     // Test basic connection first
     const { error: testError } = await supabase
-      .from('job_listings_db')
+      .from('job_listings_db')  // Changed back to correct table name
       .select('JobID')
       .limit(1);
     
@@ -130,7 +130,7 @@ const FeaturedJobs = async () => {
 
     // Fetch all recent jobs
     const { data: allJobs, error } = await supabase
-      .from('job_listings_db')
+      .from('job_listings_db')  // Changed back to correct table name
       .select('*')
       .order('PostedDate', { ascending: false })
       .limit(50); // Get more jobs to filter from
@@ -163,8 +163,14 @@ const FeaturedJobs = async () => {
       );
     }
 
-    // Filter for jobs over $100k
+    // Filter for jobs over $100k (using both formatted_salary and min_amount)
     const highPayingJobs = allJobs.filter(job => {
+      // First try using min_amount if available
+      if (job.min_amount && job.min_amount >= 100000) {
+        return true;
+      }
+      
+      // Fallback to formatted_salary parsing
       if (!job.formatted_salary) return false;
       const { min } = getSalaryRange(job.formatted_salary);
       return min >= 100000;
