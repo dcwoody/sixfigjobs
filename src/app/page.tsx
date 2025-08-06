@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, MapPin, TrendingUp, Users, Building2, ArrowRight, Briefcase, DollarSign, Mail, CheckCircle } from 'lucide-react';
+import { useWeeklyJobs } from '@/components/useWeeklyJobs'; 
 
 export default function Home() {
   const [jobQuery, setJobQuery] = useState('');
@@ -15,6 +16,9 @@ export default function Home() {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const router = useRouter();
+
+  // Use the weekly jobs hook
+  const { weeklyJobCount, loading: jobCountLoading, error: jobCountError } = useWeeklyJobs();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +54,27 @@ export default function Home() {
     { label: 'Average Salary', value: '$125k', icon: DollarSign }
   ];
 
+  // Function to format the job count text
+  const getJobCountText = () => {
+    if (jobCountLoading) {
+      return 'Loading new jobs...';
+    }
+
+    if (jobCountError) {
+      return 'New jobs posted this week';
+    }
+
+    if (weeklyJobCount === 0) {
+      return 'Check back for new jobs this week';
+    }
+
+    if (weeklyJobCount === 1) {
+      return '1 new job this week';
+    }
+
+    return `Over ${weeklyJobCount} new jobs this week`;
+  };
+
   return (
     <MainLayout>
       {/* Hero Section */}
@@ -62,18 +87,20 @@ export default function Home() {
               <div className="w-full md:w-1/2 px-4 mb-16 md:mb-0">
                 <div className="inline-flex items-center px-4 py-2 rounded-full bg-white shadow-sm border mb-6">
                   <TrendingUp className="w-4 h-4 mr-2 text-[#31C7FF]" />
-                  <span className="text-sm font-medium text-gray-700">Over 500 new jobs this week</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    {getJobCountText()}
+                  </span>
                 </div>
-                
+
                 <h1 className="mb-6 text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight text-gray-900">
                   Six-Figure Careers,<br />
                   <span className="text-[#31C7FF]">One Click Away</span>
                 </h1>
-                
+
                 <p className="mb-8 text-lg md:text-xl text-gray-500 font-medium leading-relaxed">
                   Connect with premium opportunities from top-tier companies. Access curated roles paying $100K+ with transparent salaries and streamlined applications.
                 </p>
-                
+
                 <div className="flex flex-wrap">
                   <div className="w-full md:w-auto py-1 md:py-0 md:mr-4">
                     <Link href="/jobs" className="inline-block py-5 px-7 w-full text-base md:text-lg leading-4 text-white font-medium text-center bg-[#31C7FF] hover:bg-[#28B4E6] rounded-md shadow-sm transition-all duration-200 hover:shadow-lg">
@@ -89,28 +116,33 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Right content - Stats Card */}
-              <div className="w-full md:w-1/2 px-4">
-                <div className="relative mx-auto md:mr-0 max-w-max">
-                  <div className="absolute -top-4 -right-4 w-72 h-72 bg-[#31C7FF] rounded-full opacity-20"></div>
-                  <div className="absolute -bottom-4 -left-4 w-48 h-48 bg-gray-200 rounded-full opacity-40"></div>
-                  
-                  <div className="relative bg-white rounded-2xl shadow-2xl p-8 border">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-semibold text-gray-900">Live Job Stats</h3>
-                      <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                    </div>
-                    <div className="space-y-4">
-                      {stats.slice(0, 3).map((stat, index) => (
-                        <div key={index} className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <stat.icon className="w-5 h-5 mr-3 text-gray-400" />
-                            <span className="text-gray-600">{stat.label}</span>
-                          </div>
-                          <span className="font-bold text-gray-900">{stat.value}</span>
+              {/* Add a loading state if needed */}
+              {jobCountLoading && (
+                <div className="inline-block w-4 h-4 border-2 border-gray-300 border-t-[#31C7FF] rounded-full animate-spin ml-2"></div>
+              )}
+            </div>
+
+            {/* Right content - Stats Card */}
+            <div className="w-full md:w-1/2 px-4">
+              <div className="relative mx-auto md:mr-0 max-w-max">
+                <div className="absolute -top-4 -right-4 w-72 h-72 bg-[#31C7FF] rounded-full opacity-20"></div>
+                <div className="absolute -bottom-4 -left-4 w-48 h-48 bg-gray-200 rounded-full opacity-40"></div>
+
+                <div className="relative bg-white rounded-2xl shadow-2xl p-8 border">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900">Live Job Stats</h3>
+                    <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                  </div>
+                  <div className="space-y-4">
+                    {stats.slice(0, 3).map((stat, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <stat.icon className="w-5 h-5 mr-3 text-gray-400" />
+                          <span className="text-gray-600">{stat.label}</span>
                         </div>
-                      ))}
-                    </div>
+                        <span className="font-bold text-gray-900">{stat.value}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -146,7 +178,7 @@ export default function Home() {
                   />
                 </div>
               </div>
-              
+
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex flex-wrap gap-2">
                   <span className="text-sm text-gray-500 font-medium">Popular:</span>
@@ -164,9 +196,9 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
-                
-                <button 
-                  type="submit" 
+
+                <button
+                  type="submit"
                   className="px-8 py-4 text-white font-semibold rounded-xl bg-[#31C7FF] hover:bg-[#28B4E6] transition-all duration-200 hover:shadow-lg flex items-center whitespace-nowrap"
                 >
                   Search Jobs
@@ -225,7 +257,7 @@ export default function Home() {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-[#31C7FF]/20 rounded-full mb-6">
               <Mail className="w-8 h-8 text-[#31C7FF]" />
             </div>
-            
+
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
               Never Miss a Premium Opportunity
             </h2>
@@ -248,7 +280,7 @@ export default function Home() {
                   required
                   className="flex-1 px-6 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#31C7FF] focus:border-transparent outline-none text-gray-700"
                 />
-                <button 
+                <button
                   type="submit"
                   className="px-8 py-4 text-white font-semibold rounded-xl bg-[#31C7FF] hover:bg-[#28B4E6] transition-all duration-200 hover:shadow-lg whitespace-nowrap"
                 >
@@ -256,7 +288,7 @@ export default function Home() {
                 </button>
               </form>
             )}
-            
+
             <p className="text-sm text-gray-500 mt-4">
               No spam, unsubscribe anytime. We respect your privacy.
             </p>

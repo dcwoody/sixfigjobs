@@ -26,6 +26,12 @@ const Hero = () => {
     }
   };
 
+  // Handle logo click explicitly
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    router.push('/');
+  };
+
   const navigationLinks = [
     { name: 'Browse Jobs', href: '/jobs', icon: Briefcase },
   //  { name: 'Companies', href: '/company', icon: Building2 },
@@ -38,13 +44,18 @@ const Hero = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/" className="flex-shrink-0">
+            <Link 
+              href="/" 
+              className="flex-shrink-0 cursor-pointer"
+              onClick={handleLogoClick}
+            >
               <Image
                 className="h-8 w-auto"
                 src="/img/logo.svg"
                 alt="SixFigJobs.com Logo"
                 width={120}
                 height={32}
+                priority
               />
             </Link>
           </div>
@@ -157,7 +168,14 @@ const Hero = () => {
           
           <div className="fixed top-0 right-0 bottom-0 w-full max-w-sm bg-white shadow-xl">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <Link href="/" className="flex-shrink-0" onClick={() => setMobileNavOpen(false)}>
+              <Link 
+                href="/" 
+                className="flex-shrink-0" 
+                onClick={(e) => {
+                  handleLogoClick(e);
+                  setMobileNavOpen(false);
+                }}
+              >
                 <Image
                   className="h-8 w-auto"
                   src="/img/logo.svg"
