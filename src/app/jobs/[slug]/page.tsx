@@ -27,15 +27,20 @@ interface Job {
 
 // Title case utility (cleans up title)
 function toTitleCase(str: string): string {
-  const acronyms = ["IT", "HR", "CEO", "VP", "CTO", "CFO", "COO", "UX", "UI"];
-  return str
-    .split(' ')
+  const acronyms = new Set(["IT", "HR", "CEO", "VP", "UX", "UI", "AI", "ML", "CFO", "COO", "CTO", "GIS"]);
+
+  return str.split(/(\s+|-|\(|\))/g) // Split by space, hyphen, or parentheses but keep them
     .map(word => {
-      const cleanWord = word.replace(/[^a-zA-Z]/g, ''); // strip punctuation
-      if (acronyms.includes(cleanWord.toUpperCase())) return cleanWord.toUpperCase();
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      const clean = word.replace(/[^a-zA-Z]/g, '');
+      if (acronyms.has(clean.toUpperCase())) {
+        return clean.toUpperCase();
+      }
+      if (/^[a-zA-Z]/.test(word)) {
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      }
+      return word; // return punctuation or whitespace as-is
     })
-    .join(' ');
+    .join('');
 }
 
 
