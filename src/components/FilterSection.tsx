@@ -1,4 +1,3 @@
-// src/components/FilterSection.tsx
 'use client';
 
 import { useState } from 'react';
@@ -10,7 +9,8 @@ export default function FilterSection({
   items,
   selectedItem,
   filterType,
-  createFilterUrl,
+  baseUrl,
+  existingParams,
   showCheckbox = false,
   isLast = false,
 }: {
@@ -18,11 +18,18 @@ export default function FilterSection({
   items: string[];
   selectedItem?: string;
   filterType: string;
-  createFilterUrl: (type: string, value: string) => string;
+  baseUrl: string;
+  existingParams: Record<string, string | undefined>;
   showCheckbox?: boolean;
   isLast?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(true);
+
+  const buildUrl = (value: string) => {
+    const params = new URLSearchParams(existingParams as Record<string, string>);
+    params.set(filterType, value);
+    return `${baseUrl}?${params.toString()}`;
+  };
 
   return (
     <div className={isLast ? 'mb-6' : 'mb-8'}>
@@ -38,7 +45,7 @@ export default function FilterSection({
           {items.map((item) => (
             <Link
               key={item}
-              href={createFilterUrl(filterType, item)}
+              href={buildUrl(item)}
               className={`flex items-center px-3 py-2 text-sm rounded-lg transition-colors duration-200 ${
                 selectedItem === item
                   ? 'bg-[#31C7FF] text-white'

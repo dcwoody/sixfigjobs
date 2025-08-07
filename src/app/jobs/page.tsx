@@ -23,9 +23,9 @@ interface Job {
 }
 
 interface PageProps {
-  searchParams: Promise<{ 
-    q?: string; 
-    location?: string; 
+  searchParams: Promise<{
+    q?: string;
+    location?: string;
     page?: string;
     jobType?: string;
     workType?: string;
@@ -126,11 +126,11 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
     if (location && filterType !== 'location') params.set('location', location);
     if (jobType && filterType !== 'jobType') params.set('jobType', jobType);
     if (workType && filterType !== 'workType') params.set('workType', workType);
-    
+
     if (filterType === 'location') params.set('location', value);
     if (filterType === 'jobType') params.set('jobType', value);
     if (filterType === 'workType') params.set('workType', value);
-    
+
     return `/jobs${params.toString() ? `?${params.toString()}` : ''}`;
   };
 
@@ -158,7 +158,7 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
   // DC region locations and other filter options
   const locations = [
     'Washington, D.C.',
-    'Alexandria, VA', 
+    'Alexandria, VA',
     'Arlington, VA',
     'Remote',
     'New York, NY',
@@ -167,9 +167,12 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
     'Chicago, IL',
     'Boston, MA'
   ];
-  
+
   const jobTypes = ['Full-time', 'Part-time', 'Contract', 'Freelance'];
   const workTypes = ['Remote', 'Hybrid', 'On-site'];
+
+  const baseUrl = '/jobs';
+  const existingParams = { q, location, jobType, workType };
 
   return (
     <>
@@ -237,31 +240,32 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
                 </div>
 
                 {/* Location Filter */}
-                <FilterSection 
-                  title="Location" 
-                  items={locations} 
+                <FilterSection
+                  title="Location"
+                  items={locations}
                   selectedItem={location}
                   filterType="location"
-                  createFilterUrl={createFilterUrl}
+                  baseUrl={baseUrl}
+                  existingParams={existingParams}
                 />
 
-                {/* Job Type Filter */}
-                <FilterSection 
-                  title="Job Type" 
-                  items={jobTypes} 
+                <FilterSection
+                  title="Job Type"
+                  items={jobTypes}
                   selectedItem={jobType}
                   filterType="jobType"
-                  createFilterUrl={createFilterUrl}
+                  baseUrl={baseUrl}
+                  existingParams={existingParams}
                   showCheckbox={true}
                 />
 
-                {/* Work Type Filter */}
-                <FilterSection 
-                  title="Work Type" 
-                  items={workTypes} 
+                <FilterSection
+                  title="Work Type"
+                  items={workTypes}
                   selectedItem={workType}
                   filterType="workType"
-                  createFilterUrl={createFilterUrl}
+                  baseUrl={baseUrl}
+                  existingParams={existingParams}
                   showCheckbox={true}
                   isLast={true}
                 />
@@ -355,7 +359,7 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
                               </div>
                             </div>
                           </div>
-                          
+
                           <p className="text-gray-700 text-sm mb-4 leading-relaxed">
                             {job.ShortDescription}
                           </p>
@@ -433,8 +437,8 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
                               key={pageNum}
                               href={createPageUrl(pageNum)}
                               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${pageNum === currentPage
-                                  ? 'bg-[#31C7FF] text-white'
-                                  : 'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-900'
+                                ? 'bg-[#31C7FF] text-white'
+                                : 'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-900'
                                 }`}
                             >
                               {pageNum}
