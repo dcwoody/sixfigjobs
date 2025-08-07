@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
-import Hero from '@/components/Hero';
+import Hero from '@/components/NavBar';
 import { Search, MapPin, Building2, DollarSign, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Job {

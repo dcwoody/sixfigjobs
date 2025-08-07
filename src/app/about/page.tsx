@@ -1,4 +1,4 @@
-import Hero from '@/components/Hero'
+import Hero from '@/components/NavBar'
 import Footer from '@/components/Footer'
 import Link from 'next/link'
 

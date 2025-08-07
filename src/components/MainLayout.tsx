@@ -1,5 +1,5 @@
 import React from 'react';
-import Hero from './Hero';
+import Hero from './NavBar';
 import Footer from './Footer';
 
 interface MainLayoutProps {

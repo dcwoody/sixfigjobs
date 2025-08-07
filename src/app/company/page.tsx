@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Metadata } from 'next';
 
-import Hero from '@/components/Hero';
+import Hero from '@/components/NavBar';
 import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {

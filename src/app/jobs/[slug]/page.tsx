@@ -7,7 +7,7 @@ import { PostgrestError } from '@supabase/supabase-js';
 import { Metadata } from 'next';
 
 import SaveButton from '@/components/SaveButton';
-import Hero from '@/components/Hero';
+import Hero from '@/components/NavBar';
 import Footer from '@/components/Footer';
 
 interface Job {
@@ -27,16 +27,17 @@ interface Job {
 
 // Title case utility (cleans up title)
 function toTitleCase(str: string): string {
+  const acronyms = ["IT", "HR", "CEO", "VP", "CTO", "CFO", "COO", "UX", "UI"];
   return str
-    .toLowerCase()
     .split(' ')
-    .map(word =>
-      word.length > 2
-        ? word.charAt(0).toUpperCase() + word.slice(1)
-        : word
-    )
+    .map(word => {
+      const cleanWord = word.replace(/[^a-zA-Z]/g, ''); // strip punctuation
+      if (acronyms.includes(cleanWord.toUpperCase())) return cleanWord.toUpperCase();
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
     .join(' ');
 }
+
 
 // Add this helper function for time formatting
 function formatTimeAgo(dateString: string): string {

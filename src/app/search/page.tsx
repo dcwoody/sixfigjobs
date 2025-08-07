@@ -42,7 +42,7 @@ export default function Search() {
     const fetchJobs = async () => {
       setLoading(true);
       const { data, error } = await supabase
-        .from('jobs_db')
+        .from('job_listings_db')
         .select('*')
         .ilike('JobTitle', `%${searchTerm}%`); // Initial fetch with search term
       if (error) {

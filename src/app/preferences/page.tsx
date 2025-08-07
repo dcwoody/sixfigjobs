@@ -5,7 +5,7 @@ import { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { AuthContext } from '@/components/AuthProvider';
-import Hero from '@/components/Hero';
+import Hero from '@/components/NavBar';
 import Footer from '@/components/Footer';
 
 export default function PreferencesPage() {
