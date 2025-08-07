@@ -13,6 +13,7 @@ export default function FilterSection({
   existingParams,
   showCheckbox = false,
   isLast = false,
+  defaultOpen = true, // NEW
 }: {
   title: string;
   items: string[];
@@ -22,8 +23,9 @@ export default function FilterSection({
   existingParams: Record<string, string | undefined>;
   showCheckbox?: boolean;
   isLast?: boolean;
+  defaultOpen?: boolean; // NEW
 }) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(defaultOpen); // ✅ use defaultOpen
 
   const buildUrl = (value: string) => {
     const params = new URLSearchParams(existingParams as Record<string, string>);

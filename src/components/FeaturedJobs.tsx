@@ -186,12 +186,6 @@ export default async function FeaturedJobs() {
                 )}
               </div>
 
-              <div className="flex-grow mb-4">
-                <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
-                  {job.ShortDescription}
-                </p>
-              </div>
-
               <div className="flex flex-wrap gap-2 mb-4">
                 {tags.slice(0, 2).map((tag, index) => (
                   <span key={index} className="px-2 py-1 text-xs font-medium bg-[#31C7FF]/10 text-[#31C7FF] rounded-md">
