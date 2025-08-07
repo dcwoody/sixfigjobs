@@ -62,41 +62,44 @@ if (jobType) {
   countQuery = countQuery.eq('JobType', jobType);
 }
 
-if (workType) {
-  if (workType === 'Remote') {
-    countQuery = countQuery.eq('is_remote', true);
-  } else if (workType === 'On-site') {
-    countQuery = countQuery.eq('is_remote', false);
-  }
+if (workType === 'Remote') {
+  countQuery = countQuery.eq('is_remote', true);
+} else if (workType === 'On-site') {
+  countQuery = countQuery.eq('is_remote', false);
 }
 
   const { count: totalJobs } = await countQuery;
   const totalPages = Math.ceil((totalJobs || 0) / JOBS_PER_PAGE);
 
   let query = supabase
-    .from('job_listings_db')
-    .select('*')
-    .order('PostedDate', { ascending: false })
-    .range(offset, offset + JOBS_PER_PAGE - 1);
+  .from('job_listings_db')
+  .select('*')
+  .order('PostedDate', { ascending: false })
+  .range(offset, offset + JOBS_PER_PAGE - 1);
 
-  if (q) {
-    query = query.or(`JobTitle.ilike.%${q}%,ShortDescription.ilike.%${q}%,Company.ilike.%${q}%`);
+if (q) {
+  query = query.or(
+    `JobTitle.ilike.%${q}%,ShortDescription.ilike.%${q}%,Company.ilike.%${q}%`
+  );
+}
+
+if (location) {
+  query = query.ilike('Location', `%${location}%`);
+
+  if (location.toLowerCase().includes('remote')) {
+    query = query.eq('is_remote', true);
   }
-  if (location) {
-    query = query.or(
-      `Location.ilike.%${location}%,is_remote.eq.${location.toLowerCase().includes('remote')}`
-    );
-  }
-  if (jobType) {
-    query = query.eq('JobType', jobType);
-  }
-  if (workType) {
-    if (workType === 'Remote') {
-      query = query.eq('is_remote', true);
-    } else if (workType === 'On-site') {
-      query = query.eq('is_remote', false);
-    }
-  }
+}
+
+if (jobType) {
+  query = query.eq('JobType', jobType);
+}
+
+if (workType === 'Remote') {
+  query = query.eq('is_remote', true);
+} else if (workType === 'On-site') {
+  query = query.eq('is_remote', false);
+}
 
   const { data: jobs, error } = await query;
   if (error) return <div className="p-6 text-red-600">Error loading jobs: {error.message}</div>;
