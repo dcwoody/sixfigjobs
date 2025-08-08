@@ -1,146 +1,76 @@
-// src/components/JobCard.tsx - FIXED VERSION
-'use client';
-
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
+// src/components/JobCard.tsx
+import React from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabaseClient';
-import { getCompanyLogo, getCompanyPageUrl } from '@/lib/dbSync';
+import { MapPin, DollarSign, Calendar, Heart, ExternalLink } from 'lucide-react';
+import { Job } from '@/types';
+import { formatDate } from '@/lib/data';
 
 interface JobCardProps {
-  job: {
-    JobID: string;
-    JobTitle: string;
-    Company: string;
-    Location: string;
-    formatted_salary: string;
-    JobType: string;
-    ShortDescription: string;
-    PostedDate: string;
-    is_remote: boolean;
-    CompanyLogo?: string | null; // ← FIXED: Added | null to match your data structure
-    slug: string;
-  };
+  job: Job;
 }
 
 export default function JobCard({ job }: JobCardProps) {
-  const [companyLogo, setCompanyLogo] = useState<string | null>(job.CompanyLogo || null);
-  const [companyPageUrl, setCompanyPageUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    async function loadCompanyData() {
-      if (job.CompanyLogo && companyPageUrl) return; // Already have everything
-      
-      setLoading(true);
-      try {
-        const [logo, pageUrl] = await Promise.all([
-          // ← FIXED: Handle undefined by converting to null
-          job.CompanyLogo ? Promise.resolve(job.CompanyLogo) : getCompanyLogo(job.Company, job.CompanyLogo ?? null, supabase),
-          getCompanyPageUrl(job.Company, supabase)
-        ]);
-        
-        setCompanyLogo(logo);
-        setCompanyPageUrl(pageUrl);
-      } catch (error) {
-        console.error('Error loading company data:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadCompanyData();
-  }, [job.Company, job.CompanyLogo, companyPageUrl]);
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '—';
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-      {/* Company Header */}
-      <div className="flex items-center mb-4">
-        {loading ? (
-          <div className="w-10 h-10 bg-gray-200 rounded-md mr-3 animate-pulse" />
-        ) : companyLogo ? (
-          <Image
-            src={companyLogo}
-            alt={`${job.Company} logo`}
-            width={40}
-            height={40}
-            className="rounded-md mr-3 object-contain"
-            onError={() => setCompanyLogo(null)}
-          />
-        ) : (
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md mr-3 flex items-center justify-center">
-            <span className="text-white font-bold">
-              {job.Company.charAt(0).toUpperCase()}
-            </span>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <Link href={`/jobs/${job.slug}`}>
+                <h3 className="text-xl font-semibold text-gray-900 mb-1 hover:text-blue-600 cursor-pointer">
+                  {job.JobTitle}
+                </h3>
+              </Link>
+              <Link href={`/companies/${job.Company.toLowerCase().replace(/\s+/g, '-')}`}>
+                <p className="text-blue-600 font-medium cursor-pointer hover:underline">
+                  {job.Company}
+                </p>
+              </Link>
+            </div>
+            <button className="text-gray-400 hover:text-red-500 transition-colors">
+              <Heart className="h-5 w-5" />
+            </button>
           </div>
-        )}
-        
-        <div>
-          {companyPageUrl ? (
-            <Link 
-              href={companyPageUrl}
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
-            >
-              {job.Company}
+          
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-3">
+            <div className="flex items-center">
+              <MapPin className="h-4 w-4 mr-1" />
+              {job.Location}
+            </div>
+            <div className="flex items-center">
+              <DollarSign className="h-4 w-4 mr-1" />
+              {job.formatted_salary}
+            </div>
+            <div className="flex items-center">
+              <Calendar className="h-4 w-4 mr-1" />
+              {formatDate(job.PostedDate)}
+            </div>
+            {job.is_remote && (
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                Remote
+              </span>
+            )}
+          </div>
+          
+          <p className="text-gray-600 mb-4">{job.ShortDescription}</p>
+          
+          <div className="flex items-center space-x-3">
+            <Link href={`/jobs/${job.slug}`}>
+              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                View Details
+              </button>
             </Link>
-          ) : (
-            <span className="text-sm text-gray-600 font-medium">
-              {job.Company}
-            </span>
-          )}
-          <p className="text-xs text-gray-500">{job.Location}</p>
+            <a
+              href={job.job_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 transition-colors flex items-center"
+            >
+              Apply Now <ExternalLink className="h-4 w-4 ml-1" />
+            </a>
+          </div>
         </div>
       </div>
-
-      {/* Job Details */}
-      <Link href={`/jobs/${job.slug}`} className="block hover:text-blue-600 group">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
-          {job.JobTitle}
-        </h3>
-        <p className="text-gray-600 text-sm mb-3 line-clamp-3">
-          {job.ShortDescription}
-        </p>
-        
-        {/* Job Meta */}
-        <div className="flex justify-between items-center text-sm mb-3">
-          <span className="text-green-600 font-semibold">
-            {job.formatted_salary || 'Salary not specified'}
-          </span>
-          <span className="text-gray-500">
-            {formatDate(job.PostedDate)}
-          </span>
-        </div>
-        
-        {/* Job Type Badges */}
-        <div className="flex gap-2">
-          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
-            {job.JobType}
-          </span>
-          {job.is_remote && (
-            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
-              Remote
-            </span>
-          )}
-        </div>
-      </Link>
     </div>
   );
 }

@@ -1,572 +1,157 @@
-// src/app/jobs/page.tsx - KEEP YOUR ORIGINAL LAYOUT + ADD LOGO SYNC
-import { supabase } from '@/lib/supabaseClient';
-import Image from 'next/image';
-import Link from 'next/link';
-import Footer from '@/components/Footer';
-import Hero from '@/components/NavBar';
-import React from 'react';
-import { Search, MapPin, DollarSign, ChevronLeft, ChevronRight, Filter, Heart, Building2, Clock, TrendingUp, Sparkles, X } from 'lucide-react';
-import FilterSection from '@/components/FilterSection';
-import { getCompanyLogo, getCompanyPageUrl } from '@/lib/dbSync'; // ← ADD THIS IMPORT
+// src/app/jobs/page.tsx
+'use client';
 
-interface Job {
-  JobID: string;
-  JobTitle: string;
-  Company: string;
-  Location: string;
-  formatted_salary: string;
-  JobType: string;
-  ShortDescription: string;
-  PostedDate: string;
-  is_remote: boolean;
-  CompanyLogo?: string;
-  slug: string;
-  companyPageUrl?: string;
-}
+import React, { useState, useEffect } from 'react';
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Job } from '@/types';
+import JobCard from '@/components/JobCard';
 
-interface PageProps {
-  searchParams: Promise<{
-    q?: string;
-    location?: string;
-    page?: string;
-    jobType?: string;
-    workType?: string;
-  }>;
-}
+export default function JobsPage() {
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const jobsPerPage = 6;
 
-const JOBS_PER_PAGE = 12;
+  const locations = ['Washington DC', 'Alexandria, VA', 'Arlington, VA', 'Maryland', 'Remote'];
 
-export default async function JobsListingPage({ searchParams }: PageProps) {
-  const resolvedSearchParams = await searchParams;
-  const { q, location, page, jobType, workType } = resolvedSearchParams;
-  const currentPage = parseInt(page || '1', 10);
-  const offset = (currentPage - 1) * JOBS_PER_PAGE;
-
-  let countQuery = supabase
-    .from('job_listings_db')
-    .select('*', { count: 'exact', head: true });
-
-  if (q) {
-    countQuery = countQuery.or(
-      `JobTitle.ilike.%${q}%,ShortDescription.ilike.%${q}%,Company.ilike.%${q}%`
-    );
-  }
-
-  if (location) {
-    countQuery = countQuery.ilike('Location', `%${location}%`);
-    if (location.toLowerCase().includes('remote')) {
-      countQuery = countQuery.eq('is_remote', true);
-    }
-  }
-
-  if (jobType) {
-    countQuery = countQuery.eq('JobType', jobType);
-  }
-
-  if (workType === 'Remote') {
-    countQuery = countQuery.eq('is_remote', true);
-  } else if (workType === 'On-site') {
-    countQuery = countQuery.eq('is_remote', false);
-  }
-
-  const { count: totalJobs } = await countQuery;
-  const totalPages = Math.ceil((totalJobs || 0) / JOBS_PER_PAGE);
-
-  let query = supabase
-    .from('job_listings_db')
-    .select('*')
-    .order('PostedDate', { ascending: false })
-    .range(offset, offset + JOBS_PER_PAGE - 1);
-
-  if (q) {
-    query = query.or(
-      `JobTitle.ilike.%${q}%,ShortDescription.ilike.%${q}%,Company.ilike.%${q}%`
-    );
-  }
-
-  if (location) {
-    query = query.ilike('Location', `%${location}%`);
-    if (location.toLowerCase().includes('remote')) {
-      query = query.eq('is_remote', true);
-    }
-  }
-
-  if (jobType) {
-    query = query.eq('JobType', jobType);
-  }
-
-  if (workType === 'Remote') {
-    query = query.eq('is_remote', true);
-  } else if (workType === 'On-site') {
-    query = query.eq('is_remote', false);
-  }
-
-  const { data: jobs, error } = await query;
-
-  if (error) return <div className="p-6 text-red-600">Error loading jobs: {error.message}</div>;
-
-  // ← ADD LOGO SYNC HERE (keep everything else the same)
-  const enhancedJobs = await Promise.all(
-    (jobs || []).map(async (job) => {
-      const companyLogo = await getCompanyLogo(job.Company, job.CompanyLogo || null, supabase);
-      const companyPageUrl = await getCompanyPageUrl(job.Company, supabase);
+  useEffect(() => {
+    // Load job data (in real app, this would be an API call)
+    const loadData = async () => {
+      const response = await fetch('/data/job_listings_db.csv');
+      const csvText = await response.text();
       
-      return {
-        ...job,
-        CompanyLogo: companyLogo,
-        companyPageUrl
-      };
-    })
-  );
+      // You'll need to install papa parse: npm install papaparse @types/papaparse
+      const Papa = require('papaparse');
+      const result = Papa.parse(csvText, {
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true
+      });
+      
+      const sortedJobs = result.data.sort((a: Job, b: Job) => 
+        new Date(b.PostedDate).getTime() - new Date(a.PostedDate).getTime()
+      );
+      
+      setJobs(sortedJobs);
+      setFilteredJobs(sortedJobs);
+    };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '—';
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    loadData();
+  }, []);
 
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  useEffect(() => {
+    let filtered = jobs;
 
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
-  const createPageUrl = (pageNum: number) => {
-    const params = new URLSearchParams();
-    if (q) params.set('q', q);
-    if (location) params.set('location', location);
-    if (jobType) params.set('jobType', jobType);
-    if (workType) params.set('workType', workType);
-    if (pageNum > 1) params.set('page', pageNum.toString());
-    return `/jobs${params.toString() ? `?${params.toString()}` : ''}`;
-  };
-
-  const createFilterUrl = (filterType: string, value: string) => {
-    const params = new URLSearchParams();
-    if (q) params.set('q', q);
-    if (location && filterType !== 'location') params.set('location', location);
-    if (jobType && filterType !== 'jobType') params.set('jobType', jobType);
-    if (workType && filterType !== 'workType') params.set('workType', workType);
-
-    if (filterType === 'location') params.set('location', value);
-    if (filterType === 'jobType') params.set('jobType', value);
-    if (filterType === 'workType') params.set('workType', value);
-
-    return `/jobs${params.toString() ? `?${params.toString()}` : ''}`;
-  };
-
-  const clearFilters = () => {
-    const params = new URLSearchParams();
-    if (q) params.set('q', q);
-    return `/jobs${params.toString() ? `?${params.toString()}` : ''}`;
-  };
-
-  const getJobTypeColor = (jobType: string) => {
-    switch (jobType.toLowerCase()) {
-      case 'full-time':
-        return 'bg-gradient-to-r from-blue-500/10 to-cyan-500/10 text-blue-700 border border-blue-200/50';
-      case 'part-time':
-        return 'bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-700 border border-amber-200/50';
-      case 'contract':
-        return 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-700 border border-purple-200/50';
-      case 'freelance':
-        return 'bg-gradient-to-r from-emerald-500/10 to-teal-500/10 text-emerald-700 border border-emerald-200/50';
-      case 'remote':
-        return 'bg-gradient-to-r from-green-500/10 to-teal-500/10 text-green-700 border border-green-200/50';
-      default:
-        return 'bg-gradient-to-r from-gray-500/10 to-slate-500/10 text-gray-700 border border-gray-200/50';
+    if (searchQuery) {
+      filtered = filtered.filter(job => 
+        job.JobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.Company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.ShortDescription.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
-  };
 
-  // DC region locations and other filter options
-  const locations = [
-    'Washington, D.C.',
-    'Arlington, VA',
-    'Alexandria, VA',
-    'Bethesda, MD',
-    'Silver Spring, MD',
-    'Rockville, MD',
-    'Fairfax, VA',
-    'Tysons, VA',
-    'Reston, VA',
-    'Remote'
-  ];
+    if (locationFilter) {
+      if (locationFilter === 'Remote') {
+        filtered = filtered.filter(job => job.is_remote);
+      } else {
+        filtered = filtered.filter(job => 
+          job.Location.toLowerCase().includes(locationFilter.toLowerCase())
+        );
+      }
+    }
 
-  const jobTypes = [
-    'Full-Time',
-    'Part-Time',
-    'Contract',
-    'Freelance',
-    'Internship'
-  ];
+    setFilteredJobs(filtered);
+    setCurrentPage(1);
+  }, [searchQuery, locationFilter, jobs]);
 
-  const workTypes = [
-    'Remote',
-    'Hybrid',
-    'On-site'
-  ];
-
-  const baseUrl = '/jobs';
-  const existingParams = { q, location, jobType, workType };
+  const totalPages = Math.ceil(filteredJobs.length / jobsPerPage);
+  const startIndex = (currentPage - 1) * jobsPerPage;
+  const currentJobs = filteredJobs.slice(startIndex, startIndex + jobsPerPage);
 
   return (
-    <>
-      <Hero />
-      <div className="relative min-h-screen">
-        {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 -z-10" />
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Job Opportunities</h1>
+          <p className="text-gray-600">{filteredJobs.length} jobs found • Sorted by newest first</p>
+        </div>
 
-        {/* Header Section */}
-        <div className="relative pt-20 pb-12 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5" />
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 mb-6 shadow-sm border border-white/20">
-                <Sparkles className="w-4 h-4 text-blue-600 mr-2" />
-                <span className="text-sm font-medium text-gray-700">Find Your Dream Job</span>
-              </div>
-              
-              <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent mb-6">
-                Six-Figure Opportunities
-              </h1>
-              
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-                Discover high-paying positions from top companies. Your next career breakthrough is waiting.
-              </p>
-
-              {/* Search Form */}
-              <div className="max-w-4xl mx-auto">
-                <form method="GET" action="/jobs" className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    <div className="flex-1 relative">
-                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                      <input
-                        type="text"
-                        name="q"
-                        defaultValue={q || ''}
-                        placeholder="Job title, keywords, or company"
-                        className="w-full pl-12 pr-4 py-4 bg-transparent rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-700 placeholder-gray-500"
-                      />
-                    </div>
-                    <div className="flex-1 relative">
-                      <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                      <input
-                        type="text"
-                        name="location"
-                        defaultValue={location || ''}
-                        placeholder="City, state, or remote"
-                        className="w-full pl-12 pr-4 py-4 bg-transparent rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-700 placeholder-gray-500"
-                      />
-                    </div>
-                    {/* Hidden inputs to preserve other filters */}
-                    {jobType && <input type="hidden" name="jobType" value={jobType} />}
-                    {workType && <input type="hidden" name="workType" value={workType} />}
-                    <button
-                      type="submit"
-                      className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
-                    >
-                      Search Jobs
-                    </button>
-                  </div>
-                </form>
-              </div>
+        {/* Search and Filters */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search jobs, companies..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
+            <select
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+            >
+              <option value="">All Locations</option>
+              {locations.map(location => (
+                <option key={location} value={location}>{location}</option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 py-12">
-          <div className="flex gap-8">
-            {/* Sidebar Filters */}
-            <div className="w-80 flex-shrink-0">
-              <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6 sticky top-8">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
-                      <Filter className="w-4 h-4 text-white" />
-                    </div>
-                    <h2 className="text-lg font-bold text-gray-900">Filters</h2>
-                  </div>
-                  {(location || jobType || workType) && (
-                    <Link
-                      href={clearFilters()}
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
-                    >
-                      Clear All
-                    </Link>
-                  )}
-                </div>
-
-                {/* Location Filter */}
-                <FilterSection
-                  title="Location"
-                  items={locations}
-                  selectedItem={location}
-                  filterType="location"
-                  baseUrl={baseUrl}
-                  existingParams={existingParams}
-                  showCheckbox={true}
-                  defaultOpen={false}
-                />
-
-                <FilterSection
-                  title="Job Type"
-                  items={jobTypes}
-                  selectedItem={jobType}
-                  filterType="jobType"
-                  baseUrl={baseUrl}
-                  existingParams={existingParams}
-                  showCheckbox={true}
-                  defaultOpen={false}
-                />
-
-                <FilterSection
-                  title="Work Type"
-                  items={workTypes}
-                  selectedItem={workType}
-                  filterType="workType"
-                  baseUrl={baseUrl}
-                  existingParams={existingParams}
-                  showCheckbox={true}
-                  isLast={true}
-                />
-              </div>
-            </div>
-
-            {/* Jobs List */}
-            <div className="flex-1">
-              {/* Active Filters */}
-              {(location || jobType || workType) && (
-                <div className="mb-6">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm text-gray-600 font-medium">Active filters:</span>
-                    {location && (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm">
-                        Location: {location}
-                        <Link href={createFilterUrl('location', '')} className="ml-2 hover:bg-white/20 rounded-full p-0.5 transition-colors">
-                          <X className="w-3 h-3" />
-                        </Link>
-                      </span>
-                    )}
-                    {jobType && (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-sm">
-                        {jobType}
-                        <Link href={createFilterUrl('jobType', '')} className="ml-2 hover:bg-white/20 rounded-full p-0.5 transition-colors">
-                          <X className="w-3 h-3" />
-                        </Link>
-                      </span>
-                    )}
-                    {workType && (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-sm">
-                        {workType}
-                        <Link href={createFilterUrl('workType', '')} className="ml-2 hover:bg-white/20 rounded-full p-0.5 transition-colors">
-                          <X className="w-3 h-3" />
-                        </Link>
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Jobs Count */}
-              <div className="mb-8">
-                <div className="flex items-center">
-                  <TrendingUp className="w-5 h-5 text-blue-600 mr-2" />
-                  <p className="text-gray-700">
-                    <span className="font-bold text-gray-900 text-xl">{totalJobs}</span>
-                    <span className="ml-1">amazing opportunities waiting</span>
-                    {q && <span className="text-blue-600 font-medium"> for &quot;{q}&quot;</span>}
-                  </p>
-                </div>
-              </div>
-
-              {/* Jobs Grid */}
-              {enhancedJobs && enhancedJobs.length > 0 ? (
-                <div className="space-y-6 mb-8">
-                  {enhancedJobs.map((job: Job) => (
-                    <div
-                      key={job.JobID}
-                      className="group bg-white rounded-2xl shadow-md hover:shadow-lg border border-gray-200 p-8 transition-all duration-300 hover:-translate-y-1">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-start gap-6 mb-6">
-                            {/* ← ENHANCED Company Logo with Fallback */}
-                            <div className="flex-shrink-0">
-                              {job.CompanyLogo ? (
-                                <Image
-                                  src={job.CompanyLogo}
-                                  alt={`${job.Company} logo`}
-                                  width={64}
-                                  height={64}
-                                  className="w-16 h-16 object-contain rounded-xl border border-gray-200 p-2 bg-white"
-                                />
-                              ) : (
-                                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center border border-gray-200">
-                                  <span className="text-white font-bold text-xl">
-                                    {job.Company.charAt(0).toUpperCase()}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between mb-3">
-                                <div>
-                                  {/* ← ENHANCED Company Name with Link */}
-                                  <div className="flex items-center gap-3 mb-2">
-                                    <Building2 className="w-4 h-4 text-gray-400" />
-                                    {job.companyPageUrl ? (
-                                      <Link 
-                                        href={job.companyPageUrl}
-                                        className="text-gray-600 hover:text-blue-600 font-medium text-sm transition-colors"
-                                      >
-                                        {job.Company}
-                                      </Link>
-                                    ) : (
-                                      <span className="text-gray-600 font-medium text-sm">
-                                        {job.Company}
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <Link href={`/jobs/${job.slug}`} className="group">
-                                    <h3 className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-200 mb-2">
-                                      {job.JobTitle}
-                                    </h3>
-                                  </Link>
-
-                                  <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
-                                    <div className="flex items-center">
-                                      <MapPin className="w-4 h-4 mr-1" />
-                                      {job.Location}
-                                    </div>
-                                    <div className="flex items-center">
-                                      <Clock className="w-4 h-4 mr-1" />
-                                      {formatDate(job.PostedDate)}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="text-right flex flex-col items-end">
-                                  <div className="flex items-center text-green-600 font-bold text-lg mb-2">
-                                    <DollarSign className="w-5 h-5" />
-                                    {job.formatted_salary || 'Competitive'}
-                                  </div>
-                                  
-                                  <div className="flex gap-2 mb-3">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getJobTypeColor(job.JobType)}`}>
-                                      {job.JobType}
-                                    </span>
-                                    {job.is_remote && (
-                                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-green-500/10 to-teal-500/10 text-green-700 border border-green-200/50">
-                                        Remote
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <p className="text-gray-600 leading-relaxed mb-4 line-clamp-2">
-                                {job.ShortDescription}
-                              </p>
-
-                              <Link
-                                href={`/jobs/${job.slug}`}
-                                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
-                              >
-                                View Details
-                              </Link>
-                            </div>
-                          </div>
-
-                          <button className="flex-shrink-0 ml-6 p-3 text-gray-400 hover:text-red-500 transition-all duration-200 hover:scale-110">
-                            <Heart className="w-6 h-6" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-16 text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full mb-4">
-                    <Search className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">No jobs found</h3>
-                  <p className="text-gray-600 mb-6">Try adjusting your search criteria or browse all available positions.</p>
-                  <Link
-                    href="/jobs"
-                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
-                  >
-                    Browse All Jobs
-                  </Link>
-                </div>
-              )}
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center text-sm text-gray-600">
-                      Showing page {currentPage} of {totalPages}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {currentPage > 1 && (
-                        <Link
-                          href={createPageUrl(currentPage - 1)}
-                          className="inline-flex items-center px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg transition-colors duration-200"
-                        >
-                          <ChevronLeft className="w-4 h-4 mr-1" />
-                          Previous
-                        </Link>
-                      )}
-
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                          const pageNum = Math.max(1, currentPage - 2) + i;
-                          if (pageNum > totalPages) return null;
-                          
-                          return (
-                            <Link
-                              key={pageNum}
-                              href={createPageUrl(pageNum)}
-                              className={`w-10 h-10 flex items-center justify-center text-sm font-medium rounded-lg transition-colors duration-200 ${
-                                pageNum === currentPage
-                                  ? 'bg-blue-600 text-white'
-                                  : 'text-gray-700 hover:bg-gray-100'
-                              }`}
-                            >
-                              {pageNum}
-                            </Link>
-                          );
-                        })}
-                      </div>
-
-                      {currentPage < totalPages && (
-                        <Link
-                          href={createPageUrl(currentPage + 1)}
-                          className="inline-flex items-center px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg transition-colors duration-200"
-                        >
-                          Next
-                          <ChevronRight className="w-4 h-4 ml-1" />
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* Job Listings */}
+        <div className="space-y-4 mb-8">
+          {currentJobs.map((job) => (
+            <JobCard key={job.JobID} job={job} />
+          ))}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center space-x-4">
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </button>
+            
+            <div className="flex space-x-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-2 rounded-lg ${
+                    currentPage === page
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+            
+            <button
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </button>
+          </div>
+        )}
       </div>
-      <Footer />
-    </>
+    </div>
   );
 }
