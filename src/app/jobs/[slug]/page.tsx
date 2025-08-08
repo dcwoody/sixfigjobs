@@ -1,10 +1,11 @@
-// src/app/jobs/[slug]/page.tsx
+// src/app/jobs/[slug]/page.tsx - CORRECTED WITH ALL ORIGINAL ELEMENTS
 import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { PostgrestError } from '@supabase/supabase-js';
 import { Metadata } from 'next';
+import { getCompanyLogo, getCompanyPageUrl, findCompanyMatch } from '@/lib/dbSync';
 
 import SaveButton from '@/components/SaveButton';
 import Hero from '@/components/NavBar';
@@ -12,7 +13,7 @@ import Footer from '@/components/Footer';
 
 interface Job {
   JobID: string;
-  CompanyLogo: string;
+  CompanyLogo: string | null;
   JobTitle: string;
   Company: string;
   Location: string;
@@ -23,13 +24,15 @@ interface Job {
   job_url: string;
   slug: string;
   id: string;
+  is_remote: boolean;
+  PostedDate: string;
 }
 
 // Title case utility (cleans up title)
 function toTitleCase(str: string): string {
   const acronyms = new Set(["IT", "HR", "CEO", "VP", "UX", "UI", "AI", "ML", "CFO", "COO", "CTO", "GIS"]);
 
-  return str.split(/(\s+|-|\(|\))/g) // Split by space, hyphen, or parentheses but keep them
+  return str.split(/(\s+|-|\(|\))/g)
     .map(word => {
       const clean = word.replace(/[^a-zA-Z]/g, '');
       if (acronyms.has(clean.toUpperCase())) {
@@ -38,13 +41,11 @@ function toTitleCase(str: string): string {
       if (/^[a-zA-Z]/.test(word)) {
         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
       }
-      return word; // return punctuation or whitespace as-is
+      return word;
     })
     .join('');
 }
 
-
-// Add this helper function for time formatting
 function formatTimeAgo(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();
@@ -56,6 +57,20 @@ function formatTimeAgo(dateString: string): string {
   if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
   if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`;
   return `${Math.floor(diffInDays / 365)} years ago`;
+}
+
+// Helper function to check if job is remote/hybrid
+function getWorkArrangement(location: string, jobType: string): { type: 'remote' | 'hybrid' | 'onsite', label: string } {
+  const locationLower = location.toLowerCase();
+  const jobTypeLower = jobType.toLowerCase();
+
+  if (locationLower.includes('remote') || jobTypeLower.includes('remote')) {
+    return { type: 'remote', label: 'Remote' };
+  }
+  if (locationLower.includes('hybrid') || jobTypeLower.includes('hybrid')) {
+    return { type: 'hybrid', label: 'Hybrid' };
+  }
+  return { type: 'onsite', label: 'On-site' };
 }
 
 interface PageProps {
@@ -110,20 +125,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-// Helper function to check if job is remote/hybrid
-function getWorkArrangement(location: string, jobType: string): { type: 'remote' | 'hybrid' | 'onsite', label: string } {
-  const locationLower = location.toLowerCase();
-  const jobTypeLower = jobType.toLowerCase();
-
-  if (locationLower.includes('remote') || jobTypeLower.includes('remote')) {
-    return { type: 'remote', label: 'Remote' };
-  }
-  if (locationLower.includes('hybrid') || jobTypeLower.includes('hybrid')) {
-    return { type: 'hybrid', label: 'Hybrid' };
-  }
-  return { type: 'onsite', label: 'On-site' };
-}
-
 export default async function Page({ params }: PageProps) {
   const resolvedParams = await params;
   const { slug } = resolvedParams;
@@ -139,22 +140,44 @@ export default async function Page({ params }: PageProps) {
     notFound();
   }
 
-  // Get similar jobs
-  const { data: similarJobs } = await supabase
-    .from('job_listings_db')
-    .select('JobID, JobTitle, Company, Location, formatted_salary, slug')
-    .neq('JobID', job.JobID)
-    .eq('JobType', job.JobType)
-    .limit(4);
+  // ✅ MOVE ALL ASYNC OPERATIONS TO SERVER-SIDE
+  // Enhanced company data retrieval with logo fallback
+  const [companyLogo, companyPageUrl] = await Promise.all([
+    getCompanyLogo(job.Company, job.CompanyLogo, supabase),
+    getCompanyPageUrl(job.Company, supabase)
+  ]);
 
-  // Get company data from companies_db
+  // Get detailed company information for additional context
+  const { data: companies } = await supabase
+    .from('companies_db')
+    .select('*');
+
+  const matchedCompany = companies ? findCompanyMatch(job.Company, companies) : null;
+
+  // Get company data from companies_db (original logic)
   const companySlug = job.Company.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-
   const { data: companyData } = await supabase
     .from('companies_db')
     .select('slug, overall_rating, career_rating, ceo_name, ceo_photo, website, name, short_name, updated_at, id')
     .eq('slug', companySlug)
     .single();
+
+  // ✅ FETCH SIMILAR JOBS ON SERVER-SIDE
+  const { data: similarJobs } = await supabase
+    .from('job_listings_db')
+    .select('JobID, JobTitle, Company, Location, formatted_salary, slug, CompanyLogo')
+    .neq('JobID', job.JobID)
+    .eq('JobType', job.JobType)
+    .limit(4);
+
+  // ✅ ENHANCE SIMILAR JOBS ON SERVER-SIDE
+  const enhancedSimilarJobs = await Promise.all(
+    (similarJobs || []).map(async (similarJob) => ({
+      ...similarJob,
+      CompanyLogo: await getCompanyLogo(similarJob.Company, similarJob.CompanyLogo, supabase),
+      companyPageUrl: await getCompanyPageUrl(similarJob.Company, supabase)
+    }))
+  );
 
   const workArrangement = getWorkArrangement(job.Location, job.JobType);
 
@@ -172,7 +195,7 @@ export default async function Page({ params }: PageProps) {
     "hiringOrganization": {
       "@type": "Organization",
       "name": job.Company,
-      "logo": job.CompanyLogo
+      "logo": companyLogo || job.CompanyLogo
     },
     "jobLocation": {
       "@type": "Place",
@@ -193,18 +216,10 @@ export default async function Page({ params }: PageProps) {
     "aggregateRating": companyData?.overall_rating ? {
       "@type": "AggregateRating",
       "ratingValue": companyData.overall_rating,
-      "ratingCount": 100 // optional estimate
+      "ratingCount": 100
     } : undefined,
     "employmentType": job.JobType.toUpperCase()
   };
-
-
-
-  const currentUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://yoursite.com'}/jobs/${slug}`;
-
-  if (!job || error) {
-    notFound(); // 👈 this triggers the actual 404 page
-  }
 
   return (
     <>
@@ -251,10 +266,11 @@ export default async function Page({ params }: PageProps) {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-4 mb-4">
-                  {job.CompanyLogo && (
+                  {/* Enhanced Company Logo with Fallback */}
+                  {companyLogo && (
                     <div className="flex-shrink-0">
                       <Image
-                        src={job.CompanyLogo}
+                        src={companyLogo}
                         alt={`${job.Company} logo`}
                         width={64}
                         height={64}
@@ -264,27 +280,70 @@ export default async function Page({ params }: PageProps) {
                   )}
                   <div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-1">{toTitleCase(job.JobTitle)}</h1>
-                    {companyData?.slug ? (
+                    {/* Enhanced Company Name with Link */}
+                    {companyPageUrl ? (
                       <Link
-                        href={`/company/${companyData.slug}`}
-                        className="text-blue-600 font-medium hover:underline"
+                        href={companyPageUrl}
+                        className="text-lg text-blue-600 hover:text-blue-800 font-medium transition-colors"
                       >
-                        {companyData.name}
+                        {job.Company}
                       </Link>
                     ) : (
-                      <span className="text-blue-600 font-medium">{job.Company}</span>
+                      <h2 className="text-lg text-gray-600 font-medium">{job.Company}</h2>
                     )}
-                    <div className="flex items-center text-gray-600 mt-1">
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      {job.Location}
-                    </div>
+
+                    {/* Show additional company info if available */}
+                    {matchedCompany && (
+                      <div className="mt-2">
+                        {matchedCompany.industry && (
+                          <p className="text-sm text-gray-500">{matchedCompany.industry}</p>
+                        )}
+                        {matchedCompany.overall_rating && (
+                          <div className="flex items-center mt-1">
+                            <span className="text-yellow-500 text-sm">★</span>
+                            <span className="text-sm text-gray-600 ml-1">
+                              {matchedCompany.overall_rating}/5.0
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Action Buttons */}
+                {/* ← RESTORED: Job Description Badges */}
+                <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-4">
+                  <div className="flex items-center">
+                    <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    {job.Location}
+                  </div>
+                  <div className="flex items-center">
+                    <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {job.JobType}
+                  </div>
+                  <div className="flex items-center">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${workArrangement.type === 'remote' ? 'bg-green-100 text-green-800' :
+                      workArrangement.type === 'hybrid' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                      {workArrangement.label}
+                    </span>
+                  </div>
+                  {job.formatted_salary && (
+                    <div className="flex items-center font-semibold text-green-600">
+                      <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                      </svg>
+                      {job.formatted_salary}
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex gap-3">
                   {job.job_url && (
                     <a
@@ -327,6 +386,8 @@ export default async function Page({ params }: PageProps) {
                   ))}
                 </div>
               </div>
+
+
             </div>
 
             {/* Sidebar */}
@@ -334,39 +395,38 @@ export default async function Page({ params }: PageProps) {
 
               {/* Job Details Card */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Job Details</h3>
-
-                <div className="space-y-4">
-                  {/* Salary */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-center">
-                      <span className="w-2 h-2 bg-green-500 rounded-full mr-3" />
-                      <span className="text-sm font-medium text-gray-600">Salary</span>
+                <h4 className="text-lg font-bold text-gray-900 mb-4">Job Details</h4>
+                <div className="space-y-3">
+                  {/* ← RESTORED: Salary Badge with Green Color */}
+                  {job.formatted_salary && (
+                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                        <span className="text-sm font-medium text-gray-600">Salary</span>
+                      </div>
+                      <span className="text-sm font-semibold text-green-600">{job.formatted_salary}</span>
                     </div>
-                    <span className="text-base font-semibold text-gray-900">
-                      {job.formatted_salary || 'Not disclosed'}
-                    </span>
-                  </div>
+                  )}
 
-                  {/* Job Type */}
-                  <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  {/* ← RESTORED: Job Type Badge with Blue Color */}
+                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="flex items-center">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
                       <span className="text-sm font-medium text-gray-600">Job Type</span>
                     </div>
-                    <span className="text-sm font-semibold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">
-                      {job.JobType}
-                    </span>
+                    <span className="text-sm font-semibold text-blue-600">{job.JobType}</span>
                   </div>
 
-                  {/* Work Arrangement Badge */}
-                  {(workArrangement.type === 'remote' || workArrangement.type === 'hybrid') && (
-                    <div className={`flex items-center justify-between p-4 rounded-lg border ${workArrangement.type === 'remote'
+                  {/* Work Style Badge */}
+                  {workArrangement && (
+                    <div className={`flex items-center justify-between p-3 rounded-lg border ${workArrangement.type === 'remote'
                       ? 'bg-purple-50 border-purple-200'
                       : 'bg-orange-50 border-orange-200'
                       }`}>
                       <div className="flex items-center">
-                        <div className={`w-2 h-2 rounded-full mr-3 ${workArrangement.type === 'remote' ? 'bg-purple-500' : 'bg-orange-500'
+                        <div className={`w-2 h-2 rounded-full mr-2 ${workArrangement.type === 'remote'
+                          ? 'bg-purple-500'
+                          : 'bg-orange-500'
                           }`}></div>
                         <span className="text-sm font-medium text-gray-600">Work Style</span>
                       </div>
@@ -381,7 +441,7 @@ export default async function Page({ params }: PageProps) {
                 </div>
               </div>
 
-              {/* Company Rating Card */}
+              {/* ← FIXED: Company Rating Card with Glassdoor */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Company Rating</h3>
 
@@ -395,7 +455,8 @@ export default async function Page({ params }: PageProps) {
                         key={star}
                         className={`w-5 h-5 ${companyData?.overall_rating && star <= Math.round(companyData.overall_rating)
                           ? 'text-yellow-400'
-                          : 'text-gray-300'}`}
+                          : 'text-gray-300'
+                          }`}
                         fill="currentColor"
                         viewBox="0 0 22 20"
                       >
@@ -469,97 +530,141 @@ export default async function Page({ params }: PageProps) {
                 </div>
               </div>
 
-              {/* Share Job Card */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Share This Job</h3>
-
-                <div className="space-y-3">
-                  {/* Email Share */}
-                  <a
-                    href={`mailto:?subject=${encodeURIComponent(`Check out this job: ${job.JobTitle} at ${job.Company}`)}&body=${encodeURIComponent(`I thought you might be interested in this position:\n\n${job.JobTitle} at ${job.Company}\n${job.ShortDescription}\n\nView details: ${currentUrl}`)}`}
-                    className="flex items-center justify-center w-full p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-                  >
-                    <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    <span className="text-sm font-medium text-gray-700">Email Job</span>
-                  </a>
-
-
-
-                  {/* Social Share Buttons */}
-                  <div className="grid grid-cols-2 gap-2 pt-2">
-                    <a
-                      href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                      </svg>
-                    </a>
-                    <a
-                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out this job: ${job.JobTitle} at ${job.Company}`)}&url=${encodeURIComponent(currentUrl)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center p-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors duration-200"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
-                      </svg>
-                    </a>
+              {/* Company Info Card (Enhanced with matched company data) */}
+              {matchedCompany && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <h4 className="text-lg font-bold text-gray-900 mb-4">About {job.Company}</h4>
+                  <div className="space-y-3">
+                    {matchedCompany.industry && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Industry</span>
+                        <span className="font-medium">{matchedCompany.industry}</span>
+                      </div>
+                    )}
+                    {matchedCompany.headquarters && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Headquarters</span>
+                        <span className="font-medium">{matchedCompany.headquarters}</span>
+                      </div>
+                    )}
+                    {matchedCompany.size && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Company Size</span>
+                        <span className="font-medium">{matchedCompany.size}</span>
+                      </div>
+                    )}
+                    {matchedCompany.overall_rating && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Rating</span>
+                        <div className="flex items-center">
+                          <span className="text-yellow-500 mr-1">★</span>
+                          <span className="font-medium">{matchedCompany.overall_rating}/5.0</span>
+                        </div>
+                      </div>
+                    )}
+                    {companyPageUrl && (
+                      <Link
+                        href={companyPageUrl}
+                        className="inline-block w-full text-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 mt-3"
+                      >
+                        View Company Profile
+                      </Link>
+                    )}
                   </div>
                 </div>
-              </div>
-
-              {/* Quick Apply Card */}
-              <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-sm p-6 text-white">
-                <h3 className="text-lg font-bold mb-2">Ready to Apply?</h3>
-                <p className="text-blue-100 text-sm mb-4">
-                  Don&apos;t miss out on this opportunity. Apply now and take the next step in your career.
-                </p>
-                {job.job_url && (
-                  <a
-                    href={job.job_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center w-full px-4 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors duration-200"
-                  >
-                    Apply Now
-                    <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </a>
-                )}
-              </div>
+              )}
             </div>
           </div>
-
-          {/* Similar Jobs Section */}
-          {similarJobs && similarJobs.length > 0 && (
-            <section className="mt-16">
-              <h2 className="text-xl font-bold mb-4 text-gray-700">Similar Jobs</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {similarJobs.map((related) => (
-                  <div key={related.JobID} className="border rounded-xl p-4 shadow-sm hover:shadow-md transition">
-                    <h3 className="text-md font-semibold mb-1 text-gray-900">{related.JobTitle}</h3>
-                    <p className="text-sm text-gray-600">{related.Company}</p>
-                    <p className="text-sm text-gray-500">{related.Location}</p>
-                    <p className="text-sm font-medium text-green-700">{related.formatted_salary}</p>
-                    <Link
-                      href={`/jobs/${related.slug}`}
-                      className="text-sm mt-2 inline-block text-blue-600 hover:underline"
-                    >
-                      View Job →
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
         </div>
       </div>
+
+      {/* ✅ FIXED: Similar Jobs Section - No async in JSX */}
+      {enhancedSimilarJobs && enhancedSimilarJobs.length > 0 && (
+        <div className="bg-gray-50 py-16">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="text-center mb-12">
+              <h3 className="text-3xl font-bold text-gray-900 mb-4">Similar Jobs</h3>
+              <p className="text-lg text-gray-600">More opportunities you might be interested in</p>
+            </div>
+
+            {/* Full Width 1x4 Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {enhancedSimilarJobs.map((similarJob) => (
+                <div key={similarJob.JobID} className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300 h-full">
+
+                  {/* Company Logo Circle */}
+                  <div className="flex justify-center mb-6">
+                    {similarJob.CompanyLogo ? (
+                      <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center border-2 border-gray-200">
+                        <Image
+                          src={similarJob.CompanyLogo}
+                          alt={`${similarJob.Company} logo`}
+                          width={32}
+                          height={32}
+                          className="w-8 h-8 object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md">
+                        <span className="text-white font-bold text-xl">
+                          {similarJob.Company.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Company Name */}
+                  <div className="text-center mb-4">
+                    {similarJob.companyPageUrl ? (
+                      <Link
+                        href={similarJob.companyPageUrl}
+                        className="text-sm text-blue-600 hover:text-blue-800 font-semibold transition-colors"
+                      >
+                        {similarJob.Company}
+                      </Link>
+                    ) : (
+                      <p className="text-sm text-gray-600 font-semibold">{similarJob.Company}</p>
+                    )}
+                  </div>
+
+                  {/* Job Title */}
+                  <h4 className="text-xl font-bold text-gray-900 mb-4 text-center line-clamp-2 leading-tight min-h-[3.5rem]">
+                    <Link href={`/jobs/${similarJob.slug}`} className="hover:text-blue-600 transition-colors">
+                      {similarJob.JobTitle}
+                    </Link>
+                  </h4>
+
+                  {/* Location */}
+                  <p className="text-base text-gray-600 text-center mb-6 font-medium">
+                    {similarJob.Location}
+                  </p>
+
+                  {/* Salary */}
+                  <div className="text-center mb-6">
+                    <span className="text-xl font-bold text-green-600">
+                      {similarJob.formatted_salary || 'Competitive Salary'}
+                    </span>
+                  </div>
+
+                  {/* View Job Button */}
+                  <div className="text-center">
+                    <Link
+                      href={`/jobs/${similarJob.slug}`}
+                      className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md hover:shadow-lg"
+                    >
+                      View Job
+                      <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </>
   );

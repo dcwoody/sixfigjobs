@@ -1,4 +1,4 @@
-// src/app/jobs/page.tsx
+// src/app/jobs/page.tsx - KEEP YOUR ORIGINAL LAYOUT + ADD LOGO SYNC
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -7,19 +7,21 @@ import Hero from '@/components/NavBar';
 import React from 'react';
 import { Search, MapPin, DollarSign, ChevronLeft, ChevronRight, Filter, Heart, Building2, Clock, TrendingUp, Sparkles, X } from 'lucide-react';
 import FilterSection from '@/components/FilterSection';
+import { getCompanyLogo, getCompanyPageUrl } from '@/lib/dbSync'; // ← ADD THIS IMPORT
 
 interface Job {
   JobID: string;
   JobTitle: string;
-  ShortDescription: string;
   Company: string;
   Location: string;
-  JobType: string;
   formatted_salary: string;
-  slug: string;
+  JobType: string;
+  ShortDescription: string;
   PostedDate: string;
   is_remote: boolean;
   CompanyLogo?: string;
+  slug: string;
+  companyPageUrl?: string;
 }
 
 interface PageProps {
@@ -40,69 +42,82 @@ export default async function JobsListingPage({ searchParams }: PageProps) {
   const currentPage = parseInt(page || '1', 10);
   const offset = (currentPage - 1) * JOBS_PER_PAGE;
 
-let countQuery = supabase
-  .from('job_listings_db')
-  .select('*', { count: 'exact', head: true });
+  let countQuery = supabase
+    .from('job_listings_db')
+    .select('*', { count: 'exact', head: true });
 
-if (q) {
-  countQuery = countQuery.or(
-    `JobTitle.ilike.%${q}%,ShortDescription.ilike.%${q}%,Company.ilike.%${q}%`
-  );
-}
-
-if (location) {
-  countQuery = countQuery.ilike('Location', `%${location}%`);
-
-  if (location.toLowerCase().includes('remote')) {
-    countQuery = countQuery.eq('is_remote', true);
+  if (q) {
+    countQuery = countQuery.or(
+      `JobTitle.ilike.%${q}%,ShortDescription.ilike.%${q}%,Company.ilike.%${q}%`
+    );
   }
-}
 
-if (jobType) {
-  countQuery = countQuery.eq('JobType', jobType);
-}
+  if (location) {
+    countQuery = countQuery.ilike('Location', `%${location}%`);
+    if (location.toLowerCase().includes('remote')) {
+      countQuery = countQuery.eq('is_remote', true);
+    }
+  }
 
-if (workType === 'Remote') {
-  countQuery = countQuery.eq('is_remote', true);
-} else if (workType === 'On-site') {
-  countQuery = countQuery.eq('is_remote', false);
-}
+  if (jobType) {
+    countQuery = countQuery.eq('JobType', jobType);
+  }
+
+  if (workType === 'Remote') {
+    countQuery = countQuery.eq('is_remote', true);
+  } else if (workType === 'On-site') {
+    countQuery = countQuery.eq('is_remote', false);
+  }
 
   const { count: totalJobs } = await countQuery;
   const totalPages = Math.ceil((totalJobs || 0) / JOBS_PER_PAGE);
 
   let query = supabase
-  .from('job_listings_db')
-  .select('*')
-  .order('PostedDate', { ascending: false })
-  .range(offset, offset + JOBS_PER_PAGE - 1);
+    .from('job_listings_db')
+    .select('*')
+    .order('PostedDate', { ascending: false })
+    .range(offset, offset + JOBS_PER_PAGE - 1);
 
-if (q) {
-  query = query.or(
-    `JobTitle.ilike.%${q}%,ShortDescription.ilike.%${q}%,Company.ilike.%${q}%`
-  );
-}
-
-if (location) {
-  query = query.ilike('Location', `%${location}%`);
-
-  if (location.toLowerCase().includes('remote')) {
-    query = query.eq('is_remote', true);
+  if (q) {
+    query = query.or(
+      `JobTitle.ilike.%${q}%,ShortDescription.ilike.%${q}%,Company.ilike.%${q}%`
+    );
   }
-}
 
-if (jobType) {
-  query = query.eq('JobType', jobType);
-}
+  if (location) {
+    query = query.ilike('Location', `%${location}%`);
+    if (location.toLowerCase().includes('remote')) {
+      query = query.eq('is_remote', true);
+    }
+  }
 
-if (workType === 'Remote') {
-  query = query.eq('is_remote', true);
-} else if (workType === 'On-site') {
-  query = query.eq('is_remote', false);
-}
+  if (jobType) {
+    query = query.eq('JobType', jobType);
+  }
+
+  if (workType === 'Remote') {
+    query = query.eq('is_remote', true);
+  } else if (workType === 'On-site') {
+    query = query.eq('is_remote', false);
+  }
 
   const { data: jobs, error } = await query;
+
   if (error) return <div className="p-6 text-red-600">Error loading jobs: {error.message}</div>;
+
+  // ← ADD LOGO SYNC HERE (keep everything else the same)
+  const enhancedJobs = await Promise.all(
+    (jobs || []).map(async (job) => {
+      const companyLogo = await getCompanyLogo(job.Company, job.CompanyLogo || null, supabase);
+      const companyPageUrl = await getCompanyPageUrl(job.Company, supabase);
+      
+      return {
+        ...job,
+        CompanyLogo: companyLogo,
+        companyPageUrl
+      };
+    })
+  );
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -172,13 +187,30 @@ if (workType === 'Remote') {
   // DC region locations and other filter options
   const locations = [
     'Washington, D.C.',
-    'Alexandria, VA',
     'Arlington, VA',
-    'Remote',
+    'Alexandria, VA',
+    'Bethesda, MD',
+    'Silver Spring, MD',
+    'Rockville, MD',
+    'Fairfax, VA',
+    'Tysons, VA',
+    'Reston, VA',
+    'Remote'
   ];
 
-  const jobTypes = ['Full-time', 'Part-time', 'Contract', 'Freelance'];
-  const workTypes = ['Remote', 'Hybrid', 'On-site'];
+  const jobTypes = [
+    'Full-Time',
+    'Part-Time',
+    'Contract',
+    'Freelance',
+    'Internship'
+  ];
+
+  const workTypes = [
+    'Remote',
+    'Hybrid',
+    'On-site'
+  ];
 
   const baseUrl = '/jobs';
   const existingParams = { q, location, jobType, workType };
@@ -186,61 +218,62 @@ if (workType === 'Remote') {
   return (
     <>
       <Hero />
-      <div className="min-h-screen bg-white from-slate-50 via-blue-50/30 to-indigo-50/30">
-        {/* Hero Section */}
-        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg/%3E%3Cg' fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-40"></div>
+      <div className="relative min-h-screen">
+        {/* Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 -z-10" />
 
-          <div className="relative max-w-7xl mx-auto px-4 py-20">
+        {/* Header Section */}
+        <div className="relative pt-20 pb-12 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5" />
+          <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-12">
-              <div className="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white/90 text-sm font-medium mb-6 border border-white/20">
-                <Sparkles className="w-4 h-4 mr-2" />
-                Discover Your Next Opportunity
+              <div className="inline-flex items-center bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 mb-6 shadow-sm border border-white/20">
+                <Sparkles className="w-4 h-4 text-blue-600 mr-2" />
+                <span className="text-sm font-medium text-gray-700">Find Your Dream Job</span>
               </div>
-              <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                Find Your Dream
-                <span className="block bg-gradient-to-r from-cyan-400 to-blue-300 bg-clip-text text-transparent">
-                  Career Today
-                </span>
+              
+              <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent mb-6">
+                Six-Figure Opportunities
               </h1>
-              <p className="text-xl text-blue-100 max-w-2xl mx-auto leading-relaxed">
-                Connect with top companies and discover opportunities that match your skills and aspirations
+              
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+                Discover high-paying positions from top companies. Your next career breakthrough is waiting.
               </p>
-            </div>
 
-            {/* Enhanced Search Bar */}
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-2 shadow-2xl border border-white/20">
-                <form method="GET" action="/jobs" className="flex flex-col md:flex-row gap-2">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      name="q"
-                      defaultValue={q || ''}
-                      placeholder="Job title, keywords, or company"
-                      className="w-full pl-12 pr-4 py-4 bg-transparent rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-700 placeholder-gray-500"
-                    />
+              {/* Search Form */}
+              <div className="max-w-4xl mx-auto">
+                <form method="GET" action="/jobs" className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 relative">
+                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <input
+                        type="text"
+                        name="q"
+                        defaultValue={q || ''}
+                        placeholder="Job title, keywords, or company"
+                        className="w-full pl-12 pr-4 py-4 bg-transparent rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-700 placeholder-gray-500"
+                      />
+                    </div>
+                    <div className="flex-1 relative">
+                      <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <input
+                        type="text"
+                        name="location"
+                        defaultValue={location || ''}
+                        placeholder="City, state, or remote"
+                        className="w-full pl-12 pr-4 py-4 bg-transparent rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-700 placeholder-gray-500"
+                      />
+                    </div>
+                    {/* Hidden inputs to preserve other filters */}
+                    {jobType && <input type="hidden" name="jobType" value={jobType} />}
+                    {workType && <input type="hidden" name="workType" value={workType} />}
+                    <button
+                      type="submit"
+                      className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                    >
+                      Search Jobs
+                    </button>
                   </div>
-                  <div className="flex-1 relative">
-                    <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      name="location"
-                      defaultValue={location || ''}
-                      placeholder="City, state, or remote"
-                      className="w-full pl-12 pr-4 py-4 bg-transparent rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-700 placeholder-gray-500"
-                    />
-                  </div>
-                  {/* Hidden inputs to preserve other filters */}
-                  {jobType && <input type="hidden" name="jobType" value={jobType} />}
-                  {workType && <input type="hidden" name="workType" value={workType} />}
-                  <button
-                    type="submit"
-                    className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
-                  >
-                    Search Jobs
-                  </button>
                 </form>
               </div>
             </div>
@@ -278,7 +311,7 @@ if (workType === 'Remote') {
                   filterType="location"
                   baseUrl={baseUrl}
                   existingParams={existingParams}
-                  showCheckbox={true} // ✅ Add this
+                  showCheckbox={true}
                   defaultOpen={false}
                 />
 
@@ -354,89 +387,108 @@ if (workType === 'Remote') {
               </div>
 
               {/* Jobs Grid */}
-              {jobs && jobs.length > 0 ? (
+              {enhancedJobs && enhancedJobs.length > 0 ? (
                 <div className="space-y-6 mb-8">
-                  {jobs.map((job: Job) => (
+                  {enhancedJobs.map((job: Job) => (
                     <div
                       key={job.JobID}
                       className="group bg-white rounded-2xl shadow-md hover:shadow-lg border border-gray-200 p-8 transition-all duration-300 hover:-translate-y-1">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-start gap-6 mb-6">
-                            {/* Company Logo */}
+                            {/* ← ENHANCED Company Logo with Fallback */}
                             <div className="flex-shrink-0">
                               {job.CompanyLogo ? (
                                 <Image
                                   src={job.CompanyLogo}
                                   alt={`${job.Company} logo`}
-                                  width={56}
-                                  height={56}
-                                  className="w-14 h-14 object-contain rounded-xl bg-gray-50 p-2 border border-gray-200 shadow-lg"
+                                  width={64}
+                                  height={64}
+                                  className="w-16 h-16 object-contain rounded-xl border border-gray-200 p-2 bg-white"
                                 />
                               ) : (
-                                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                                  <Building2 className="w-7 h-7 text-white" />
+                                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center border border-gray-200">
+                                  <span className="text-white font-bold text-xl">
+                                    {job.Company.charAt(0).toUpperCase()}
+                                  </span>
                                 </div>
                               )}
                             </div>
 
-                            <div className="flex-1 min-w-0">
-                              <Link href={`/jobs/${job.slug}`}>
-                                <h3 className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors cursor-pointer mb-2 leading-tight">
-                                  {job.JobTitle}
-                                </h3>
-                              </Link>
-                              <div className="flex items-center text-blue-600 font-semibold mb-4">
-                                <span className="text-lg">{job.Company}</span>
-                              </div>
-
-                              <div className="flex items-center gap-6 text-sm text-gray-600 mb-4">
-                                <div className="flex items-center">
-                                  <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-                                  <span className="font-medium">{job.Location}</span>
-                                </div>
-                                {job.formatted_salary && (
-                                  <div className="flex items-center">
-                                    <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
-                                    <span className="font-bold text-gray-900">{job.formatted_salary}</span>
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  {/* ← ENHANCED Company Name with Link */}
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <Building2 className="w-4 h-4 text-gray-400" />
+                                    {job.companyPageUrl ? (
+                                      <Link 
+                                        href={job.companyPageUrl}
+                                        className="text-gray-600 hover:text-blue-600 font-medium text-sm transition-colors"
+                                      >
+                                        {job.Company}
+                                      </Link>
+                                    ) : (
+                                      <span className="text-gray-600 font-medium text-sm">
+                                        {job.Company}
+                                      </span>
+                                    )}
                                   </div>
-                                )}
-                                <div className="flex items-center">
-                                  <Clock className="w-4 h-4 mr-2 text-gray-400" />
-                                  <span>Posted {formatDate(job.PostedDate)}</span>
+
+                                  <Link href={`/jobs/${job.slug}`} className="group">
+                                    <h3 className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-200 mb-2">
+                                      {job.JobTitle}
+                                    </h3>
+                                  </Link>
+
+                                  <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
+                                    <div className="flex items-center">
+                                      <MapPin className="w-4 h-4 mr-1" />
+                                      {job.Location}
+                                    </div>
+                                    <div className="flex items-center">
+                                      <Clock className="w-4 h-4 mr-1" />
+                                      {formatDate(job.PostedDate)}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="text-right flex flex-col items-end">
+                                  <div className="flex items-center text-green-600 font-bold text-lg mb-2">
+                                    <DollarSign className="w-5 h-5" />
+                                    {job.formatted_salary || 'Competitive'}
+                                  </div>
+                                  
+                                  <div className="flex gap-2 mb-3">
+                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getJobTypeColor(job.JobType)}`}>
+                                      {job.JobType}
+                                    </span>
+                                    {job.is_remote && (
+                                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-green-500/10 to-teal-500/10 text-green-700 border border-green-200/50">
+                                        Remote
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
+
+                              <p className="text-gray-600 leading-relaxed mb-4 line-clamp-2">
+                                {job.ShortDescription}
+                              </p>
+
+                              <Link
+                                href={`/jobs/${job.slug}`}
+                                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                              >
+                                View Details
+                              </Link>
                             </div>
                           </div>
 
-                          <p className="text-gray-700 text-base mb-6 leading-relaxed">
-                            {job.ShortDescription}
-                          </p>
-
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <span className={`px-4 py-2 rounded-full text-sm font-semibold ${getJobTypeColor(job.JobType)}`}>
-                                {job.JobType}
-                              </span>
-                              {job.is_remote && (
-                                <span className="px-4 py-2 rounded-full text-sm font-semibold bg-gradient-to-r from-emerald-500/10 to-teal-500/10 text-emerald-700 border border-emerald-200/50">
-                                  Remote
-                                </span>
-                              )}
-                            </div>
-
-                            <Link
-                              href={`/jobs/${job.slug}`}
-                              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
-                            >
-                              View Details
-                            </Link>
-                          </div>
+                          <button className="flex-shrink-0 ml-6 p-3 text-gray-400 hover:text-red-500 transition-all duration-200 hover:scale-110">
+                            <Heart className="w-6 h-6" />
+                          </button>
                         </div>
-
-                        <button className="flex-shrink-0 ml-6 p-3 text-gray-400 hover:text-red-500 transition-all duration-200 hover:scale-110">
-                          <Heart className="w-6 h-6" />
-                        </button>
                       </div>
                     </div>
                   ))}
@@ -460,37 +512,36 @@ if (workType === 'Remote') {
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="text-sm text-gray-600">
-                      Showing <span className="font-bold text-gray-900">{offset + 1}</span> to{' '}
-                      <span className="font-bold text-gray-900">{Math.min(offset + JOBS_PER_PAGE, totalJobs || 0)}</span> of{' '}
-                      <span className="font-bold text-gray-900">{totalJobs}</span> results
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center text-sm text-gray-600">
+                      Showing page {currentPage} of {totalPages}
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-2">
                       {currentPage > 1 && (
                         <Link
                           href={createPageUrl(currentPage - 1)}
-                          className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white/80 backdrop-blur-sm border border-gray-300 rounded-lg hover:bg-white hover:text-gray-900 transition-all duration-200 hover:shadow-md"
+                          className="inline-flex items-center px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg transition-colors duration-200"
                         >
                           <ChevronLeft className="w-4 h-4 mr-1" />
                           Previous
                         </Link>
                       )}
 
-                      <div className="flex items-center space-x-1">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                          const pageNum = Math.max(1, currentPage - 2) + i;
                           if (pageNum > totalPages) return null;
-
+                          
                           return (
                             <Link
                               key={pageNum}
                               href={createPageUrl(pageNum)}
-                              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${pageNum === currentPage
-                                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg'
-                                : 'text-gray-600 bg-white/80 backdrop-blur-sm border border-gray-300 hover:bg-white hover:text-gray-900 hover:shadow-md'
-                                }`}
+                              className={`w-10 h-10 flex items-center justify-center text-sm font-medium rounded-lg transition-colors duration-200 ${
+                                pageNum === currentPage
+                                  ? 'bg-blue-600 text-white'
+                                  : 'text-gray-700 hover:bg-gray-100'
+                              }`}
                             >
                               {pageNum}
                             </Link>
@@ -501,7 +552,7 @@ if (workType === 'Remote') {
                       {currentPage < totalPages && (
                         <Link
                           href={createPageUrl(currentPage + 1)}
-                          className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white/80 backdrop-blur-sm border border-gray-300 rounded-lg hover:bg-white hover:text-gray-900 transition-all duration-200 hover:shadow-md"
+                          className="inline-flex items-center px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg transition-colors duration-200"
                         >
                           Next
                           <ChevronRight className="w-4 h-4 ml-1" />
@@ -515,7 +566,6 @@ if (workType === 'Remote') {
           </div>
         </div>
       </div>
-
       <Footer />
     </>
   );

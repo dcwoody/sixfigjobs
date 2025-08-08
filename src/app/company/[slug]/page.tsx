@@ -1,31 +1,13 @@
-// src/app/company/[slug]/page.tsx
+// src/app/company/[slug]/page.tsx - FIXED VERSION
 import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Metadata } from 'next';
+import { findCompanyMatch } from '@/lib/dbSync'; // Import the matching function
 
 import Hero from '@/components/NavBar';
 import Footer from '@/components/Footer';
-
-
-// Create URL-friendly slug from company name
-function createSlug(name: string): string {
-    return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-}
-
-// Title case utility
-function toTitleCase(str: string): string {
-    return str
-        .toLowerCase()
-        .split(' ')
-        .map(word =>
-            word.length > 2
-                ? word.charAt(0).toUpperCase() + word.slice(1)
-                : word
-        )
-        .join(' ');
-}
 
 // Helper function for time formatting
 function formatTimeAgo(dateString: string): string {
@@ -45,18 +27,42 @@ interface PageProps {
     params: Promise<{ slug: string }>;
 }
 
+interface SlimCompany {
+    name: string;
+    description?: string;  // ← Make it optional
+    industry?: string;     // ← Make it optional  
+    headquarters?: string; // ← Make it optional
+}
+
 // SEO: Generate dynamic metadata
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
     const resolvedParams = await params;
     const { slug } = resolvedParams;
 
     const { data: company } = await supabase
-    .from('companies_db')
-    .select('name, description, industry, headquarters')
-    .eq('slug', slug)
-    .single();
+        .from('companies_db')
+        .select('name, description, industry, headquarters')
+        .eq('slug', slug)
+        .single();
 
-    if (!company) {
+let matchedCompany: SlimCompany | null = company || null;
+const searchName = slug.replace(/-/g, ' ');
+
+let matchedCompany = company || null;
+
+if (!matchedCompany) {
+    const { data: allCompanies } = await supabase
+        .from('companies_db')
+        .select('id, name, short_name, description, industry, headquarters, slug, company_logo');
+
+    if (allCompanies) {
+        const searchName = slug.replace(/-/g, ' ');
+        const foundCompany = findCompanyMatch(searchName, allCompanies);
+        matchedCompany = foundCompany || null;
+    }
+}
+
+    if (!matchedCompany) {
         return {
             title: 'Company Not Found | SixFigHires.com',
             description: 'The requested company profile could not be found.'
@@ -65,7 +71,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     const brand = ' | SixFigHires.com';
     const maxTotalLength = 60;
-    const rawTitle = `${company.name} - Company Profile`;
+    const rawTitle = `${matchedCompany.name} - Company Profile`;
 
     const truncatedTitle =
         rawTitle.length + brand.length > maxTotalLength
@@ -76,17 +82,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     return {
         title: finalTitle,
-        description: company.description || `Learn about ${company.name}, a ${company.industry || 'leading'} company ${company.headquarters ? `based in ${company.headquarters}` : ''}. Find jobs and company information.`,
-        keywords: `${company.name}, company profile, jobs, careers, ${company.industry || ''}, ${company.headquarters || ''}`,
+        description: matchedCompany.description || `Learn about ${matchedCompany.name}, a ${matchedCompany.industry || 'leading'} company ${matchedCompany.headquarters ? `based in ${matchedCompany.headquarters}` : ''}. Find jobs and company information.`,
+        keywords: `${matchedCompany.name}, company profile, jobs, careers, ${matchedCompany.industry || ''}, ${matchedCompany.headquarters || ''}`,
         openGraph: {
             title: finalTitle,
-            description: company.description || `Learn about ${company.name}`,
+            description: matchedCompany.description || `Learn about ${matchedCompany.name}`,
             type: 'website',
         },
         twitter: {
             card: 'summary_large_image',
             title: finalTitle,
-            description: company.description || `Learn about ${company.name}`,
+            description: matchedCompany.description || `Learn about ${matchedCompany.name}`,
         }
     };
 }
@@ -95,32 +101,96 @@ export default async function CompanyPage({ params }: PageProps) {
     const resolvedParams = await params;
     const { slug } = resolvedParams;
 
-    // Try to find company by ID first, then by slug-like matching
-    const { data: company, error } = await supabase
+    const { data: companyData, error } = await supabase
         .from('companies_db')
         .select('*')
         .eq('slug', slug)
         .single();
 
+    let company = companyData;
+
     if (error || !company) {
-        console.error('Company not found or Supabase error:', error);
+        console.log('Exact slug match not found, trying fuzzy matching...');
+
+        const { data: allCompanies } = await supabase
+            .from('companies_db')
+            .select('*');
+
+        if (allCompanies && allCompanies.length > 0) {
+            const searchName = slug.replace(/-/g, ' ');
+            const matchedCompany = findCompanyMatch(searchName, allCompanies);
+
+            if (matchedCompany) {
+                company = matchedCompany;
+                console.log(`Fuzzy match found: ${company.name}`);
+            }
+        }
+    }
+
+    if (!company) {
+        console.log('No company match found, checking if jobs exist for this company...');
+
+        const searchName = slug.replace(/-/g, ' ');
+        const { data: jobsForCompany } = await supabase
+            .from('job_listings_db')
+            .select('Company, JobID, JobTitle, Location, formatted_salary, JobType, ShortDescription, slug')
+            .ilike('Company', `%${searchName}%`)
+            .limit(10);
+
+        if (jobsForCompany && jobsForCompany.length > 0) {
+            const companyName = jobsForCompany[0].Company;
+            company = {
+                id: `placeholder-${slug}`,
+                name: companyName,
+                short_name: companyName,
+                slug: slug,
+                description: `${companyName} is actively hiring for multiple positions. Explore their current job openings below.`,
+                website: null,
+                headquarters: null,
+                industry: null,
+                size: null,
+                type: null,
+                year_founded: null,
+                revenue: null,
+                mission: null,
+                company_logo: null,
+                cover_photo: null,
+                overall_rating: null,
+                career_rating: null,
+                ceo_name: null,
+                ceo_photo: null,
+                ceo_title: null,
+                created_at: new Date().toISOString(),
+                updated_at: null
+            };
+
+            console.log(`Created placeholder company for: ${companyName}`);
+        }
+    }
+
+    if (!company) {
+        console.error('Company not found:', slug);
         notFound();
     }
 
-    // Get jobs for this company
+    // Get jobs for this company (enhanced search)
     const { data: companyJobs } = await supabase
         .from('job_listings_db')
         .select('JobID, CompanyLogo, JobTitle, Company, Location, formatted_salary, JobType, ShortDescription, slug')
-        .ilike('Company', `%${company.name}%`)
+        .or(`Company.ilike.%${company.name}%,Company.ilike.%${company.short_name || ''}%`)
         .limit(10);
 
-    // Get related companies (same industry)
-    const { data: relatedCompanies } = await supabase
-        .from('companies_db')
-        .select('id, name, short_name, company_logo, industry')
-        .neq('id', company.id)
-        .eq('industry', company.industry || '')
-        .limit(6);
+    // Get related companies (same industry) - only if we have a real company
+    let relatedCompanies = null;
+    if (company.id && !company.id.startsWith('placeholder-')) {
+        const { data } = await supabase
+            .from('companies_db')
+            .select('id, name, short_name, company_logo, industry, slug')
+            .neq('id', company.id)
+            .eq('industry', company.industry || '')
+            .limit(6);
+        relatedCompanies = data;
+    }
 
     const structuredData = {
         "@context": "https://schema.org/",
@@ -132,27 +202,26 @@ export default async function CompanyPage({ params }: PageProps) {
         "foundingDate": company.year_founded?.toString(),
         "numberOfEmployees": company.size,
         "industry": company.industry,
-        "address": {
+        "address": company.headquarters ? {
             "@type": "PostalAddress",
             "addressLocality": company.headquarters
-        },
+        } : undefined,
         "aggregateRating": company.overall_rating ? {
             "@type": "AggregateRating",
             "ratingValue": company.overall_rating,
-            "ratingCount": 100
+            "bestRating": "5",
+            "ratingCount": "100"
         } : undefined
     };
 
     return (
         <>
+            <Hero />
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{
-                    __html: JSON.stringify(structuredData),
-                }}
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
             />
 
-            <Hero />
             <div className="min-h-screen bg-gray-50 py-8 px-4">
                 <div className="max-w-6xl mx-auto">
 
@@ -160,179 +229,170 @@ export default async function CompanyPage({ params }: PageProps) {
                     <nav className="mb-6" aria-label="Breadcrumb">
                         <ol className="flex items-center space-x-2 text-sm text-gray-600">
                             <li>
-                                <Link href="/" className="hover:text-blue-600 transition-colors">
-                                    Home
-                                </Link>
+                                <Link href="/" className="hover:text-blue-600 transition-colors">Home</Link>
                             </li>
                             <li className="flex items-center">
                                 <svg className="w-4 h-4 mx-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                 </svg>
-                                <Link href="/company" className="hover:text-blue-600 transition-colors">
-                                    Companies
-                                </Link>
+                                <Link href="/company" className="hover:text-blue-600 transition-colors">Companies</Link>
                             </li>
                             <li className="flex items-center">
                                 <svg className="w-4 h-4 mx-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                 </svg>
-                                <span className="text-gray-900 font-medium truncate max-w-xs">
-                                    {company.name}
-                                </span>
+                                <span className="text-gray-900 font-medium">{company.name}</span>
                             </li>
                         </ol>
                     </nav>
 
-                    {/* Header Card */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-                        {/* Cover Photo */}
-                        {company.cover_photo && (
-                            <div className="h-48 bg-gradient-to-r from-blue-600 to-blue-700 relative">
-                                <Image
-                                    src={company.cover_photo}
-                                    alt={`${company.name} cover`}
-                                    fill
-                                    className="object-cover"
-                                />
-                            </div>
-                        )}
+                    {/* Company Header */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+
+                        {/* Cover Photo or Gradient */}
+                        <div className="h-32 bg-gradient-to-r from-blue-500 to-purple-600"></div>
 
                         <div className="p-8">
-                            <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-6 mb-6">
-                                        {company.company_logo && (
-                                            <div className="flex-shrink-0">
-                                                <Image
-                                                    src={company.company_logo}
-                                                    alt={`${company.name} logo`}
-                                                    width={96}
-                                                    height={96}
-                                                    className="w-24 h-24 object-contain rounded-xl border border-gray-200 p-2 bg-white shadow-sm"
-                                                />
-                                            </div>
-                                        )}
-                                        <div className="flex-1">
-                                            <h1 className="text-4xl font-bold text-gray-900 mb-2">{company.name}</h1>
-                                            <div className="flex flex-wrap items-center gap-4 text-gray-600 mb-4">
-                                                {company.industry && (
-                                                    <div className="flex items-center">
-                                                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                                        </svg>
-                                                        {company.industry}
-                                                    </div>
-                                                )}
-                                                {company.headquarters && (
-                                                    <div className="flex items-center">
-                                                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                        </svg>
-                                                        {company.headquarters}
-                                                    </div>
-                                                )}
-                                                {company.size && (
-                                                    <div className="flex items-center">
-                                                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                                        </svg>
-                                                        {company.size}
-                                                    </div>
-                                                )}
-                                            </div>
+                            <div className="flex items-start gap-6 mb-6">
+                                {/* Company Logo */}
+                                {company.company_logo ? (
+                                    <Image
+                                        src={company.company_logo}
+                                        alt={`${company.name} logo`}
+                                        width={100}
+                                        height={100}
+                                        className="w-20 h-20 object-contain rounded-xl border border-gray-200 p-2 bg-white -mt-10"
+                                    />
+                                ) : (
+                                    <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center -mt-10 border-4 border-white">
+                                        <span className="text-white font-bold text-2xl">
+                                            {company.name.charAt(0).toUpperCase()}
+                                        </span>
+                                    </div>
+                                )}
 
-                                            {/* Action Buttons */}
-                                            <div className="flex gap-3">
-                                                {company.website && (
-                                                    <a
-                                                        href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200 shadow-sm"
-                                                    >
-                                                        Visit Website
-                                                        <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                        </svg>
-                                                    </a>
-                                                )}
-                                                {companyJobs && companyJobs.length > 0 && (
-                                                    <a
-                                                        href="#jobs"
-                                                        className="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors duration-200 shadow-sm"
-                                                    >
-                                                        View Jobs ({companyJobs.length})
-                                                        <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                        </svg>
-                                                    </a>
-                                                )}
-                                            </div>
-                                        </div>
+                                <div className="flex-1">
+                                    <h1 className="text-3xl font-bold text-gray-900 mb-2">{company.name}</h1>
+
+                                    {company.industry && (
+                                        <p className="text-lg text-gray-600 mb-2">{company.industry}</p>
+                                    )}
+
+                                    {company.headquarters && (
+                                        <p className="text-gray-500 mb-3">{company.headquarters}</p>
+                                    )}
+
+                                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                                        {company.size && (
+                                            <span className="flex items-center">
+                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                </svg>
+                                                {company.size}
+                                            </span>
+                                        )}
+                                        {company.year_founded && (
+                                            <span className="flex items-center">
+                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                                Founded {company.year_founded}
+                                            </span>
+                                        )}
+                                        {company.website && (
+                                            <a
+                                                href={company.website}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center text-blue-600 hover:text-blue-700"
+                                            >
+                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                </svg>
+                                                Website
+                                            </a>
+                                        )}
                                     </div>
                                 </div>
                             </div>
+
+                            {company.description && (
+                                <p className="text-gray-700 leading-relaxed">{company.description}</p>
+                            )}
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Main Content */}
-                        <div className="lg:col-span-2 space-y-6">
+                        <div className="lg:col-span-2 space-y-8">
 
                             {/* Company Overview */}
-                            {company.description && (
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                    <h3 className="text-xl font-bold text-gray-900 mb-4">About {company.name}</h3>
-                                    <div className="prose prose-gray max-w-none">
-                                        {company.description.split('\n').map((paragraph: string, idx: number) => (
-                                            <p key={idx} className="text-gray-700 leading-relaxed mb-3 last:mb-0">
-                                                {paragraph.trim()}
-                                            </p>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                            {(company.mission || company.description) && (
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                                    <h2 className="text-2xl font-bold mb-4 text-gray-900">About {company.name}</h2>
 
-                            {/* Mission Statement */}
-                            {company.mission && (
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                    <h3 className="text-xl font-bold text-gray-900 mb-4">Mission Statement</h3>
-                                    <div className="prose prose-gray max-w-none">
-                                        {company.mission.split('\n').map((paragraph: string, idx: number) => (
-                                            <p key={idx} className="text-gray-700 leading-relaxed mb-3 last:mb-0">
-                                                {paragraph.trim()}
-                                            </p>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                                    {company.mission && (
+                                        <div className="mb-6">
+                                            <h3 className="text-lg font-semibold mb-2 text-gray-900">Mission</h3>
+                                            <p className="text-gray-700 leading-relaxed">{company.mission}</p>
+                                        </div>
+                                    )}
 
-                            {/* CEO Information */}
-                            {company.ceo_name && (
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                    <h3 className="text-xl font-bold text-gray-900 mb-4">Leadership</h3>
-                                    <div className="flex items-center gap-4">
-                                        {company.ceo_photo && (
-                                            <div className="flex-shrink-0">
-                                                <Image
-                                                    src={company.ceo_photo}
-                                                    alt={`${company.ceo_name} photo`}
-                                                    width={64}
-                                                    height={64}
-                                                    className="w-16 h-16 object-cover rounded-full border border-gray-200"
-                                                />
-                                            </div>
-                                        )}
+                                    {company.description && (
                                         <div>
-                                            <h4 className="text-lg font-semibold text-gray-900">{company.ceo_name}</h4>
-                                            {company.ceo_title && (
-                                                <p className="text-gray-600">{company.ceo_title}</p>
-                                            )}
+                                            <h3 className="text-lg font-semibold mb-2 text-gray-900">Overview</h3>
+                                            <p className="text-gray-700 leading-relaxed">{company.description}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Jobs Section */}
+                            {companyJobs && companyJobs.length > 0 && (
+                                <section id="jobs">
+                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                                        <h2 className="text-2xl font-bold mb-6 text-gray-900">
+                                            Open Positions at {company.name} ({companyJobs.length})
+                                        </h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {companyJobs.map((job) => (
+                                                <div key={job.JobID} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow duration-200">
+                                                    <div className="flex items-start gap-4">
+                                                        {job.CompanyLogo && (
+                                                            <Image
+                                                                src={job.CompanyLogo}
+                                                                alt={`${job.Company} logo`}
+                                                                width={40}
+                                                                height={40}
+                                                                className="w-10 h-10 object-contain rounded border border-gray-200 p-1 bg-white flex-shrink-0"
+                                                            />
+                                                        )}
+                                                        <div className="flex-1">
+                                                            <h3 className="text-lg font-bold text-gray-900 mb-2">
+                                                                <Link href={`/jobs/${job.slug}`} className="hover:text-blue-600">
+                                                                    {job.JobTitle}
+                                                                </Link>
+                                                            </h3>
+                                                            <p className="text-sm text-gray-600 mb-2">{job.Location}</p>
+                                                            <p className="text-sm text-gray-700 mb-3 line-clamp-2">{job.ShortDescription}</p>
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-sm text-green-600 font-semibold">
+                                                                    {job.formatted_salary || 'Competitive salary'}
+                                                                </span>
+                                                                <Link
+                                                                    href={`/jobs/${job.slug}`}
+                                                                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                                                                >
+                                                                    View Details →
+                                                                </Link>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
-                                </div>
+                                </section>
                             )}
                         </div>
 
@@ -343,35 +403,42 @@ export default async function CompanyPage({ params }: PageProps) {
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 <h3 className="text-lg font-bold text-gray-900 mb-4">Company Details</h3>
                                 <div className="space-y-4">
-
+                                    {company.industry && (
+                                        <div>
+                                            <dt className="text-sm text-gray-600">Industry</dt>
+                                            <dd className="text-sm font-medium text-gray-900">{company.industry}</dd>
+                                        </div>
+                                    )}
+                                    {company.size && (
+                                        <div>
+                                            <dt className="text-sm text-gray-600">Company Size</dt>
+                                            <dd className="text-sm font-medium text-gray-900">{company.size}</dd>
+                                        </div>
+                                    )}
+                                    {company.headquarters && (
+                                        <div>
+                                            <dt className="text-sm text-gray-600">Headquarters</dt>
+                                            <dd className="text-sm font-medium text-gray-900">{company.headquarters}</dd>
+                                        </div>
+                                    )}
                                     {company.year_founded && (
-                                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                            <span className="text-sm font-medium text-gray-600">Founded</span>
-                                            <span className="text-sm font-semibold text-gray-900">{company.year_founded}</span>
+                                        <div>
+                                            <dt className="text-sm text-gray-600">Founded</dt>
+                                            <dd className="text-sm font-medium text-gray-900">{company.year_founded}</dd>
                                         </div>
                                     )}
-
-                                    {company.type && (
-                                        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                                            <span className="text-sm font-medium text-gray-600">Type</span>
-                                            <span className="text-sm font-semibold text-blue-600">{company.type}</span>
-                                        </div>
-                                    )}
-
                                     {company.revenue && (
-                                        <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                                            <span className="text-sm font-medium text-gray-600">Revenue</span>
-                                            <span className="text-sm font-semibold text-green-600">{company.revenue}</span>
+                                        <div>
+                                            <dt className="text-sm text-gray-600">Revenue</dt>
+                                            <dd className="text-sm font-medium text-gray-900">{company.revenue}</dd>
                                         </div>
                                     )}
-
                                 </div>
                             </div>
 
                             {/* Company Rating */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 <h3 className="text-lg font-bold text-gray-900 mb-4">Company Rating</h3>
-
                                 <div className="text-center">
                                     <div className="text-sm text-gray-600 mb-2">Glassdoor Rating</div>
 
@@ -382,7 +449,8 @@ export default async function CompanyPage({ params }: PageProps) {
                                                 key={star}
                                                 className={`w-5 h-5 ${company.overall_rating && star <= Math.round(company.overall_rating)
                                                     ? 'text-yellow-400'
-                                                    : 'text-gray-300'}`}
+                                                    : 'text-gray-300'
+                                                    }`}
                                                 fill="currentColor"
                                                 viewBox="0 0 22 20"
                                             >
@@ -450,113 +518,80 @@ export default async function CompanyPage({ params }: PageProps) {
                                     )}
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    {/* Jobs Section */}
-                    {companyJobs && companyJobs.length > 0 && (
-                        <section id="jobs" className="mt-16">
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-                                <h2 className="text-2xl font-bold mb-6 text-gray-900">
-                                    Open Positions at {company.name} ({companyJobs.length})
-                                </h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {companyJobs.map((job) => (
-                                        <div key={job.JobID} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow duration-200">
-                                            <div className="flex items-start gap-4">
-                                                {job.CompanyLogo && (
-                                                    <div className="flex-shrink-0">
-                                                        <Image
-                                                            src={job.CompanyLogo}
-                                                            alt={`${job.Company} logo`}
-                                                            width={48}
-                                                            height={48}
-                                                            className="w-12 h-12 object-contain rounded-lg border border-gray-200 p-1"
-                                                        />
-                                                    </div>
-                                                )}
-                                                <div className="flex-1 min-w-0">
-                                                    <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                                                        {toTitleCase(job.JobTitle)}
-                                                    </h3>
-                                                    <div className="flex items-center text-sm text-gray-600 mb-2">
-                                                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                        </svg>
-                                                        {job.Location}
-                                                    </div>
-                                                    <div className="flex items-center justify-between mb-3">
-                                                        <span className="text-sm font-medium text-green-700">
-                                                            {job.formatted_salary || 'Salary not disclosed'}
-                                                        </span>
-                                                        <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
-                                                            {job.JobType}
-                                                        </span>
-                                                    </div>
-                                                    {job.ShortDescription && (
-                                                        <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                                                            {job.ShortDescription}
-                                                        </p>
-                                                    )}
-                                                    <Link
-                                                        href={`/jobs/${job.slug}`}
-                                                        className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                                                    >
-                                                        View Job Details
-                                                        <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                                        </svg>
-                                                    </Link>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </section>
-                    )}
-
-                    {/* People Also Viewed Section */}
-                    {relatedCompanies && relatedCompanies.length > 0 && (
-                        <section className="mt-16">
-                            <h2 className="text-2xl font-bold mb-6 text-gray-900">People Also Viewed</h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {relatedCompanies.map((relatedCompany) => (
-                                    <div key={relatedCompany.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-                                        <div className="text-center">
-                                            {relatedCompany.company_logo && (
-                                                <div className="flex justify-center mb-4">
+                            {/* Related Companies */}
+                            {relatedCompanies && relatedCompanies.length > 0 && (
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                    <h3 className="text-lg font-bold text-gray-900 mb-4">Related Companies</h3>
+                                    <div className="space-y-3">
+                                        {relatedCompanies.map((relatedCompany) => (
+                                            <Link
+                                                key={relatedCompany.id}
+                                                href={`/company/${relatedCompany.slug}`}
+                                                className="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                                            >
+                                                {relatedCompany.company_logo ? (
                                                     <Image
                                                         src={relatedCompany.company_logo}
                                                         alt={`${relatedCompany.name} logo`}
-                                                        width={64}
-                                                        height={64}
-                                                        className="w-16 h-16 object-contain rounded-lg border border-gray-200 p-2"
+                                                        width={32}
+                                                        height={32}
+                                                        className="w-8 h-8 object-contain rounded border border-gray-200 p-1 bg-white mr-3"
                                                     />
+                                                ) : (
+                                                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center mr-3">
+                                                        <span className="text-white text-xs font-bold">
+                                                            {relatedCompany.name.charAt(0).toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <div className="flex-1">
+                                                    <h4 className="text-sm font-medium text-gray-900">
+                                                        {relatedCompany.name}
+                                                    </h4>
+                                                    <p className="text-xs text-gray-500">
+                                                        {relatedCompany.industry}
+                                                    </p>
                                                 </div>
-                                            )}
-                                            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                                                {relatedCompany.name}
-                                            </h3>
-                                            {relatedCompany.industry && (
-                                                <p className="text-sm text-gray-600 mb-4">{relatedCompany.industry}</p>
-                                            )}
-                                            <Link
-                                                href={`/company/${createSlug(relatedCompany.name)}`}
-                                                className="inline-flex items-center justify-center w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
-                                            >
-                                                View Company
-                                                <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                                </svg>
                                             </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Leadership */}
+                            {(company.ceo_name || company.ceo_title) && (
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                    <h3 className="text-lg font-bold text-gray-900 mb-4">Leadership</h3>
+                                    <div className="flex items-center">
+                                        {company.ceo_photo ? (
+                                            <Image
+                                                src={company.ceo_photo}
+                                                alt={company.ceo_name}
+                                                width={48}
+                                                height={48}
+                                                className="w-12 h-12 rounded-full object-cover mr-3"
+                                            />
+                                        ) : (
+                                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
+                                                <span className="text-white font-bold">
+                                                    {company.ceo_name?.charAt(0).toUpperCase() || 'C'}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <div>
+                                            <h4 className="text-sm font-medium text-gray-900">
+                                                {company.ceo_name || 'Leadership Team'}
+                                            </h4>
+                                            <p className="text-xs text-gray-500">
+                                                {company.ceo_title || 'CEO'}
+                                            </p>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </section>
-                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
             <Footer />
