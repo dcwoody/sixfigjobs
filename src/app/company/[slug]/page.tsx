@@ -168,7 +168,7 @@ export default async function CompanyPage({ params }: PageProps) {
         console.error('Company not found:', slug);
         notFound();
     }
-    
+
     // Get jobs for this company (enhanced search)
     const { data: companyJobs } = await supabase
         .from('job_listings_db')
@@ -395,44 +395,46 @@ export default async function CompanyPage({ params }: PageProps) {
                         {/* Sidebar */}
                         <div className="space-y-6">
 
-                            {/* Company Stats */}
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                <h3 className="text-lg font-bold text-gray-900 mb-4">Company Details</h3>
-                                <div className="space-y-4">
-                                    {company.industry && (
-                                        <div>
-                                            <dt className="text-sm text-gray-600">Industry</dt>
-                                            <dd className="text-sm font-medium text-gray-900">{company.industry}</dd>
-                                        </div>
-                                    )}
-                                    {company.size && (
-                                        <div>
-                                            <dt className="text-sm text-gray-600">Company Size</dt>
-                                            <dd className="text-sm font-medium text-gray-900">{company.size}</dd>
-                                        </div>
-                                    )}
-                                    {company.headquarters && (
-                                        <div>
-                                            <dt className="text-sm text-gray-600">Headquarters</dt>
-                                            <dd className="text-sm font-medium text-gray-900">{company.headquarters}</dd>
-                                        </div>
-                                    )}
-                                    {company.year_founded && (
-                                        <div>
-                                            <dt className="text-sm text-gray-600">Founded</dt>
-                                            <dd className="text-sm font-medium text-gray-900">{company.year_founded}</dd>
-                                        </div>
-                                    )}
-                                    {company.revenue && (
-                                        <div>
-                                            <dt className="text-sm text-gray-600">Revenue</dt>
-                                            <dd className="text-sm font-medium text-gray-900">{company.revenue}</dd>
-                                        </div>
-                                    )}
+                            {/* Company Details - Show if we have ANY company info */}
+                            {(company.industry || company.size || company.headquarters || company.year_founded || company.revenue) && (
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                    <h3 className="text-lg font-bold text-gray-900 mb-4">Company Details</h3>
+                                    <div className="space-y-4">
+                                        {company.industry && (
+                                            <div>
+                                                <dt className="text-sm text-gray-600">Industry</dt>
+                                                <dd className="text-sm font-medium text-gray-900">{company.industry}</dd>
+                                            </div>
+                                        )}
+                                        {company.size && (
+                                            <div>
+                                                <dt className="text-sm text-gray-600">Company Size</dt>
+                                                <dd className="text-sm font-medium text-gray-900">{company.size}</dd>
+                                            </div>
+                                        )}
+                                        {company.headquarters && (
+                                            <div>
+                                                <dt className="text-sm text-gray-600">Headquarters</dt>
+                                                <dd className="text-sm font-medium text-gray-900">{company.headquarters}</dd>
+                                            </div>
+                                        )}
+                                        {company.year_founded && (
+                                            <div>
+                                                <dt className="text-sm text-gray-600">Founded</dt>
+                                                <dd className="text-sm font-medium text-gray-900">{company.year_founded}</dd>
+                                            </div>
+                                        )}
+                                        {company.revenue && (
+                                            <div>
+                                                <dt className="text-sm text-gray-600">Revenue</dt>
+                                                <dd className="text-sm font-medium text-gray-900">{company.revenue}</dd>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
-                            {/* Company Rating */}
+                            {/* Company Rating - Always show the section, even if no rating */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 <h3 className="text-lg font-bold text-gray-900 mb-4">Company Rating</h3>
                                 <div className="text-center">
@@ -453,6 +455,34 @@ export default async function CompanyPage({ params }: PageProps) {
                                                 <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
                                             </svg>
                                         ))}
+                                    </div>
+
+                                    {company.overall_rating ? (
+                                        <>
+                                            <div className="text-2xl font-bold text-gray-900 mb-1">
+                                                {company.overall_rating.toFixed(1)}
+                                            </div>
+                                            <div className="text-sm text-gray-600 mb-2">out of 5 stars</div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="text-gray-500 text-sm italic mb-1">Not yet rated</div>
+                                            <div className="text-sm text-gray-400">No available Glassdoor rating</div>
+                                        </>
+                                    )}
+
+                                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                                        <div className="text-xs text-gray-500 mb-2">
+                                            Want to know more about this company?
+                                        </div>
+                                        <a
+                                            href={`https://www.glassdoor.com/Search/results.htm?keyword=${encodeURIComponent(company.name)}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-blue-600 hover:text-blue-800"
+                                        >
+                                            Search on Glassdoor →
+                                        </a>
                                     </div>
 
                                     {company.overall_rating !== undefined && company.overall_rating !== null ? (
@@ -589,7 +619,7 @@ export default async function CompanyPage({ params }: PageProps) {
                         </div>
                     </div>
                 </div>
-            </div>
+            </div >
             <Footer />
         </>
     );
