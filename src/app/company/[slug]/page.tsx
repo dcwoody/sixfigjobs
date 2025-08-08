@@ -29,9 +29,9 @@ interface PageProps {
 
 interface SlimCompany {
     name: string;
-    description?: string;  // ← Make it optional
-    industry?: string;     // ← Make it optional  
-    headquarters?: string; // ← Make it optional
+    description?: string;
+    industry?: string;
+    headquarters?: string;
 }
 
 // SEO: Generate dynamic metadata
@@ -45,22 +45,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         .eq('slug', slug)
         .single();
 
-let matchedCompany: SlimCompany | null = company || null;
-const searchName = slug.replace(/-/g, ' ');
+    let matchedCompany: SlimCompany | null = company || null;
 
-let matchedCompany = company || null;
+    if (!matchedCompany) {
+        const { data: allCompanies } = await supabase
+            .from('companies_db')
+            .select('id, name, short_name, description, industry, headquarters, slug, company_logo');
 
-if (!matchedCompany) {
-    const { data: allCompanies } = await supabase
-        .from('companies_db')
-        .select('id, name, short_name, description, industry, headquarters, slug, company_logo');
-
-    if (allCompanies) {
-        const searchName = slug.replace(/-/g, ' ');
-        const foundCompany = findCompanyMatch(searchName, allCompanies);
-        matchedCompany = foundCompany || null;
+        if (allCompanies) {
+            const searchName = slug.replace(/-/g, ' ');
+            matchedCompany = findCompanyMatch(searchName, allCompanies) || null;
+        }
     }
-}
 
     if (!matchedCompany) {
         return {
