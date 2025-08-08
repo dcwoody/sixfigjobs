@@ -168,7 +168,7 @@ export default async function CompanyPage({ params }: PageProps) {
         console.error('Company not found:', slug);
         notFound();
     }
-
+    
     // Get jobs for this company (enhanced search)
     const { data: companyJobs } = await supabase
         .from('job_listings_db')
