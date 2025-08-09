@@ -1,44 +1,38 @@
-// src/components/Navigation.tsx
+// src/components/Navigation.tsx - New Professional Navigation
 'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Briefcase, Globe, Building, User, Menu, X } from 'lucide-react';
+import { Briefcase, Menu, X } from 'lucide-react';
 
 export default function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const navItems = [
-    { href: '/', label: 'Home', icon: Globe },
-    { href: '/jobs', label: 'Jobs', icon: Briefcase },
-    { href: '/companies', label: 'Companies', icon: Building },
-    { href: '/login', label: 'Login', icon: User }
-  ];
-
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-white/95 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <Link href="/" className="flex items-center">
-            <Briefcase className="h-8 w-8 text-blue-600 mr-2" />
-            <span className="text-xl font-bold text-gray-900">SixFigHires</span>
+          {/* Logo */}
+          <Link href="/" className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+              <Briefcase className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-blue-600 bg-clip-text text-transparent">
+              SixFigHires
+            </span>
           </Link>
           
           {/* Desktop Navigation */}
-          <div className="hidden md:flex space-x-8">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+          <div className="hidden md:flex items-center space-x-8">
+            <Link href="/jobs" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+              Jobs
+            </Link>
+            <Link href="/companies" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+              Companies
+            </Link>
+            <Link href="/login" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+              Sign In
+            </Link>
           </div>
 
           {/* Mobile menu button */}
@@ -53,22 +47,29 @@ export default function Navigation() {
       
       {/* Mobile Navigation */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-200 bg-white">
+        <div className="md:hidden border-t border-gray-200 bg-white/95 backdrop-blur-sm">
           <div className="px-2 pt-2 pb-3 space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+            <Link
+              href="/jobs"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Jobs
+            </Link>
+            <Link
+              href="/companies"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Companies
+            </Link>
+            <Link
+              href="/login"
+              className="block px-3 py-2 rounded-md text-base font-medium bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Sign In
+            </Link>
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-// src/app/jobs/page.tsx - Server Component for SEO + Initial Data
+// src/app/jobs/page.tsx - Simplified for API approach
 import { supabase } from '@/lib/supabase';
 import JobsList from '@/components/JobsList';
 import React from 'react';
@@ -16,12 +16,12 @@ interface PageProps {
 export default async function JobsPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   
-  // Server-side data loading for SEO and initial render
+  // Load initial page of jobs (12 jobs for fast loading)
   const { data: initialJobs, error } = await supabase
     .from('job_listings_db')
     .select('*')
     .order('PostedDate', { ascending: false })
-    .limit(50); // Load first 50 jobs for initial render
+    .limit(12);
 
   if (error) {
     return (
