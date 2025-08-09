@@ -14,10 +14,24 @@ interface PageProps {
 export default async function JobDetailPage({ params }: PageProps) {
   const { slug } = await params;
   
+  console.log('🔍 Looking for job with slug:', slug);
+  
   const jobs = await loadJobData();
   const companies = await loadCompanyData();
   
+  console.log('🔍 Total jobs loaded:', jobs.length);
+  console.log('🔍 Available slugs:', jobs.map(j => j.slug));
+  
   const job = jobs.find(j => j.slug === slug);
+  
+  console.log('🔍 Found job:', job ? 'YES' : 'NO');
+  if (job) {
+    console.log('🔍 Job title:', job.JobTitle);
+  } else {
+    console.log('❌ Job not found for slug:', slug);
+    console.log('❌ Available slugs in data:', jobs.slice(0, 5).map(j => ({ title: j.JobTitle, slug: j.slug })));
+  }
+  
   if (!job) notFound();
   
   const company = companies.find(c => c.name === job.Company);
@@ -25,7 +39,7 @@ export default async function JobDetailPage({ params }: PageProps) {
     j.JobID !== job.JobID && 
     (j.Company === job.Company || j.JobType === job.JobType)
   ).slice(0, 3);
-
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
