@@ -1,29 +1,129 @@
 // src/app/login/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
 import { Briefcase, Mail, Lock } from 'lucide-react';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    setMounted(true);
+    
+    // Check if user is already logged in
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push('/welcome');
+      }
+    };
+    
+    checkSession();
+  }, [router]);
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement authentication logic
-    alert('Login functionality will be implemented in the backend phase.');
+    setLoading(true);
+    setErrorMsg('');
+
+    try {
+      // 1. Sign in with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        setErrorMsg(authError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (!authData.user) {
+        setErrorMsg('Login failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Get user profile from users_db
+      const { data: userProfile, error: profileError } = await supabase
+        .from('users_db')
+        .select('*')
+        .eq('auth_user_id', authData.user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        // If no profile exists, create one (for legacy users or OAuth users)
+        const { error: createError } = await supabase
+          .from('users_db')
+          .insert([{
+            auth_user_id: authData.user.id,
+            email: authData.user.email,
+            first_name: authData.user.user_metadata?.first_name || '',
+            last_name: authData.user.user_metadata?.last_name || '',
+            user_type: 'job_seeker', // Default for legacy users
+            is_newsletter_subscriber: false,
+            is_verified: false,
+          }]);
+
+        if (createError) {
+          console.error('Profile creation error:', createError);
+        }
+      }
+
+      // 3. Redirect based on user type
+      if (userProfile?.user_type === 'employer') {
+        router.push('/employer/dashboard');
+      } else {
+        router.push('/welcome');
+      }
+
+    } catch (error) {
+      console.error('Login error:', error);
+      setErrorMsg('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleGoogleLogin = () => {
-    // TODO: Implement Google OAuth
-    alert('Google OAuth integration will be implemented in the backend phase.');
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        setErrorMsg(error.message);
+      }
+    } catch (error) {
+      console.error('Google login error:', error);
+      setErrorMsg('Google login failed. Please try again.');
+    }
   };
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <Briefcase className="h-12 w-12 text-blue-600" />
+          <Link href="/">
+            <Briefcase className="h-12 w-12 text-blue-600" />
+          </Link>
         </div>
         <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
           Sign in to your account
@@ -36,11 +136,19 @@ export default function LoginPage() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           
+          {/* Error Message */}
+          {errorMsg && (
+            <div className="mb-6 rounded-md bg-red-50 p-4">
+              <div className="text-sm text-red-700">{errorMsg}</div>
+            </div>
+          )}
+
           {/* Google Login */}
           <div className="mb-6">
             <button
               onClick={handleGoogleLogin}
-              className="w-full flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+              disabled={loading}
+              className="w-full flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -79,6 +187,7 @@ export default function LoginPage() {
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -99,6 +208,7 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -110,6 +220,7 @@ export default function LoginPage() {
                   name="remember-me"
                   type="checkbox"
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  disabled={loading}
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
                   Remember me
@@ -117,18 +228,29 @@ export default function LoginPage() {
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+                <Link href="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
                   Forgot your password?
-                </a>
+                </Link>
               </div>
             </div>
 
             <div>
               <button
                 type="submit"
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                disabled={loading}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Sign in
+                {loading ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Signing in...
+                  </span>
+                ) : (
+                  'Sign in'
+                )}
               </button>
             </div>
           </form>
@@ -136,9 +258,9 @@ export default function LoginPage() {
           <div className="mt-6">
             <div className="text-center text-sm">
               <span className="text-gray-600">Don't have an account? </span>
-              <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+              <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
                 Sign up
-              </a>
+              </Link>
             </div>
           </div>
         </div>
