@@ -1,298 +1,274 @@
-// src/app/auth/callback/page.tsx
+// src/app/login/page.tsx
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
+import { Briefcase, Mail, Lock } from 'lucide-react';
 
-function AuthCallbackContent() {
+export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const processUserProfile = async (user: any, userType: string, isNewsletterSubscriber: boolean) => {
+  useEffect(() => {
+    setMounted(true);
+    
+    // Check if user is already logged in
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push('/welcome');
+      }
+    };
+    
+    checkSession();
+  }, [router]);
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg('');
+
     try {
-      // Check if user profile exists in users_db
-      console.log('Checking for existing profile...');
-      const { data: existingProfile, error: profileCheckError } = await supabase
+      // 1. Sign in with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        setErrorMsg(authError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (!authData.user) {
+        setErrorMsg('Login failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Get user profile from users_db
+      const { data: userProfile, error: profileError } = await supabase
         .from('users_db')
         .select('*')
-        .eq('auth_user_id', user.id)
+        .eq('auth_user_id', authData.user.id)
         .single();
 
-      if (profileCheckError && profileCheckError.code !== 'PGRST116') {
-        console.error('Profile check error:', profileCheckError);
-      }
-
-      // If no profile exists, create one
-      if (!existingProfile) {
-        console.log('Creating new user profile...');
-        const userProfileData = {
-          auth_user_id: user.id,
-          email: user.email,
-          first_name: user.user_metadata?.first_name || user.user_metadata?.given_name || '',
-          last_name: user.user_metadata?.last_name || user.user_metadata?.family_name || '',
-          user_type: userType,
-          is_newsletter_subscriber: isNewsletterSubscriber,
-          is_verified: user.email_confirmed_at ? true : false,
-          ...(userType === 'employer' && {
-            company_name: '', // Will need to be filled out later
-            company_website: '',
-            industry: '',
-          })
-        };
-
-        const { error: profileError } = await supabase
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        // If no profile exists, create one (for legacy users or OAuth users)
+        const { error: createError } = await supabase
           .from('users_db')
-          .insert([userProfileData]);
+          .insert([{
+            auth_user_id: authData.user.id,
+            email: authData.user.email,
+            first_name: authData.user.user_metadata?.first_name || '',
+            last_name: authData.user.user_metadata?.last_name || '',
+            user_type: 'job_seeker', // Default for legacy users
+            is_newsletter_subscriber: false,
+            is_verified: false,
+          }]);
 
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          setError('Failed to create user profile. Please contact support.');
-          setLoading(false);
-          return;
-        }
-
-        console.log('Profile created successfully!');
-
-        // Create employer profile if needed
-        if (userType === 'employer') {
-          console.log('Creating employer profile...');
-          const { error: employerError } = await supabase
-            .from('employer_profiles')
-            .insert([{
-              user_id: user.id,
-              company_description: '',
-              subscription_plan: 'free',
-              jobs_posted_count: 0,
-            }]);
-
-          if (employerError) {
-            console.error('Employer profile creation error:', employerError);
-            // Don't fail the OAuth flow, but log the error
-          }
-        }
-
-        // Redirect based on user type
-        console.log('Redirecting to dashboard...');
-        if (userType === 'employer') {
-          router.push('/employer/onboarding');
-        } else {
-          router.push('/welcome');
-        }
-      } else {
-        console.log('Existing profile found, redirecting...');
-        // Profile exists, redirect based on existing user type
-        if (existingProfile.user_type === 'employer') {
-          router.push('/employer/dashboard');
-        } else {
-          router.push('/welcome');
+        if (createError) {
+          console.error('Profile creation error:', createError);
         }
       }
+
+      // 3. Redirect based on user type
+      if (userProfile?.user_type === 'employer') {
+        router.push('/employer/dashboard');
+      } else {
+        router.push('/welcome');
+      }
+
     } catch (error) {
-      console.error('Profile processing error:', error);
-      setError('Failed to process user profile. Please try again.');
+      console.error('Login error:', error);
+      setErrorMsg('An unexpected error occurred. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const handleAuthCallback = async () => {
-      try {
-        // Debug: Log what Google sent us
-        console.log('=== OAuth Callback Debug ===');
-        console.log('Current URL:', window.location.href);
-        console.log('Search params:', window.location.search);
-        console.log('Hash:', window.location.hash);
-        
-        // Get URL parameters
-        const userType = searchParams.get('user_type') || 'job_seeker';
-        const newsletterParam = searchParams.get('newsletter');
-        const isNewsletterSubscriber = newsletterParam === 'true';
-        const code = searchParams.get('code');
-        const state = searchParams.get('state');
-        const errorParam = searchParams.get('error');
-        
-        console.log('OAuth params:', { userType, code: code ? 'present' : 'missing', state, error: errorParam });
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/welcome`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
 
-        if (errorParam) {
-          console.error('OAuth error from Google:', errorParam);
-          setError(`OAuth error: ${errorParam}`);
-          setLoading(false);
-          return;
-        }
-
-        if (!code) {
-          console.error('No authorization code received from Google');
-          setError('No authorization code received from Google. Please try again.');
-          setLoading(false);
-          return;
-        }
-
-        console.log('Setting up auth state listener...');
-        
-        // Listen for auth state changes - this should trigger when Supabase processes the OAuth callback
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-          console.log('Auth state change:', event, session?.user?.email);
-          
-          if (event === 'SIGNED_IN' && session?.user) {
-            console.log('User signed in successfully!', session.user.email);
-            subscription.unsubscribe(); // Clean up listener
-            await processUserProfile(session.user, userType, isNewsletterSubscriber);
-          }
-        });
-
-        // Also check if there's already a session (in case the callback was processed before the listener was set up)
-        console.log('Checking for existing session...');
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Session check error:', error);
-        } else if (session?.user) {
-          console.log('Found existing session!', session.user.email);
-          subscription.unsubscribe();
-          await processUserProfile(session.user, userType, isNewsletterSubscriber);
-        } else {
-          console.log('No existing session, waiting for auth state change...');
-          
-          // Set a timeout to show error if nothing happens within 15 seconds
-          setTimeout(() => {
-            if (loading) {
-              subscription.unsubscribe();
-              console.error('Timeout waiting for authentication');
-              setError('Authentication timed out. Please try logging in again.');
-              setLoading(false);
-            }
-          }, 15000);
-        }
-
-      } catch (error) {
-        console.error('Auth callback error:', error);
-        setError('An unexpected error occurred. Please try again.');
-        setLoading(false);
+      if (error) {
+        setErrorMsg(error.message);
       }
-    };
-
-    handleAuthCallback();
-  }, [router, searchParams, loading]);
-
-  // Handle error parameter from URL
-  useEffect(() => {
-    const errorParam = searchParams.get('error');
-    if (errorParam) {
-      switch (errorParam) {
-        case 'auth_failed':
-          setError('Authentication failed. Please try again.');
-          break;
-        case 'callback_failed':
-          setError('Callback processing failed. Please try again.');
-          break;
-        case 'no_code':
-          setError('No authorization code received. Please try again.');
-          break;
-        default:
-          setError('An authentication error occurred. Please try again.');
-      }
-      setLoading(false);
+    } catch (error) {
+      console.error('Google login error:', error);
+      setErrorMsg('Google login failed. Please try again.');
     }
-  }, [searchParams]);
+  };
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-8 text-center">
-          <div className="mb-4">
-            <svg
-              className="mx-auto h-12 w-12 text-red-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-              />
-            </svg>
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Authentication Error</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => router.push('/login')}
-            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
-          >
-            Back to Login
-          </button>
-        </div>
-      </div>
-    );
+  if (!mounted) {
+    return null;
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-8 text-center">
-        <div className="mb-4">
-          <svg
-            className="animate-spin mx-auto h-12 w-12 text-blue-600"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            ></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            ></path>
-          </svg>
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="flex justify-center">
+          <Link href="/">
+            <Briefcase className="h-12 w-12 text-blue-600" />
+          </Link>
         </div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Completing sign in...</h2>
-        <p className="text-gray-600">Please wait while we set up your account.</p>
+        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+          Sign in to your account
+        </h2>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Access your saved jobs and application history
+        </p>
+      </div>
+
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          
+          {/* Error Message */}
+          {errorMsg && (
+            <div className="mb-6 rounded-md bg-red-50 p-4">
+              <div className="text-sm text-red-700">{errorMsg}</div>
+            </div>
+          )}
+
+          {/* Google Login */}
+          <div className="mb-6">
+            <button
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Continue with Google
+            </button>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">Or continue with</span>
+            </div>
+          </div>
+
+          {/* Email/Password Form */}
+          <form className="mt-6 space-y-6" onSubmit={handleSubmit}>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email address
+              </label>
+              <div className="mt-1 relative">
+                <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <div className="mt-1 relative">
+                <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  disabled={loading}
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                  Remember me
+                </label>
+              </div>
+
+              <div className="text-sm">
+                <Link href="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
+                  Forgot your password?
+                </Link>
+              </div>
+            </div>
+
+            <div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Signing in...
+                  </span>
+                ) : (
+                  'Sign in'
+                )}
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-6">
+            <div className="text-center text-sm">
+              <span className="text-gray-600">Don't have an account? </span>
+              <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
+                Sign up
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  );
-}
-
-export default function AuthCallbackPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-8 text-center">
-          <div className="mb-4">
-            <svg
-              className="animate-spin mx-auto h-12 w-12 text-blue-600"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading...</h2>
-          <p className="text-gray-600">Setting up your authentication...</p>
-        </div>
-      </div>
-    }>
-      <AuthCallbackContent />
-    </Suspense>
   );
 }
