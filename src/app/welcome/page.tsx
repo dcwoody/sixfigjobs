@@ -68,25 +68,58 @@ export default function WelcomePage() {
       setSession(session);
       
       if (!session) {
-        router.push('/login');
-        return;
+        console.log('No session found, checking URL for auth callback...');
+        
+        // Check if we came from OAuth (has state/code in URL)
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        
+        if (code && state) {
+          console.log('OAuth parameters detected, processing...');
+          // Try to establish session from OAuth callback
+          try {
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for potential session
+            const { data: { session: retrySession } } = await supabase.auth.getSession();
+            
+            if (retrySession) {
+              console.log('Session established after retry!');
+              setSession(retrySession);
+              // Continue with profile fetching below
+            } else {
+              console.log('No session after OAuth retry, redirecting to login');
+              router.push('/login');
+              return;
+            }
+          } catch (error) {
+            console.error('Error processing OAuth callback:', error);
+            router.push('/login');
+            return;
+          }
+        } else {
+          console.log('No OAuth parameters, redirecting to login');
+          router.push('/login');
+          return;
+        }
       }
 
-      // Fetch user profile
-      const { data: profile, error } = await supabase
-        .from('users_db')
-        .select('*')
-        .eq('auth_user_id', session.user.id)
-        .single();
+      // Fetch user profile if we have a session
+      if (session) {
+        const { data: profile, error } = await supabase
+          .from('users_db')
+          .select('*')
+          .eq('auth_user_id', session.user.id)
+          .single();
 
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        router.push('/login');
-        return;
+        if (error) {
+          console.error('Error fetching user profile:', error);
+          router.push('/login');
+          return;
+        }
+
+        setUserProfile(profile);
+        fetchDashboardData(session.user.id);
       }
-
-      setUserProfile(profile);
-      fetchDashboardData(session.user.id);
     };
 
     getSession();
