@@ -133,7 +133,23 @@ function AuthCallbackContent() {
         // Try to handle the OAuth callback
         console.log('Attempting to handle OAuth callback...');
         
-        // First, let Supabase handle the callback automatically
+        // Try manual code exchange as a fallback
+        try {
+          console.log('Trying manual code exchange...');
+          const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (!exchangeError && exchangeData.session?.user) {
+            console.log('Manual code exchange successful!', exchangeData.session.user.email);
+            await processUserProfile(exchangeData.session.user, userType, isNewsletterSubscriber);
+            return;
+          } else if (exchangeError) {
+            console.log('Manual code exchange failed:', exchangeError.message);
+          }
+        } catch (codeExchangeError) {
+          console.log('Code exchange attempt failed:', codeExchangeError);
+        }
+        
+        // Fall back to checking existing session
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
