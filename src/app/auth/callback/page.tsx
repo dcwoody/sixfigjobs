@@ -11,6 +11,92 @@ function AuthCallbackContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const processUserProfile = async (user: any, userType: string, isNewsletterSubscriber: boolean) => {
+    try {
+      // Check if user profile exists in users_db
+      console.log('Checking for existing profile...');
+      const { data: existingProfile, error: profileCheckError } = await supabase
+        .from('users_db')
+        .select('*')
+        .eq('auth_user_id', user.id)
+        .single();
+
+      if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+        console.error('Profile check error:', profileCheckError);
+      }
+
+      // If no profile exists, create one
+      if (!existingProfile) {
+        console.log('Creating new user profile...');
+        const userProfileData = {
+          auth_user_id: user.id,
+          email: user.email,
+          first_name: user.user_metadata?.first_name || user.user_metadata?.given_name || '',
+          last_name: user.user_metadata?.last_name || user.user_metadata?.family_name || '',
+          user_type: userType,
+          is_newsletter_subscriber: isNewsletterSubscriber,
+          is_verified: user.email_confirmed_at ? true : false,
+          ...(userType === 'employer' && {
+            company_name: '', // Will need to be filled out later
+            company_website: '',
+            industry: '',
+          })
+        };
+
+        const { error: profileError } = await supabase
+          .from('users_db')
+          .insert([userProfileData]);
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          setError('Failed to create user profile. Please contact support.');
+          setLoading(false);
+          return;
+        }
+
+        console.log('Profile created successfully!');
+
+        // Create employer profile if needed
+        if (userType === 'employer') {
+          console.log('Creating employer profile...');
+          const { error: employerError } = await supabase
+            .from('employer_profiles')
+            .insert([{
+              user_id: user.id,
+              company_description: '',
+              subscription_plan: 'free',
+              jobs_posted_count: 0,
+            }]);
+
+          if (employerError) {
+            console.error('Employer profile creation error:', employerError);
+            // Don't fail the OAuth flow, but log the error
+          }
+        }
+
+        // Redirect based on user type
+        console.log('Redirecting to dashboard...');
+        if (userType === 'employer') {
+          router.push('/employer/onboarding');
+        } else {
+          router.push('/welcome');
+        }
+      } else {
+        console.log('Existing profile found, redirecting...');
+        // Profile exists, redirect based on existing user type
+        if (existingProfile.user_type === 'employer') {
+          router.push('/employer/dashboard');
+        } else {
+          router.push('/welcome');
+        }
+      }
+    } catch (error) {
+      console.error('Profile processing error:', error);
+      setError('Failed to process user profile. Please try again.');
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
@@ -26,13 +112,13 @@ function AuthCallbackContent() {
         const isNewsletterSubscriber = newsletterParam === 'true';
         const code = searchParams.get('code');
         const state = searchParams.get('state');
-        const error = searchParams.get('error');
+        const errorParam = searchParams.get('error');
         
-        console.log('OAuth params:', { userType, code: code ? 'present' : 'missing', state, error });
+        console.log('OAuth params:', { userType, code: code ? 'present' : 'missing', state, error: errorParam });
 
-        if (error) {
-          console.error('OAuth error from Google:', error);
-          setError(`OAuth error: ${error}`);
+        if (errorParam) {
+          console.error('OAuth error from Google:', errorParam);
+          setError(`OAuth error: ${errorParam}`);
           setLoading(false);
           return;
         }
@@ -44,101 +130,46 @@ function AuthCallbackContent() {
           return;
         }
 
-        // Try to exchange the code for a session
-        console.log('Attempting to exchange code for session...');
-        const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        // Try to handle the OAuth callback
+        console.log('Attempting to handle OAuth callback...');
         
-        if (exchangeError) {
-          console.error('Code exchange error:', exchangeError);
-          setError(`Session exchange failed: ${exchangeError.message}`);
+        // First, let Supabase handle the callback automatically
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setError(`Authentication failed: ${sessionError.message}`);
           setLoading(false);
           return;
         }
 
         if (sessionData.session?.user) {
-          console.log('Session established successfully!', sessionData.session.user.email);
+          console.log('Session found immediately!', sessionData.session.user.email);
           const user = sessionData.session.user;
-
-          // Check if user profile exists in users_db
-          console.log('Checking for existing profile...');
-          const { data: existingProfile, error: profileCheckError } = await supabase
-            .from('users_db')
-            .select('*')
-            .eq('auth_user_id', user.id)
-            .single();
-
-          if (profileCheckError && profileCheckError.code !== 'PGRST116') {
-            console.error('Profile check error:', profileCheckError);
-          }
-
-          // If no profile exists, create one
-          if (!existingProfile) {
-            console.log('Creating new user profile...');
-            const userProfileData = {
-              auth_user_id: user.id,
-              email: user.email,
-              first_name: user.user_metadata?.first_name || user.user_metadata?.given_name || '',
-              last_name: user.user_metadata?.last_name || user.user_metadata?.family_name || '',
-              user_type: userType,
-              is_newsletter_subscriber: isNewsletterSubscriber,
-              is_verified: user.email_confirmed_at ? true : false,
-              ...(userType === 'employer' && {
-                company_name: '', // Will need to be filled out later
-                company_website: '',
-                industry: '',
-              })
-            };
-
-            const { error: profileError } = await supabase
-              .from('users_db')
-              .insert([userProfileData]);
-
-            if (profileError) {
-              console.error('Profile creation error:', profileError);
-              setError('Failed to create user profile. Please contact support.');
-              setLoading(false);
+          await processUserProfile(user, userType, isNewsletterSubscriber);
+        } else {
+          // Session not immediately available, wait and retry
+          console.log('No immediate session, retrying...');
+          let attempts = 0;
+          const maxAttempts = 10;
+          
+          while (attempts < maxAttempts) {
+            console.log(`Retry attempt ${attempts + 1}/${maxAttempts}`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            const { data: retrySessionData, error: retryError } = await supabase.auth.getSession();
+            
+            if (!retryError && retrySessionData.session?.user) {
+              console.log('Session found on retry!', retrySessionData.session.user.email);
+              await processUserProfile(retrySessionData.session.user, userType, isNewsletterSubscriber);
               return;
             }
-
-            console.log('Profile created successfully!');
-
-            // Create employer profile if needed
-            if (userType === 'employer') {
-              console.log('Creating employer profile...');
-              const { error: employerError } = await supabase
-                .from('employer_profiles')
-                .insert([{
-                  user_id: user.id,
-                  company_description: '',
-                  subscription_plan: 'free',
-                  jobs_posted_count: 0,
-                }]);
-
-              if (employerError) {
-                console.error('Employer profile creation error:', employerError);
-                // Don't fail the OAuth flow, but log the error
-              }
-            }
-
-            // Redirect based on user type
-            console.log('Redirecting to dashboard...');
-            if (userType === 'employer') {
-              router.push('/employer/onboarding');
-            } else {
-              router.push('/welcome');
-            }
-          } else {
-            console.log('Existing profile found, redirecting...');
-            // Profile exists, redirect based on existing user type
-            if (existingProfile.user_type === 'employer') {
-              router.push('/employer/dashboard');
-            } else {
-              router.push('/welcome');
-            }
+            
+            attempts++;
           }
-        } else {
-          console.error('Session exchange succeeded but no user found');
-          setError('Session was created but no user data found. Please try again.');
+          
+          console.error('Session not found after retries');
+          setError('Unable to establish session. Please try again.');
           setLoading(false);
         }
 
