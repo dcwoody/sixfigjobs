@@ -130,63 +130,41 @@ function AuthCallbackContent() {
           return;
         }
 
-        // Try to handle the OAuth callback
-        console.log('Attempting to handle OAuth callback...');
+        console.log('Setting up auth state listener...');
         
-        // Try manual code exchange as a fallback
-        try {
-          console.log('Trying manual code exchange...');
-          const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        // Listen for auth state changes - this should trigger when Supabase processes the OAuth callback
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log('Auth state change:', event, session?.user?.email);
           
-          if (!exchangeError && exchangeData.session?.user) {
-            console.log('Manual code exchange successful!', exchangeData.session.user.email);
-            await processUserProfile(exchangeData.session.user, userType, isNewsletterSubscriber);
-            return;
-          } else if (exchangeError) {
-            console.log('Manual code exchange failed:', exchangeError.message);
+          if (event === 'SIGNED_IN' && session?.user) {
+            console.log('User signed in successfully!', session.user.email);
+            subscription.unsubscribe(); // Clean up listener
+            await processUserProfile(session.user, userType, isNewsletterSubscriber);
           }
-        } catch (codeExchangeError) {
-          console.log('Code exchange attempt failed:', codeExchangeError);
-        }
-        
-        // Fall back to checking existing session
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          setError(`Authentication failed: ${sessionError.message}`);
-          setLoading(false);
-          return;
-        }
+        });
 
-        if (sessionData.session?.user) {
-          console.log('Session found immediately!', sessionData.session.user.email);
-          const user = sessionData.session.user;
-          await processUserProfile(user, userType, isNewsletterSubscriber);
+        // Also check if there's already a session (in case the callback was processed before the listener was set up)
+        console.log('Checking for existing session...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session check error:', error);
+        } else if (session?.user) {
+          console.log('Found existing session!', session.user.email);
+          subscription.unsubscribe();
+          await processUserProfile(session.user, userType, isNewsletterSubscriber);
         } else {
-          // Session not immediately available, wait and retry
-          console.log('No immediate session, retrying...');
-          let attempts = 0;
-          const maxAttempts = 10;
+          console.log('No existing session, waiting for auth state change...');
           
-          while (attempts < maxAttempts) {
-            console.log(`Retry attempt ${attempts + 1}/${maxAttempts}`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const { data: retrySessionData, error: retryError } = await supabase.auth.getSession();
-            
-            if (!retryError && retrySessionData.session?.user) {
-              console.log('Session found on retry!', retrySessionData.session.user.email);
-              await processUserProfile(retrySessionData.session.user, userType, isNewsletterSubscriber);
-              return;
+          // Set a timeout to show error if nothing happens within 15 seconds
+          setTimeout(() => {
+            if (loading) {
+              subscription.unsubscribe();
+              console.error('Timeout waiting for authentication');
+              setError('Authentication timed out. Please try logging in again.');
+              setLoading(false);
             }
-            
-            attempts++;
-          }
-          
-          console.error('Session not found after retries');
-          setError('Unable to establish session. Please try again.');
-          setLoading(false);
+          }, 15000);
         }
 
       } catch (error) {
@@ -197,7 +175,7 @@ function AuthCallbackContent() {
     };
 
     handleAuthCallback();
-  }, [router, searchParams]);
+  }, [router, searchParams, loading]);
 
   // Handle error parameter from URL
   useEffect(() => {
