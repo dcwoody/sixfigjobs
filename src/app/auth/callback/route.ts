@@ -1,19 +1,28 @@
+// src/app/auth/callback/route.ts
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/'
+  const requestUrl = new URL(request.url)
+  const code = requestUrl.searchParams.get('code')
+  const next = requestUrl.searchParams.get('next') || '/'
 
   if (code) {
     const supabase = createClient()
+    
+    // Exchange the code for a session
     const { error } = await supabase.auth.exchangeCodeForSession(code)
+    
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      // Successful authentication
+      // Redirect to the 'next' URL or home
+      return NextResponse.redirect(new URL(next, requestUrl.origin))
     }
   }
 
-  // Return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/auth/error?error=auth_failed`)
+  // Authentication failed
+  return NextResponse.redirect(
+    new URL(`/login?error=auth_failed`, requestUrl.origin)
+  )
 }
