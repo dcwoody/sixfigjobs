@@ -1,4 +1,5 @@
-'use client';
+// src/app/welcome/page.tsx
+ 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -65,22 +66,37 @@ export default function WelcomePage() {
   const supabase = createClient();
 
   useEffect(() => {
+    let mounted = true;
+
     // Get initial session
     const getSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Getting session...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session error:', error);
+          setLoading(false);
+          router.push('/login');
+          return;
+        }
+
         console.log('Session check:', session?.user?.email);
         
-        if (session) {
+        if (session && mounted) {
           setSession(session);
           await fetchUserProfile(session.user.id);
-        } else {
+        } else if (!session && mounted) {
           console.log('No session found, redirecting to login');
+          setLoading(false);
           router.push('/login');
         }
       } catch (error) {
         console.error('Error getting session:', error);
-        router.push('/login');
+        if (mounted) {
+          setLoading(false);
+          router.push('/login');
+        }
       }
     };
 
@@ -89,17 +105,24 @@ export default function WelcomePage() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       console.log('Auth state changed:', _event, session?.user?.email);
+      
+      if (!mounted) return;
+      
       setSession(session);
       
       if (session) {
         await fetchUserProfile(session.user.id);
       } else {
+        setLoading(false);
         router.push('/login');
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, [router]);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -147,10 +170,14 @@ export default function WelcomePage() {
       if (profile) {
         setUserProfile(profile);
         await fetchDashboardData(userId);
+      } else {
+        // Even if no profile, stop loading
+        console.log('No profile found, but continuing...');
       }
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
     } finally {
+      // Always stop loading
       setLoading(false);
     }
   };
