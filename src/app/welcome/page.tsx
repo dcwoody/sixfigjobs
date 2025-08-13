@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 import { 
   BookmarkIcon, 
@@ -60,80 +60,100 @@ export default function WelcomePage() {
   const [loading, setLoading] = useState(true);
   const [newsletterLoading, setNewsletterLoading] = useState(false);
   const [newsletterMessage, setNewsletterMessage] = useState('');
+  
+  // Create Supabase client
+  const supabase = createClient();
 
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      
-      if (!session) {
-        console.log('No session found, checking URL for auth callback...');
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Session check:', session?.user?.email);
         
-        // Check if we came from OAuth (has state/code in URL)
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-        const state = urlParams.get('state');
-        
-        if (code && state) {
-          console.log('OAuth parameters detected, processing...');
-          // Try to establish session from OAuth callback
-          try {
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for potential session
-            const { data: { session: retrySession } } = await supabase.auth.getSession();
-            
-            if (retrySession) {
-              console.log('Session established after retry!');
-              setSession(retrySession);
-              // Continue with profile fetching below
-            } else {
-              console.log('No session after OAuth retry, redirecting to login');
-              router.push('/login');
-              return;
-            }
-          } catch (error) {
-            console.error('Error processing OAuth callback:', error);
-            router.push('/login');
-            return;
-          }
+        if (session) {
+          setSession(session);
+          await fetchUserProfile(session.user.id);
         } else {
-          console.log('No OAuth parameters, redirecting to login');
+          console.log('No session found, redirecting to login');
           router.push('/login');
-          return;
         }
-      }
-
-      // Fetch user profile if we have a session
-      if (session) {
-        const { data: profile, error } = await supabase
-          .from('users_db')
-          .select('*')
-          .eq('auth_user_id', session.user.id)
-          .single();
-
-        if (error) {
-          console.error('Error fetching user profile:', error);
-          router.push('/login');
-          return;
-        }
-
-        setUserProfile(profile);
-        fetchDashboardData(session.user.id);
+      } catch (error) {
+        console.error('Error getting session:', error);
+        router.push('/login');
       }
     };
 
     getSession();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('Auth state changed:', _event, session?.user?.email);
       setSession(session);
-      if (!session) {
+      
+      if (session) {
+        await fetchUserProfile(session.user.id);
+      } else {
         router.push('/login');
       }
     });
 
     return () => subscription.unsubscribe();
   }, [router]);
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      // First, check if user exists in users_db
+      let { data: profile, error } = await supabase
+        .from('users_db')
+        .select('*')
+        .eq('auth_user_id', userId)
+        .single();
+
+      if (error && error.code === 'PGRST116') {
+        // User doesn't exist in users_db, create them
+        console.log('Creating user profile for:', userId);
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const newProfile = {
+            auth_user_id: userId,
+            email: user.email || '',
+            first_name: user.user_metadata?.name?.split(' ')[0] || '',
+            last_name: user.user_metadata?.name?.split(' ').slice(1).join(' ') || '',
+            user_type: 'job_seeker',
+            is_newsletter_subscriber: false,
+            is_verified: true
+          };
+
+          const { data: createdProfile, error: createError } = await supabase
+            .from('users_db')
+            .insert([newProfile])
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Error creating user profile:', createError);
+            // Don't redirect to login if profile creation fails, continue anyway
+          } else {
+            profile = createdProfile;
+          }
+        }
+      } else if (error) {
+        console.error('Error fetching user profile:', error);
+      }
+
+      if (profile) {
+        setUserProfile(profile);
+        await fetchDashboardData(userId);
+      }
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchDashboardData = async (userId: string) => {
     try {
@@ -193,8 +213,6 @@ export default function WelcomePage() {
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -252,7 +270,7 @@ export default function WelcomePage() {
     router.push('/');
   };
 
-  if (loading || !session || !userProfile) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -263,9 +281,13 @@ export default function WelcomePage() {
     );
   }
 
-  const firstName = userProfile.first_name || userProfile.email?.split('@')[0] || 'there';
-  const userEmail = userProfile.email;
-  const isNewsletterSubscribed = userProfile.is_newsletter_subscriber;
+  if (!session) {
+    return null; // Will redirect to login
+  }
+
+  const firstName = userProfile?.first_name || userProfile?.email?.split('@')[0] || 'there';
+  const userEmail = userProfile?.email || session.user.email;
+  const isNewsletterSubscribed = userProfile?.is_newsletter_subscriber || false;
 
   return (
     <div className="min-h-screen bg-gray-50">
