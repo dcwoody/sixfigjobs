@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Session, User } from '@supabase/supabase-js';
-import { 
-  BookmarkIcon, 
-  BriefcaseIcon, 
-  CogIcon, 
+import { Session } from '@supabase/supabase-js';
+import {
+  BookmarkIcon,
+  BriefcaseIcon,
+  CogIcon,
   UserIcon,
   BarChart3Icon,
   BellIcon,
@@ -31,6 +31,29 @@ interface UserProfile {
   is_verified: boolean;
 }
 
+interface SavedJobRow {
+  id: string;
+  job_id: string;
+  saved_at: string;
+  job_listings_db?: {
+    JobID: string;
+    JobTitle: string;
+    Company: string;
+    Location: string;
+    formatted_salary: string;
+    slug: string;
+  } | { // sometimes PostgREST returns arrays on joins; we normalize below
+    0?: {
+      JobID: string;
+      JobTitle: string;
+      Company: string;
+      Location: string;
+      formatted_salary: string;
+      slug: string;
+    }
+  } | null;
+}
+
 interface SavedJob {
   id: string;
   job_id: string;
@@ -42,7 +65,7 @@ interface SavedJob {
     Location: string;
     formatted_salary: string;
     slug: string;
-  };
+  } | null;
 }
 
 interface JobStats {
@@ -60,68 +83,89 @@ export default function WelcomePage() {
   const [loading, setLoading] = useState(true);
   const [newsletterLoading, setNewsletterLoading] = useState(false);
   const [newsletterMessage, setNewsletterMessage] = useState('');
-  
-  // Create Supabase client
+
   const supabase = createClient();
 
+  // ---- Auth bootstrap with robust loading/redirect handling ----
   useEffect(() => {
-    // Get initial session
-    const getSession = async () => {
+    let isMounted = true;
+
+    const init = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        console.log('Session check:', session?.user?.email);
-        
-        if (session) {
-          setSession(session);
-          await fetchUserProfile(session.user.id);
-        } else {
-          console.log('No session found, redirecting to login');
-          router.push('/login');
+
+        if (!isMounted) return;
+
+        if (!session) {
+          // stop the spinner and redirect cleanly
+          setLoading(false);
+          router.replace('/login');
+          return;
         }
-      } catch (error) {
-        console.error('Error getting session:', error);
-        router.push('/login');
+
+        setSession(session);
+        await fetchUserProfile(session.user.id);
+        if (isMounted) setLoading(false);
+      } catch (err) {
+        console.error('Error getting session:', err);
+        if (isMounted) {
+          setLoading(false);
+          router.replace('/login');
+        }
       }
     };
 
-    getSession();
+    init();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log('Auth state changed:', _event, session?.user?.email);
-      setSession(session);
-      
-      if (session) {
-        await fetchUserProfile(session.user.id);
-      } else {
-        router.push('/login');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!isMounted) return;
+
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (session) {
+            setSession(session);
+            await fetchUserProfile(session.user.id);
+            if (isMounted) setLoading(false);
+          }
+        }
+
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setLoading(false);
+          router.replace('/login');
+        }
       }
-    });
+    );
 
-    return () => subscription.unsubscribe();
-  }, [router]);
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // ---- Profile fetch (no spinner control here; owned by the effect) ----
   const fetchUserProfile = async (userId: string) => {
     try {
-      // First, check if user exists in users_db
+      // Try to get existing profile
       let { data: profile, error } = await supabase
         .from('users_db')
         .select('*')
         .eq('auth_user_id', userId)
         .single();
 
-      if (error && error.code === 'PGRST116') {
-        // User doesn't exist in users_db, create them
+      // PGRST116 = No rows when expecting single
+      if (error && (error as any).code === 'PGRST116') {
         console.log('Creating user profile for:', userId);
-        
+
         const { data: { user } } = await supabase.auth.getUser();
-        
+
         if (user) {
-          const newProfile = {
+          const newProfile: UserProfile = {
             auth_user_id: userId,
             email: user.email || '',
-            first_name: user.user_metadata?.name?.split(' ')[0] || '',
-            last_name: user.user_metadata?.name?.split(' ').slice(1).join(' ') || '',
+            first_name: user.user_metadata?.name?.split(' ')?.[0] || '',
+            last_name: user.user_metadata?.name?.split(' ')?.slice(1)?.join(' ') || '',
             user_type: 'job_seeker',
             is_newsletter_subscriber: false,
             is_verified: true
@@ -135,9 +179,9 @@ export default function WelcomePage() {
 
           if (createError) {
             console.error('Error creating user profile:', createError);
-            // Don't redirect to login if profile creation fails, continue anyway
+            // proceed without hard-failing
           } else {
-            profile = createdProfile;
+            profile = createdProfile as any;
           }
         }
       } else if (error) {
@@ -145,19 +189,18 @@ export default function WelcomePage() {
       }
 
       if (profile) {
-        setUserProfile(profile);
+        setUserProfile(profile as UserProfile);
         await fetchDashboardData(userId);
       }
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
+  // ---- Dashboard data (saved jobs + stats) ----
   const fetchDashboardData = async (userId: string) => {
     try {
-      // Fetch saved jobs with job details
+      // Note: if your real table is `jobs_db`, change `job_listings_db!inner` and the counts below.
       const { data: savedJobsData, error: savedJobsError } = await supabase
         .from('saved_jobs')
         .select(`
@@ -180,26 +223,31 @@ export default function WelcomePage() {
       if (savedJobsError) {
         console.error('Error fetching saved jobs:', savedJobsError);
       } else {
-        // Transform the data to handle the nested structure
-        const transformedJobs = savedJobsData?.map((item: any) => ({
-          id: item.id,
-          job_id: item.job_id,
-          saved_at: item.saved_at,
-          job_listings_db: Array.isArray(item.job_listings_db) 
-            ? item.job_listings_db[0] 
-            : item.job_listings_db
-        })) || [];
-        setSavedJobs(transformedJobs);
+        const normalized: SavedJob[] = (savedJobsData as SavedJobRow[] | null)?.map((row) => {
+          let joined: any = row.job_listings_db ?? null;
+          // normalize array-like join responses
+          if (Array.isArray(joined)) joined = joined[0] ?? null;
+          if (joined && typeof joined === 'object' && '0' in joined) joined = (joined as any)[0] ?? null;
+
+          return {
+            id: row.id,
+            job_id: row.job_id,
+            saved_at: row.saved_at,
+            job_listings_db: joined ?? null,
+          };
+        }) ?? [];
+
+        setSavedJobs(normalized);
       }
 
-      // Fetch job statistics
+      // Job statistics
       const { count: totalJobs } = await supabase
         .from('job_listings_db')
         .select('*', { count: 'exact', head: true });
 
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-      
+
       const { count: newJobs } = await supabase
         .from('job_listings_db')
         .select('*', { count: 'exact', head: true })
@@ -210,7 +258,6 @@ export default function WelcomePage() {
         new_this_week: newJobs || 0,
         avg_salary: '$150K+',
       });
-
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     }
@@ -233,12 +280,11 @@ export default function WelcomePage() {
         setNewsletterMessage('Failed to update subscription. Please try again.');
       } else {
         setNewsletterMessage(
-          newStatus 
-            ? '✅ Successfully subscribed to weekly job alerts!' 
+          newStatus
+            ? '✅ Successfully subscribed to weekly job alerts!'
             : '📭 Unsubscribed from newsletter.'
         );
-        
-        // Update local state
+
         setUserProfile(prev => prev ? { ...prev, is_newsletter_subscriber: newStatus } : null);
       }
     } catch (error) {
@@ -282,7 +328,8 @@ export default function WelcomePage() {
   }
 
   if (!session) {
-    return null; // Will redirect to login
+    // Redirect is handled; render nothing to avoid flicker
+    return null;
   }
 
   const firstName = userProfile?.first_name || userProfile?.email?.split('@')[0] || 'there';
@@ -317,10 +364,9 @@ export default function WelcomePage() {
           </div>
         </div>
       </nav>
-      
+
       <div className="py-8 px-4">
         <div className="max-w-7xl mx-auto">
-          
           {/* Header Section */}
           <div className="mb-8">
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl shadow-lg p-8 text-white">
@@ -335,7 +381,7 @@ export default function WelcomePage() {
                   <p className="text-blue-200 text-sm mt-1">{userEmail}</p>
                 </div>
                 <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
-                  <Link 
+                  <Link
                     href="/jobs"
                     className="inline-flex items-center px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
                   >
@@ -362,7 +408,7 @@ export default function WelcomePage() {
                   </button>
                 </div>
               </div>
-              
+
               {/* Newsletter Message */}
               {newsletterMessage && (
                 <div className="mt-4 p-3 bg-white/10 rounded-lg">
@@ -414,10 +460,8 @@ export default function WelcomePage() {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
             {/* Main Content Area */}
             <div className="lg:col-span-2 space-y-6">
-              
               {/* Recently Saved Jobs */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -425,8 +469,8 @@ export default function WelcomePage() {
                     <BookmarkIcon className="w-5 h-5 mr-2 text-blue-600" />
                     Recently Saved Jobs
                   </h2>
-                  <Link 
-                    href="/saved" 
+                  <Link
+                    href="/saved"
                     className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                   >
                     View All
@@ -438,13 +482,13 @@ export default function WelcomePage() {
                     {savedJobs.map((savedJob) => {
                       const job = savedJob.job_listings_db;
                       if (!job) return null;
-                      
+
                       return (
                         <div key={savedJob.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
                               <div className="flex items-start justify-between">
-                                <Link 
+                                <Link
                                   href={`/jobs/${job.slug}`}
                                   className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors"
                                 >
@@ -475,7 +519,7 @@ export default function WelcomePage() {
                             </div>
                             <div className="text-right ml-4">
                               <p className="text-lg font-bold text-green-600">{job.formatted_salary}</p>
-                              <Link 
+                              <Link
                                 href={`/jobs/${job.slug}`}
                                 className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center mt-1"
                               >
@@ -493,7 +537,7 @@ export default function WelcomePage() {
                     <BookmarkIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No saved jobs yet</h3>
                     <p className="text-gray-600 mb-4">Start browsing and save jobs you're interested in!</p>
-                    <Link 
+                    <Link
                       href="/jobs"
                       className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
                     >
@@ -514,7 +558,7 @@ export default function WelcomePage() {
                   <p className="text-blue-800 mb-3">
                     Set up your job preferences to get personalized recommendations!
                   </p>
-                  <Link 
+                  <Link
                     href="/preferences"
                     className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
                   >
@@ -527,13 +571,12 @@ export default function WelcomePage() {
 
             {/* Sidebar */}
             <div className="space-y-6">
-              
               {/* Quick Actions */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                 <div className="space-y-3">
-                  <Link 
-                    href="/saved" 
+                  <Link
+                    href="/saved"
                     className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                   >
                     <BookmarkIcon className="w-5 h-5 text-blue-600 mr-3" />
@@ -543,8 +586,8 @@ export default function WelcomePage() {
                     </div>
                   </Link>
 
-                  <Link 
-                    href="/preferences" 
+                  <Link
+                    href="/preferences"
                     className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                   >
                     <CogIcon className="w-5 h-5 text-blue-600 mr-3" />
@@ -554,8 +597,8 @@ export default function WelcomePage() {
                     </div>
                   </Link>
 
-                  <Link 
-                    href="/settings" 
+                  <Link
+                    href="/settings"
                     className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                   >
                     <UserIcon className="w-5 h-5 text-blue-600 mr-3" />
@@ -580,14 +623,14 @@ export default function WelcomePage() {
                       <p className="text-sm text-gray-600">Get weekly premium job updates</p>
                     </div>
                     <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      isNewsletterSubscribed 
-                        ? 'bg-green-100 text-green-800' 
+                      isNewsletterSubscribed
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-800'
                     }`}>
                       {isNewsletterSubscribed ? 'Subscribed' : 'Not subscribed'}
                     </div>
                   </div>
-                  
+
                   <button
                     onClick={handleNewsletterToggle}
                     disabled={newsletterLoading}
@@ -623,9 +666,9 @@ export default function WelcomePage() {
                     <Link href="/preferences" className="text-blue-600 font-medium">Set up →</Link>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                      style={{width: `${isNewsletterSubscribed ? '75%' : '50%'}`}}
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${isNewsletterSubscribed ? '75%' : '50%'}` }}
                     ></div>
                   </div>
                   <p className="text-xs text-gray-600">
