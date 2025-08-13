@@ -1,76 +1,105 @@
 // src/components/JobCard.tsx
 import React from 'react';
 import Link from 'next/link';
-import { MapPin, DollarSign, Calendar, Heart, ExternalLink } from 'lucide-react';
-import { Job } from '@/types';
+import { MapPin, DollarSign, Calendar, Building2, Clock } from 'lucide-react';
 import { formatDate } from '@/lib/data';
+import SaveJobButton from './SaveJobButton';
 
-interface JobCardProps {
-    job: Job;
+interface Job {
+  JobID: string;
+  JobTitle: string;
+  Company: string;
+  Location: string;
+  formatted_salary: string;
+  ShortDescription: string;
+  PostedDate: string;
+  JobType: string;
+  is_remote: boolean;
+  slug: string;
 }
 
-export default function JobCard({ job }: JobCardProps) {
-    return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between">
-                <div className="flex-1">
-                    <div className="flex items-start justify-between mb-4">
-                        <div>
-                            <Link href={`/jobs/${job.slug}`}>
-                                <h3 className="text-xl font-semibold text-gray-900 mb-1 hover:text-blue-600 cursor-pointer">
-                                    {job.JobTitle}
-                                </h3>
-                            </Link>
-                            <Link href={`/companies/${job.Company.toLowerCase().replace(/\s+/g, '-')}`}>
-                                <p className="text-blue-600 font-medium cursor-pointer hover:underline">
-                                    {job.Company}
-                                </p>
-                            </Link>
-                        </div>
-                        <button className="text-gray-400 hover:text-red-500 transition-colors">
-                            <Heart className="h-5 w-5" />
-                        </button>
-                    </div>
+interface JobCardProps {
+  job: Job;
+  showSaveButton?: boolean;
+  className?: string;
+}
 
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-3">
-                        <div className="flex items-center">
-                            <MapPin className="h-4 w-4 mr-1" />
-                            {job.Location}
-                        </div>
-                        <div className="flex items-center">
-                            <DollarSign className="h-4 w-4 mr-1" />
-                            {job.formatted_salary}
-                        </div>
-                        <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {formatDate(job.PostedDate)}
-                        </div>
-                        {job.is_remote && (
-                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                                Remote
-                            </span>
-                        )}
-                    </div>
-
-                    <p className="text-gray-600 mb-4">{job.ShortDescription}</p>
-
-                    <div className="flex items-center space-x-3">
-                        <Link href={`/jobs/${job.slug}`}>
-                            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                                View Details
-                            </button>
-                        </Link>
-                        <a
-                            href={job.job_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 transition-colors flex items-center"
-                        >
-                            Apply Now <ExternalLink className="h-4 w-4 ml-1" />
-                        </a>
-                    </div>
-                </div>
-            </div>
+export default function JobCard({ job, showSaveButton = true, className = '' }: JobCardProps) {
+  return (
+    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow ${className}`}>
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex-1">
+          <div className="flex items-start justify-between">
+            <Link 
+              href={`/jobs/${job.slug}`}
+              className="text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+            >
+              {job.JobTitle}
+            </Link>
+            {showSaveButton && (
+              <SaveJobButton 
+                jobId={job.JobID} 
+                variant="heart" 
+                size="md"
+              />
+            )}
+          </div>
+          <Link 
+            href={`/companies/${job.Company.toLowerCase().replace(/\s+/g, '-')}`}
+            className="text-blue-600 font-medium hover:underline"
+          >
+            {job.Company}
+          </Link>
         </div>
-    );
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4 text-sm text-gray-600">
+        <div className="flex items-center">
+          <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+          <span>{job.Location}</span>
+        </div>
+        <div className="flex items-center">
+          <DollarSign className="h-4 w-4 mr-2 text-gray-400" />
+          <span className="font-medium text-green-600">{job.formatted_salary}</span>
+        </div>
+        <div className="flex items-center">
+          <Building2 className="h-4 w-4 mr-2 text-gray-400" />
+          <span>{job.JobType.replace('_', ' ')}</span>
+        </div>
+      </div>
+
+      <p className="text-gray-700 mb-4 line-clamp-2">{job.ShortDescription}</p>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center text-sm text-gray-500">
+            <Clock className="h-4 w-4 mr-1" />
+            <span>Posted {formatDate(job.PostedDate)}</span>
+          </div>
+          {job.is_remote && (
+            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+              Remote
+            </span>
+          )}
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          {showSaveButton && (
+            <SaveJobButton 
+              jobId={job.JobID} 
+              variant="bookmark" 
+              size="sm" 
+              showText={false}
+            />
+          )}
+          <Link 
+            href={`/jobs/${job.slug}`}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          >
+            View Details
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
 }

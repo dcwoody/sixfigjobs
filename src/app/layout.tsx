@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import '@/app/global.css';
 import Navigation from '@/components/Navigation';
+import { SavedJobsProvider } from '@/hooks/useSavedJobs';
 
 export const metadata: Metadata = {
   title: 'SixFigHires - Premium Job Board',
@@ -16,8 +17,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Navigation />
-        <main>{children}</main>
+        <SavedJobsProvider>
+          <Navigation />
+          <main>{children}</main>
+        </SavedJobsProvider>
       </body>
     </html>
   );
