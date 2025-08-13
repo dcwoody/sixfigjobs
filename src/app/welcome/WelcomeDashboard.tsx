@@ -225,34 +225,7 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
   const isNewsletterSubscribed = userProfile?.is_newsletter_subscriber || false;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Simple Navigation */}
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link href="/" className="text-xl font-bold text-gray-900">
-                SixFigJob
-              </Link>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/jobs" className="text-gray-700 hover:text-gray-900">
-                Browse Jobs
-              </Link>
-              <Link href="/preferences" className="text-gray-700 hover:text-gray-900">
-                Preferences
-              </Link>
-              <button
-                onClick={handleSignOut}
-                className="text-gray-700 hover:text-gray-900"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-      
+    <div className="min-h-screen bg-gray-50">      
       <div className="py-8 px-4">
         <div className="max-w-7xl mx-auto">
           
