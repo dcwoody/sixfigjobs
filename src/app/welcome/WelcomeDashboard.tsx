@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Session } from '@supabase/supabase-js';
+import { useSavedJobs } from '@/hooks/useSavedJobs';
 import { 
   BookmarkIcon, 
   BriefcaseIcon, 
@@ -32,7 +33,7 @@ interface UserProfile {
   is_verified: boolean;
 }
 
-interface SavedJob {
+interface SavedJobWithDetails {
   id: string;
   job_id: string;
   saved_at: string;
@@ -60,10 +61,11 @@ interface WelcomeDashboardProps {
 export default function WelcomeDashboard({ initialSession, initialProfile }: WelcomeDashboardProps) {
   const router = useRouter();
   const supabase = createClient();
+  const { user: savedJobsUser } = useSavedJobs(); // Use the hook's user state
   
   const [session, setSession] = useState<Session>(initialSession);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(initialProfile);
-  const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
+  const [savedJobs, setSavedJobs] = useState<SavedJobWithDetails[]>([]);
   const [jobStats, setJobStats] = useState<JobStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [newsletterLoading, setNewsletterLoading] = useState(false);
@@ -77,15 +79,47 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
       fetchDashboardData(session.user.id);
     }
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (_event === 'SIGNED_OUT' || !session) {
+    // Set up auth listener that updates session state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      console.log('Auth state changed in dashboard:', _event, newSession?.user?.email);
+      
+      if (_event === 'SIGNED_OUT' || !newSession) {
         router.push('/login');
+      } else if (newSession) {
+        setSession(newSession);
+        // Update profile and data when session changes
+        if (newSession.user.id !== session?.user.id) {
+          fetchUserProfile(newSession.user.id);
+          fetchDashboardData(newSession.user.id);
+        }
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Fetch saved jobs when savedJobsUser changes
+  useEffect(() => {
+    if (savedJobsUser) {
+      fetchSavedJobsWithDetails(savedJobsUser.id);
+    }
+  }, [savedJobsUser]);
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users_db')
+        .select('*')
+        .eq('auth_user_id', userId)
+        .single();
+
+      if (!error && data) {
+        setUserProfile(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   const createUserProfile = async (userId: string) => {
     try {
@@ -114,9 +148,8 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
     }
   };
 
-  const fetchDashboardData = async (userId: string) => {
+  const fetchSavedJobsWithDetails = async (userId: string) => {
     try {
-      // Fetch saved jobs with job details
       const { data: savedJobsData, error: savedJobsError } = await supabase
         .from('saved_jobs')
         .select(`
@@ -147,7 +180,13 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
         })) || [];
         setSavedJobs(transformedJobs);
       }
+    } catch (error) {
+      console.error('Error fetching saved jobs with details:', error);
+    }
+  };
 
+  const fetchDashboardData = async (userId: string) => {
+    try {
       // Fetch job statistics
       const { count: totalJobs } = await supabase
         .from('job_listings_db')
@@ -191,9 +230,12 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
             : '📭 Unsubscribed from newsletter.'
         );
         setUserProfile(prev => prev ? { ...prev, is_newsletter_subscriber: newStatus } : null);
+      } else {
+        setNewsletterMessage('Failed to update subscription. Please try again.');
       }
     } catch (error) {
       console.error('Newsletter subscription error:', error);
+      setNewsletterMessage('An error occurred. Please try again.');
     } finally {
       setNewsletterLoading(false);
       setTimeout(() => setNewsletterMessage(''), 3000);
@@ -255,64 +297,41 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
                     disabled={newsletterLoading}
                     className={`inline-flex items-center px-6 py-3 font-semibold rounded-lg transition-colors shadow-sm ${
                       isNewsletterSubscribed
-                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                        : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                    } disabled:opacity-50`}
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    } ${newsletterLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    {newsletterLoading ? (
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current mr-2"></div>
-                    ) : isNewsletterSubscribed ? (
-                      <CheckIcon className="w-5 h-5 mr-2" />
-                    ) : (
-                      <MailIcon className="w-5 h-5 mr-2" />
+                    <MailIcon className="w-5 h-5 mr-2" />
+                    {newsletterLoading ? 'Updating...' : (
+                      isNewsletterSubscribed ? 'Unsubscribe' : 'Join Newsletter'
                     )}
-                    {isNewsletterSubscribed ? 'Subscribed' : 'Join Newsletter'}
                   </button>
                 </div>
               </div>
               
               {newsletterMessage && (
-                <div className="mt-4 p-3 bg-white/10 rounded-lg">
-                  <p className="text-white text-sm">{newsletterMessage}</p>
+                <div className="mt-4 bg-white bg-opacity-20 text-white p-3 rounded-lg">
+                  {newsletterMessage}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Stats Overview */}
+          {/* Job Stats */}
           {jobStats && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="mb-8">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center">
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <BriefcaseIcon className="w-6 h-6 text-blue-600" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-gray-900">{jobStats.total_jobs.toLocaleString()}</p>
+                    <p className="text-gray-600">Total Jobs</p>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-2xl font-bold text-gray-900">{jobStats.total_jobs.toLocaleString()}</p>
-                    <p className="text-gray-600">Total Jobs Available</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center">
-                  <div className="p-3 bg-green-100 rounded-lg">
-                    <PlusIcon className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-2xl font-bold text-gray-900">{jobStats.new_this_week}</p>
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-gray-900">{jobStats.new_this_week}</p>
                     <p className="text-gray-600">New This Week</p>
                   </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center">
-                  <div className="p-3 bg-yellow-100 rounded-lg">
-                    <BarChart3Icon className="w-6 h-6 text-yellow-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-2xl font-bold text-gray-900">{jobStats.avg_salary}</p>
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-gray-900">{jobStats.avg_salary}</p>
                     <p className="text-gray-600">Average Salary</p>
                   </div>
                 </div>
@@ -330,7 +349,7 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
                     <BookmarkIcon className="w-5 h-5 mr-2 text-blue-600" />
                     Recently Saved Jobs
                   </h2>
-                  <Link href="/saved" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                  <Link href="/profile" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
                     View All
                   </Link>
                 </div>
@@ -405,21 +424,111 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
                   </div>
                 )}
               </div>
+
+              {/* Job Recommendations */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <BarChart3Icon className="w-5 h-5 mr-2 text-blue-600" />
+                  Recommended for You
+                </h2>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-blue-800 mb-3">
+                    Set up your job preferences to get personalized recommendations!
+                  </p>
+                  <Link 
+                    href="/preferences"
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <CogIcon className="w-4 h-4 mr-2" />
+                    Set Preferences
+                  </Link>
+                </div>
+              </div>
             </div>
 
             {/* Sidebar */}
             <div className="space-y-6">
+              
               {/* Quick Actions */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                 <div className="space-y-3">
-                  <Link href="/saved" className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <Link 
+                    href="/profile" 
+                    className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
                     <BookmarkIcon className="w-5 h-5 text-blue-600 mr-3" />
                     <div>
                       <p className="font-medium text-gray-900">Saved Jobs</p>
                       <p className="text-sm text-gray-600">View your bookmarked positions</p>
                     </div>
                   </Link>
+                  <Link 
+                    href="/preferences"
+                    className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <CogIcon className="w-5 h-5 text-blue-600 mr-3" />
+                    <div>
+                      <p className="font-medium text-gray-900">Job Preferences</p>
+                      <p className="text-sm text-gray-600">Set your criteria and alerts</p>
+                    </div>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Newsletter Status */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Newsletter Status</h3>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Weekly job alerts</p>
+                    <p className={`font-medium ${isNewsletterSubscribed ? 'text-green-600' : 'text-gray-600'}`}>
+                      {isNewsletterSubscribed ? 'Subscribed ✓' : 'Not subscribed'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleNewsletterToggle}
+                    disabled={newsletterLoading}
+                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                      isNewsletterSubscribed
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
+                  >
+                    {newsletterLoading ? 'Updating...' : (
+                      isNewsletterSubscribed ? 'Unsubscribe' : 'Subscribe Now'
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Profile Completion */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Profile Completion</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Basic info</span>
+                    <span className="text-green-600 font-medium">✓ Complete</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Newsletter subscription</span>
+                    <span className={`font-medium ${isNewsletterSubscribed ? 'text-green-600' : 'text-gray-400'}`}>
+                      {isNewsletterSubscribed ? '✓ Complete' : 'Optional'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Job preferences</span>
+                    <Link href="/preferences" className="text-blue-600 font-medium">Set up →</Link>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                      style={{width: `${isNewsletterSubscribed ? '75%' : '50%'}`}}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    {isNewsletterSubscribed ? '75%' : '50%'} complete
+                  </p>
                 </div>
               </div>
             </div>
