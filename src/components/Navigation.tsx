@@ -1,5 +1,5 @@
 // src/components/Navigation.tsx - Auth-Aware Professional Navigation
-'use client';
+use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -89,8 +89,15 @@ export default function Navigation() {
                   {/* Dropdown Menu */}
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                     <Link
-                      href="/profile"
+                      href="/welcome"
                       className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors rounded-t-lg"
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/profile"
+                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <User className="w-4 h-4 mr-2" />
                       Profile

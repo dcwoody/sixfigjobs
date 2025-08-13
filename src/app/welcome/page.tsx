@@ -1,5 +1,5 @@
 // src/app/welcome/page.tsx
- 'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -54,6 +54,8 @@ interface JobStats {
 
 export default function WelcomePage() {
   const router = useRouter();
+  const supabase = createClient();
+  
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
@@ -61,38 +63,37 @@ export default function WelcomePage() {
   const [loading, setLoading] = useState(true);
   const [newsletterLoading, setNewsletterLoading] = useState(false);
   const [newsletterMessage, setNewsletterMessage] = useState('');
-  
-  // Create Supabase client
-  const supabase = createClient();
 
   useEffect(() => {
     let mounted = true;
 
     // Get initial session
-    const getSession = async () => {
+    const initializeAuth = async () => {
       try {
-        console.log('Getting session...');
+        console.log('Initializing auth...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Session error:', error);
-          setLoading(false);
-          router.push('/login');
+          if (mounted) {
+            setLoading(false);
+            router.push('/login');
+          }
           return;
         }
 
-        console.log('Session check:', session?.user?.email);
+        console.log('Session found:', session?.user?.email);
         
         if (session && mounted) {
           setSession(session);
           await fetchUserProfile(session.user.id);
         } else if (!session && mounted) {
-          console.log('No session found, redirecting to login');
+          console.log('No session, redirecting to login');
           setLoading(false);
           router.push('/login');
         }
       } catch (error) {
-        console.error('Error getting session:', error);
+        console.error('Error in initializeAuth:', error);
         if (mounted) {
           setLoading(false);
           router.push('/login');
@@ -100,21 +101,19 @@ export default function WelcomePage() {
       }
     };
 
-    getSession();
+    initializeAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log('Auth state changed:', _event, session?.user?.email);
+      console.log('Auth state changed:', _event);
       
       if (!mounted) return;
       
-      setSession(session);
-      
-      if (session) {
-        await fetchUserProfile(session.user.id);
-      } else {
-        setLoading(false);
+      if (_event === 'SIGNED_OUT') {
         router.push('/login');
+      } else if (_event === 'SIGNED_IN' && session) {
+        setSession(session);
+        await fetchUserProfile(session.user.id);
       }
     });
 
@@ -122,7 +121,7 @@ export default function WelcomePage() {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, []); // Empty dependency array - only run once
 
   const fetchUserProfile = async (userId: string) => {
     try {

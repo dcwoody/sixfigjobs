@@ -6,7 +6,7 @@ import { cookies } from 'next/headers'
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
-  const next = requestUrl.searchParams.get('next') || '/'
+  const next = requestUrl.searchParams.get('next') || '/welcome'
 
   if (code) {
     const supabase = createClient()
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     
     if (!error) {
       // Successful authentication
-      // Redirect to the 'next' URL or home
+      // Redirect to the 'next' URL or welcome page
       return NextResponse.redirect(new URL(next, requestUrl.origin))
     }
   }
