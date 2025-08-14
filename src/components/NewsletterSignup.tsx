@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, CheckCircle, Loader2, TrendingUp, Users, Briefcase } from 'lucide-react';
+import { Mail, CheckCircle, Loader2, Calendar, Shield } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 export default function NewsletterSignup() {
@@ -101,146 +101,119 @@ export default function NewsletterSignup() {
   };
 
   return (
-    <section id="newsletter" className="bg-gradient-to-br from-blue-50 via-white to-purple-50 py-20">
+    <section id="newsletter" className="bg-gray-900 py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
+        <div className="max-w-4xl mx-auto">
           
-          {/* Header */}
-          <div className="mb-12">
-            <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mb-6">
-              <Mail className="w-4 h-4 mr-2" />
-              Weekly Newsletter
-            </div>
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
             
-            <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
-              Get the best{' '}
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                six-figure jobs
-              </span>{' '}
-              delivered weekly
-            </h2>
-            
-            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-              Join 25,000+ ambitious professionals getting curated $100k+ opportunities, 
-              salary insights, and career advice delivered to their inbox every Monday.
-            </p>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Briefcase className="w-6 h-6 text-blue-600" />
-              </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">500+</div>
-              <div className="text-gray-600">New jobs weekly</div>
-            </div>
-            
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="w-6 h-6 text-green-600" />
-              </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">$180k</div>
-              <div className="text-gray-600">Average salary</div>
-            </div>
-            
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Users className="w-6 h-6 text-purple-600" />
-              </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">25k+</div>
-              <div className="text-gray-600">Subscribers</div>
-            </div>
-          </div>
-
-          {/* Success State */}
-          {success && (
-            <div className="bg-green-50 border border-green-200 rounded-2xl p-8 mb-8">
-              <div className="flex items-center justify-center mb-4">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
+            {/* Left Side - Content */}
+            <div className="text-white">
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">
+                Subscribe to our newsletter
+              </h2>
+              <p className="text-xl text-gray-300 mb-8 leading-relaxed">
+                Get the best six-figure jobs delivered weekly. Join 25,000+ ambitious professionals 
+                getting curated $100k+ opportunities, salary insights, and career advice.
+              </p>
+              
+              {/* Benefits */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-blue-600/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                    <Calendar className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white mb-1">Weekly articles</h3>
+                    <p className="text-gray-400 text-sm">
+                      Curated job opportunities and career insights delivered every Monday morning.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-green-600/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                    <Shield className="w-4 h-4 text-green-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white mb-1">No spam</h3>
+                    <p className="text-gray-400 text-sm">
+                      Quality over quantity. Unsubscribe anytime with a single click.
+                    </p>
+                  </div>
                 </div>
               </div>
-              <h3 className="text-xl font-semibold text-green-900 mb-2">
-                🎉 Welcome to the SixFigHires community!
-              </h3>
-              <p className="text-green-800">
-                Check your inbox for a confirmation email. Your first newsletter will arrive next Monday 
-                with fresh six-figure opportunities curated just for you.
-              </p>
             </div>
-          )}
 
-          {/* Signup Form */}
-          {!success && (
-            <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div>
+            {/* Right Side - Form */}
+            <div>
+              {/* Success State */}
+              {success && (
+                <div className="bg-green-900/50 border border-green-500/50 rounded-2xl p-8 text-center">
+                  <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-8 h-8 text-green-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-2">
+                    🎉 Welcome to SixFigHires!
+                  </h3>
+                  <p className="text-green-300">
+                    Check your inbox for confirmation. Your first newsletter arrives next Monday.
+                  </p>
+                </div>
+              )}
+
+              {/* Signup Form */}
+              {!success && (
+                <form onSubmit={handleSubmit} className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-2xl p-8">
+                  <div className="space-y-4 mb-6">
                     <input
                       type="text"
                       placeholder="First name (optional)"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all placeholder-gray-500"
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     />
-                  </div>
-                  <div>
                     <input
                       type="email"
-                      placeholder="Enter your email address"
+                      placeholder="Enter your email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all placeholder-gray-500"
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     />
                   </div>
-                </div>
 
-                {error && (
-                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-                    {error}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-8 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin inline" />
-                      Subscribing...
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="w-5 h-5 mr-2 inline" />
-                      Get Weekly Jobs
-                    </>
+                  {error && (
+                    <div className="mb-6 p-4 bg-red-900/50 border border-red-500/50 rounded-xl text-red-300 text-sm">
+                      {error}
+                    </div>
                   )}
-                </button>
 
-                <p className="text-sm text-gray-500 mt-4">
-                  No spam. Unsubscribe anytime. Join 25,000+ professionals already subscribed.
-                </p>
-              </div>
-            </form>
-          )}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-8 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin inline" />
+                        Subscribing...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-5 h-5 mr-2 inline" />
+                        Subscribe
+                      </>
+                    )}
+                  </button>
 
-          {/* Social Proof */}
-          {!success && (
-            <div className="mt-12">
-              <p className="text-sm text-gray-600 mb-6">Trusted by professionals at:</p>
-              <div className="flex flex-wrap items-center justify-center gap-8 opacity-60">
-                {['Google', 'Apple', 'Meta', 'Netflix', 'Tesla', 'Amazon'].map((company) => (
-                  <div key={company} className="bg-gray-100 px-4 py-2 rounded-lg">
-                    <span className="text-gray-600 font-medium">{company}</span>
-                  </div>
-                ))}
-              </div>
+                  <p className="text-sm text-gray-400 mt-4 text-center">
+                    No spam. Unsubscribe anytime. Join 25,000+ professionals.
+                  </p>
+                </form>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </section>

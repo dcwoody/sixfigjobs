@@ -1,70 +1,62 @@
 // src/app/signup/page.tsx
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import Link from 'next/link';
-import { Briefcase, Users, TrendingUp, Star, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
+import { Briefcase } from 'lucide-react'
+
+interface FormData {
+  email: string
+  password: string
+  firstName: string
+  lastName: string
+  userType: 'job_seeker' | 'employer'
+  companyName: string
+  companySize: string
+  industry: string
+  isNewsletterSubscriber: boolean
+}
 
 export default function SignupPage() {
-  const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
-    confirmPassword: '',
     firstName: '',
     lastName: '',
-    userType: 'job_seeker', // 'job_seeker' or 'employer'
+    userType: 'job_seeker',
     companyName: '',
-    companyWebsite: '',
+    companySize: '',
     industry: '',
-    isNewsletterSubscriber: true,
-  });
+    isNewsletterSubscriber: true
+  })
+  const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
+  const [mounted, setMounted] = useState(false)
+  
+  const supabase = createClient()
+  const router = useRouter()
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-  
-  const [errorMsg, setErrorMsg] = useState('');
-  const [loading, setLoading] = useState(false);
+    setMounted(true)
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
+    const { name, value, type } = e.target
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-    }));
-  };
+    }))
+  }
 
   const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrorMsg('');
-
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      setErrorMsg('Passwords do not match');
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setErrorMsg('Password must be at least 6 characters');
-      setLoading(false);
-      return;
-    }
-
-    if (formData.userType === 'employer' && !formData.companyName) {
-      setErrorMsg('Company name is required for employer accounts');
-      setLoading(false);
-      return;
-    }
+    e.preventDefault()
+    setLoading(true)
+    setErrorMsg('')
 
     try {
-      // 1. Create Supabase auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -72,76 +64,28 @@ export default function SignupPage() {
             first_name: formData.firstName,
             last_name: formData.lastName,
             user_type: formData.userType,
+            ...(formData.userType === 'employer' && {
+              company_name: formData.companyName,
+              company_size: formData.companySize,
+              industry: formData.industry
+            }),
+            newsletter_subscriber: formData.isNewsletterSubscriber
           }
         }
-      });
+      })
 
-      if (authError) {
-        setErrorMsg(authError.message);
-        setLoading(false);
-        return;
+      if (error) {
+        setErrorMsg(error.message)
+      } else {
+        // Redirect to dashboard or confirmation page
+        router.push('/dashboard')
       }
-
-      if (!authData.user) {
-        setErrorMsg('Failed to create account');
-        setLoading(false);
-        return;
-      }
-
-      // 2. Create user profile in users_db
-      const userProfileData = {
-        auth_user_id: authData.user.id,
-        email: formData.email,
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        user_type: formData.userType,
-        is_newsletter_subscriber: formData.isNewsletterSubscriber,
-        is_verified: false,
-        ...(formData.userType === 'employer' && {
-          company_name: formData.companyName,
-          company_website: formData.companyWebsite,
-          industry: formData.industry,
-        })
-      };
-
-      const { error: profileError } = await supabase
-        .from('users_db')
-        .insert([userProfileData]);
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        setErrorMsg('Account created but profile setup failed. Please contact support.');
-        setLoading(false);
-        return;
-      }
-
-      // 3. Create employer profile if needed
-      if (formData.userType === 'employer') {
-        const { error: employerError } = await supabase
-          .from('employer_profiles')
-          .insert([{
-            user_id: authData.user.id,
-            company_description: '',
-            subscription_plan: 'free',
-            jobs_posted_count: 0,
-          }]);
-
-        if (employerError) {
-          console.error('Employer profile creation error:', employerError);
-          // Don't fail the signup for this, just log it
-        }
-      }
-
-      // Success - redirect to welcome page
-      router.push('/welcome');
-
     } catch (error) {
-      console.error('Signup error:', error);
-      setErrorMsg('An unexpected error occurred. Please try again.');
+      setErrorMsg('An unexpected error occurred. Please try again.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleGoogleSignup = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -153,32 +97,15 @@ export default function SignupPage() {
           newsletter: formData.isNewsletterSubscriber.toString(),
         }
       },
-    });
+    })
 
     if (error) {
-      setErrorMsg(error.message);
+      setErrorMsg(error.message)
     }
-  };
-
-  const handleAppleSignup = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'apple',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: {
-          user_type: formData.userType,
-          newsletter: formData.isNewsletterSubscriber.toString(),
-        }
-      },
-    });
-
-    if (error) {
-      setErrorMsg(error.message);
-    }
-  };
+  }
 
   if (!mounted) {
-    return null;
+    return null
   }
 
   return (
@@ -205,7 +132,7 @@ export default function SignupPage() {
             </p>
           </div>
 
-          {/* Social Sign Up */}
+          {/* Social Sign Up - Google Only */}
           <div className="space-y-3">
             <button
               onClick={handleGoogleSignup}
@@ -219,18 +146,6 @@ export default function SignupPage() {
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
               Sign up with Google
-            </button>
-            
-            <button
-              onClick={handleAppleSignup}
-              type="button"
-              className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium"
-            >
-              <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09z"/>
-                <path d="M15.53 3.83c.893-1.09 1.479-2.58 1.309-4.081-1.297.052-2.869.869-3.8 1.947-.832.952-1.56 2.471-1.364 3.931 1.448.111 2.927-.74 3.855-1.797z"/>
-              </svg>
-              Sign up with Apple
             </button>
           </div>
 
@@ -291,124 +206,120 @@ export default function SignupPage() {
                   />
                   <div className="flex flex-col">
                     <span className="block text-sm font-semibold text-gray-900">Employer</span>
-                    <span className="block text-xs text-gray-600">Post premium jobs</span>
+                    <span className="block text-xs text-gray-600">Hire top talent</span>
                   </div>
                 </label>
               </div>
             </div>
 
-            {/* Name Fields */}
+            {/* Basic Info */}
             <div className="grid grid-cols-2 gap-4">
               <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  First name
+                </label>
                 <input
-                  id="firstName"
-                  name="firstName"
                   type="text"
-                  required
+                  name="firstName"
                   value={formData.firstName}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all placeholder-gray-500"
-                  placeholder="First Name"
+                  required
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Last name
+                </label>
                 <input
-                  id="lastName"
-                  name="lastName"
                   type="text"
-                  required
+                  name="lastName"
                   value={formData.lastName}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all placeholder-gray-500"
-                  placeholder="Last Name"
+                  required
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                 />
               </div>
             </div>
 
-            {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Your email</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Email address
+              </label>
               <input
-                id="email"
-                name="email"
                 type="email"
-                autoComplete="email"
-                required
+                name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all placeholder-gray-500"
-                placeholder="name@company.com"
+                required
+                className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
               />
             </div>
 
-            {/* Password Fields */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Your password</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Password
+              </label>
               <input
-                id="password"
-                name="password"
                 type="password"
-                autoComplete="new-password"
-                required
+                name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all placeholder-gray-500"
-                placeholder="••••••••"
-              />
-            </div>
-
-            <div>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
                 required
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all placeholder-gray-500"
-                placeholder="Confirm password"
+                minLength={6}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
               />
+              <p className="mt-1 text-xs text-gray-500">Minimum 6 characters</p>
             </div>
 
-            {/* Employer-specific fields */}
+            {/* Employer Fields */}
             {formData.userType === 'employer' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">Company Name</label>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Company name
+                  </label>
                   <input
-                    id="companyName"
-                    name="companyName"
                     type="text"
-                    required
+                    name="companyName"
                     value={formData.companyName}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all placeholder-gray-500"
-                    placeholder="Your company name"
+                    required
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">Company Website</label>
-                  <input
-                    id="companyWebsite"
-                    name="companyWebsite"
-                    type="url"
-                    value={formData.companyWebsite}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all placeholder-gray-500"
-                    placeholder="https://yourcompany.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">Industry</label>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Company size
+                  </label>
                   <select
-                    id="industry"
+                    name="companySize"
+                    value={formData.companySize}
+                    onChange={handleInputChange}
+                    required
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                  >
+                    <option value="">Select company size</option>
+                    <option value="1-10">1-10 employees</option>
+                    <option value="11-50">11-50 employees</option>
+                    <option value="51-200">51-200 employees</option>
+                    <option value="201-500">201-500 employees</option>
+                    <option value="501-1000">501-1,000 employees</option>
+                    <option value="1000+">1,000+ employees</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Industry
+                  </label>
+                  <select
                     name="industry"
                     value={formData.industry}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
+                    required
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   >
                     <option value="">Select industry</option>
                     <option value="technology">Technology</option>
@@ -510,54 +421,35 @@ export default function SignupPage() {
             Thousands of professionals and companies around the world showcase their career opportunities on SixFigHires - the home to the world's best jobs and top talent.
           </p>
 
-          {/* Social Proof */}
-          <div className="flex items-center justify-center space-x-4 mb-8">
-            <div className="flex -space-x-2">
-              {[1,2,3,4,5].map((i) => (
-                <div key={i} className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-400 to-red-400 border-2 border-white/20 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-white" />
-                </div>
-              ))}
-            </div>
-            <div className="text-left">
-              <div className="text-lg font-semibold">Over 25.7k Happy Professionals</div>
-              <div className="flex items-center space-x-1 text-yellow-200">
-                {[1,2,3,4,5].map((i) => (
-                  <Star key={i} className="w-4 h-4 fill-current" />
-                ))}
-                <span className="ml-2 text-sm">4.9/5 rating</span>
-              </div>
-            </div>
-          </div>
-
           {/* Features */}
-          <div className="space-y-4 text-left">
-            {[
-              "Access to exclusive six-figure positions",
-              "Direct connections with hiring managers", 
-              "AI-powered job matching technology",
-              "Premium salary negotiation resources"
-            ].map((feature, index) => (
-              <div key={index} className="flex items-center space-x-3">
-                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
-                <span className="text-blue-100">{feature}</span>
+          <div className="grid gap-4 text-left">
+            <div className="flex items-center space-x-3">
+              <div className="w-6 h-6 bg-green-400 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-green-900" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
               </div>
-            ))}
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-6 mt-12 pt-8 border-t border-white/20">
-            <div className="text-center">
-              <div className="text-3xl font-bold">$180K+</div>
-              <div className="text-blue-200 text-sm">Average Salary</div>
+              <span className="text-blue-100">Exclusive six-figure job opportunities</span>
             </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold">95%</div>
-              <div className="text-blue-200 text-sm">Success Rate</div>
+            <div className="flex items-center space-x-3">
+              <div className="w-6 h-6 bg-green-400 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-green-900" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <span className="text-blue-100">Connect with top-tier companies</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-6 h-6 bg-green-400 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-green-900" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <span className="text-blue-100">Advanced matching algorithms</span>
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }
