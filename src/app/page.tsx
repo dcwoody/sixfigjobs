@@ -50,7 +50,7 @@ export default async function HomePage() {
             {/* Badge */}
             <div className="inline-flex items-center bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 mb-8 shadow-sm border border-white/20">
               <Sparkles className="w-4 h-4 text-blue-600 mr-2" />
-              <span className="text-sm font-medium text-gray-700">Join {totalJobs.toLocaleString()}+ Premium Opportunities</span>
+              <span className="text-sm font-medium text-gray-700">There are currently {totalJobs.toLocaleString()}+ $100k Opportunities</span>
             </div>
 
             {/* Main Headline */}
@@ -97,26 +97,6 @@ export default async function HomePage() {
                   </button>
                 </div>
               </form>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-white/20">
-                <div className="text-3xl font-bold text-blue-600 mb-1">{totalJobs.toLocaleString()}</div>
-                <div className="text-gray-600 text-sm">Active Jobs</div>
-              </div>
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-white/20">
-                <div className="text-3xl font-bold text-green-600 mb-1">${Math.round(avgSalary / 1000)}K+</div>
-                <div className="text-gray-600 text-sm">Avg. Salary</div>
-              </div>
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-white/20">
-                <div className="text-3xl font-bold text-purple-600 mb-1">{totalCompanies}</div>
-                <div className="text-gray-600 text-sm">Companies</div>
-              </div>
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-white/20">
-                <div className="text-3xl font-bold text-orange-600 mb-1">{remotePercentage}%</div>
-                <div className="text-gray-600 text-sm">Remote Jobs</div>
-              </div>
             </div>
           </div>
         </div>
@@ -235,46 +215,6 @@ export default async function HomePage() {
       {/* Newsletter Signup - ADD THIS */}
       <NewsletterSignup />
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center space-x-2 mb-6">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
-                  <Briefcase className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold">SixFigHires</span>
-              </div>
-              <p className="text-gray-400 mb-6 max-w-md">
-                Your premier destination for six-figure career opportunities. Connect with top companies and advance your career.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/jobs" className="hover:text-white transition-colors">Browse Jobs</Link></li>
-                <li><Link href="/companies" className="hover:text-white transition-colors">Companies</Link></li>
-                <li><Link href="/login" className="hover:text-white transition-colors">Sign In</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Support</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 SixFigHires. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

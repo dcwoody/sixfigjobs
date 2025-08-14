@@ -226,19 +226,7 @@ export default function Navigation() {
                   </Link>
                 </>
               ) : null}
-              
-              {/* About link for everyone */}
-              <Link 
-                href="/about" 
-                className={`font-medium transition-colors ${
-                  pathname.startsWith('/about') 
-                    ? 'text-blue-600' 
-                    : 'text-gray-700 hover:text-blue-600'
-                }`}
-              >
-                About
-              </Link>
-              
+                           
               {loading ? (
                 <div className="w-24 h-10 bg-gray-100 animate-pulse rounded-lg"></div>
               ) : user ? (

@@ -382,7 +382,7 @@ export default function SignupPage() {
             </button>
 
             {/* Sign In Link */}
-            <p className="text-center text-sm text-gray-600">
+            <p className="text-center text-sm text-gray-600 mb-8">
               Already have an account?{' '}
               <Link href="/login" className="font-medium text-blue-600 hover:text-blue-700">
                 Sign in
