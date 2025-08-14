@@ -78,7 +78,7 @@ export default function SignupPage() {
         setErrorMsg(error.message)
       } else {
         // Redirect to dashboard or confirmation page
-        router.push('/dashboard')
+        router.push('/welcome')
       }
     } catch (error) {
       setErrorMsg('An unexpected error occurred. Please try again.')
