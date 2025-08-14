@@ -1,7 +1,7 @@
 // src/app/about/page.tsx
-import Image from "next/image";
+//import Image from "next/image";
 import Link from "next/link";
-import Footer from "@/components/Footer";
+//import Footer from "@/components/Footer";
 import { Users, TrendingUp, Award, Target, CheckCircle, Star, Briefcase } from "lucide-react";
 
 export const metadata = {
@@ -281,8 +281,6 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   );
 }
