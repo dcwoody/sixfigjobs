@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import '@/app/global.css';
 import Navigation from '@/components/Navigation';
+import Footer from '@/components/Footer';
 import { SavedJobsProvider } from '@/hooks/useSavedJobs';
 
 export const metadata: Metadata = {
@@ -20,6 +21,7 @@ export default function RootLayout({
         <SavedJobsProvider>
           <Navigation />
           <main>{children}</main>
+          <Footer />
         </SavedJobsProvider>
       </body>
     </html>

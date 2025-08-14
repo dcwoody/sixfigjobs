@@ -3,6 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Search, MapPin, TrendingUp, Users, Building2, DollarSign, Star, ArrowRight, CheckCircle, Sparkles, Globe, Briefcase } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import NewsletterSignup from '@/components/NewsletterSignup';
 
 export default async function HomePage() {
   // Get real stats from your database
@@ -13,14 +14,14 @@ export default async function HomePage() {
 
   const totalJobs = jobsData.count || 0;
   const totalCompanies = companiesData.count || 0;
-  
+
   // Calculate average salary from real data
   const salaries = jobsData.data?.filter(job => job.formatted_salary).map(job => {
     const salary = job.formatted_salary.replace(/[^\d]/g, '');
     return parseInt(salary);
   }).filter(salary => salary > 50000) || [];
-  
-  const avgSalary = salaries.length > 0 
+
+  const avgSalary = salaries.length > 0
     ? Math.round(salaries.reduce((a, b) => a + b, 0) / salaries.length)
     : 150000;
 
@@ -36,14 +37,14 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      
+
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-20 pb-32">
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.1),transparent_70%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(168,85,247,0.1),transparent_70%)]" />
         </div>
-        
+
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             {/* Badge */}
@@ -105,7 +106,7 @@ export default async function HomePage() {
                 <div className="text-gray-600 text-sm">Active Jobs</div>
               </div>
               <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-white/20">
-                <div className="text-3xl font-bold text-green-600 mb-1">${Math.round(avgSalary/1000)}K+</div>
+                <div className="text-3xl font-bold text-green-600 mb-1">${Math.round(avgSalary / 1000)}K+</div>
                 <div className="text-gray-600 text-sm">Avg. Salary</div>
               </div>
               <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-white/20">
@@ -196,7 +197,7 @@ export default async function HomePage() {
                     {job.JobTitle}
                   </h3>
                   <p className="text-blue-600 font-medium mb-4">{job.Company}</p>
-                  
+
                   <div className="flex items-center text-gray-600 text-sm mb-4">
                     <MapPin className="w-4 h-4 mr-2" />
                     {job.Location}
@@ -231,32 +232,8 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* CTA Section */}
-      <section className="py-24 bg-gradient-to-r from-blue-600 to-purple-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold text-white mb-6">
-            Ready to Find Your Next Opportunity?
-          </h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
-            Join thousands of professionals who've found their dream jobs through SixFigHires.
-          </p>
-          
-          <div className="flex flex-col md:flex-row gap-4 justify-center">
-            <Link
-              href="/jobs"
-              className="px-8 py-4 bg-white text-blue-600 font-semibold rounded-xl hover:bg-gray-100 transition-colors transform hover:scale-105"
-            >
-              Browse Jobs
-            </Link>
-            <Link
-              href="/login"
-              className="px-8 py-4 bg-transparent border-2 border-white text-white font-semibold rounded-xl hover:bg-white hover:text-blue-600 transition-colors"
-            >
-              Create Account
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* Newsletter Signup - ADD THIS */}
+      <NewsletterSignup />
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-16">
@@ -273,7 +250,7 @@ export default async function HomePage() {
                 Your premier destination for six-figure career opportunities. Connect with top companies and advance your career.
               </p>
             </div>
-            
+
             <div>
               <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
               <ul className="space-y-2 text-gray-400">
@@ -282,7 +259,7 @@ export default async function HomePage() {
                 <li><Link href="/login" className="hover:text-white transition-colors">Sign In</Link></li>
               </ul>
             </div>
-            
+
             <div>
               <h3 className="text-lg font-semibold mb-4">Support</h3>
               <ul className="space-y-2 text-gray-400">
@@ -292,7 +269,7 @@ export default async function HomePage() {
               </ul>
             </div>
           </div>
-          
+
           <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
             <p>&copy; 2024 SixFigHires. All rights reserved.</p>
           </div>
