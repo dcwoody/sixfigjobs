@@ -2,7 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Search, MapPin, TrendingUp, Users, Building2, DollarSign, Star, ArrowRight, CheckCircle, Sparkles, Globe, Briefcase } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import NewsletterSignup from '@/components/NewsletterSignup';
 
 export default async function HomePage() {

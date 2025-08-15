@@ -1,5 +1,5 @@
 // src/app/jobs/page.tsx - Simplified for API approach
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import JobsList from '@/components/JobsList';
 import React from 'react';
 
