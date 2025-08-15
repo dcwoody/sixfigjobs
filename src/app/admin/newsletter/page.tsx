@@ -67,160 +67,159 @@ export default function AdminNewsletterPage() {
   };
 
   const generatePreview = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/newsletter/generate-content', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_NEWSLETTER_SECRET}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to generate content: ${response.status} - ${errorText}`);
+  setLoading(true);
+  try {
+    const response = await fetch('/api/newsletter/generate-content', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_NEWSLETTER_SECRET}`,
+        'Content-Type': 'application/json'
       }
-      
-      const data = await response.json();
-      setPreview(data);
-      setShowPreview(true);
-      setSendStatus('✅ Newsletter preview generated successfully!');
-    } catch (error) {
-      console.error('Error generating preview:', error);
-      setSendStatus(`❌ Failed to generate preview: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setLoading(false);
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to generate content: ${response.status} - ${errorText}`);
     }
-  };
+    
+    const data = await response.json();
+    setPreview(data);
+    setShowPreview(true);
+    setSendStatus('✅ Newsletter preview generated successfully!');
+  } catch (error) {
+    console.error('Error generating preview:', error);
+    setSendStatus(`❌ Failed to generate preview: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const sendNewsletter = async () => {
-    if (!preview) {
-      setSendStatus('Please generate preview first');
-      return;
-    }
+  if (!preview) {
+    setSendStatus('Please generate preview first');
+    return;
+  }
 
-    // Confirm before sending to all subscribers
-    const confirmed = window.confirm(
-      `Are you sure you want to send this newsletter to ${stats.totalSubscribers} subscribers? This cannot be undone.`
-    );
+  const confirmed = window.confirm(
+    `Are you sure you want to send this newsletter to ${stats.totalSubscribers} subscribers? This cannot be undone.`
+  );
+  
+  if (!confirmed) {
+    return;
+  }
+
+  setLoading(true);
+  setSendStatus('Sending newsletter to all subscribers...');
+
+  try {
+    const response = await fetch('/api/newsletter/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_NEWSLETTER_SECRET}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        subject: preview.subject,
+        htmlContent: preview.htmlContent,
+        jobsData: preview.jobsData
+      })
+    });
+
+    const result = await response.json();
     
-    if (!confirmed) {
-      return;
+    if (response.ok) {
+      setSendStatus(`✅ Newsletter sent successfully! Delivered to ${result.stats.sent} subscribers. ${result.stats.failed} failed.`);
+      fetchStats();
+    } else {
+      setSendStatus(`❌ Failed to send newsletter: ${result.error}`);
     }
+  } catch (error) {
+    console.error('Error sending newsletter:', error);
+    setSendStatus('❌ Failed to send newsletter. Check console for details.');
+  } finally {
+    setLoading(false);
+  }
+};
 
-    setLoading(true);
-    setSendStatus('Sending newsletter to all subscribers...');
-
-    try {
-      const response = await fetch('/api/newsletter/send', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_NEWSLETTER_SECRET}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          subject: preview.subject,
-          htmlContent: preview.htmlContent,
-          jobsData: preview.jobsData
-        })
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
-        setSendStatus(`✅ Newsletter sent successfully! Delivered to ${result.stats.sent} subscribers. ${result.stats.failed} failed.`);
-        fetchStats(); // Refresh stats
-      } else {
-        setSendStatus(`❌ Failed to send newsletter: ${result.error}`);
+const exportSubscribers = async () => {
+  try {
+    setSendStatus('Exporting subscriber list...');
+    
+    const response = await fetch('/api/newsletter/export', {
+      headers: {
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_NEWSLETTER_SECRET}`
       }
-    } catch (error) {
-      console.error('Error sending newsletter:', error);
-      setSendStatus('❌ Failed to send newsletter. Check console for details.');
-    } finally {
-      setLoading(false);
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Export failed: ${response.status} - ${errorText}`);
     }
-  };
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `newsletter-subscribers-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    
+    setSendStatus('✅ Subscriber list exported successfully!');
+  } catch (error) {
+    console.error('Error exporting subscribers:', error);
+    setSendStatus(`❌ Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
 
-  const exportSubscribers = async () => {
-    try {
-      setSendStatus('Exporting subscriber list...');
-      
-      const response = await fetch('/api/newsletter/export', {
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_NEWSLETTER_SECRET}`
-        }
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Export failed: ${response.status} - ${errorText}`);
-      }
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `newsletter-subscribers-${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      setSendStatus('✅ Subscriber list exported successfully!');
-    } catch (error) {
-      console.error('Error exporting subscribers:', error);
-      setSendStatus(`❌ Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
 
   const sendTestNewsletter = async () => {
-    if (!preview) {
-      setSendStatus('Please generate preview first');
-      return;
+  if (!preview) {
+    setSendStatus('Please generate preview first');
+    return;
+  }
+
+  const testEmail = prompt('Enter your email address for test newsletter:');
+  if (!testEmail) return;
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(testEmail)) {
+    setSendStatus('❌ Please enter a valid email address');
+    return;
+  }
+
+  setLoading(true);
+  setSendStatus(`Sending test newsletter to ${testEmail}...`);
+
+  try {
+    const response = await fetch('/api/newsletter/test-send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_NEWSLETTER_SECRET}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        testEmail,
+        subject: preview.subject,
+        htmlContent: preview.htmlContent
+      })
+    });
+
+    const result = await response.json();
+    
+    if (response.ok) {
+      setSendStatus(`✅ Test newsletter sent to ${testEmail}! Check your inbox.`);
+    } else {
+      setSendStatus(`❌ Failed to send test: ${result.error}`);
     }
-
-    const testEmail = prompt('Enter your email address for test newsletter:');
-    if (!testEmail) return;
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(testEmail)) {
-      setSendStatus('❌ Please enter a valid email address');
-      return;
-    }
-
-    setLoading(true);
-    setSendStatus(`Sending test newsletter to ${testEmail}...`);
-
-    try {
-      const response = await fetch('/api/newsletter/test-send', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_NEWSLETTER_SECRET}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          testEmail,
-          subject: preview.subject,
-          htmlContent: preview.htmlContent
-        })
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
-        setSendStatus(`✅ Test newsletter sent to ${testEmail}! Check your inbox.`);
-      } else {
-        setSendStatus(`❌ Failed to send test: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Error sending test:', error);
-      setSendStatus('❌ Failed to send test newsletter');
-    } finally {
-      setLoading(false);
-    }
-  };
+  } catch (error) {
+    console.error('Error sending test:', error);
+    setSendStatus('❌ Failed to send test newsletter');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
