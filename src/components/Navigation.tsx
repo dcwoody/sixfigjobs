@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Briefcase, Menu, X, User, LogOut, CheckCircle, Loader2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { useRouter, usePathname } from 'next/navigation';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -17,7 +17,7 @@ export default function Navigation() {
   const [showSignOutSuccess, setShowSignOutSuccess] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  const supabase = createClient();
+  // Remove the createClient call since we're importing supabase directly
 
   useEffect(() => {
     let mounted = true;

@@ -1,5 +1,5 @@
 // src/lib/data.ts
-import { supabase } from './supabase'
+import { supabase } from './supabase/client'
 import { Company, Job } from '@/types'
 
 export async function loadJobData(): Promise<Job[]> {
