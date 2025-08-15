@@ -71,135 +71,94 @@ const fetchStats = async () => {
 const generatePreview = async () => {
   setLoading(true);
   try {
-    // Create a mock preview with real data from your database
-    const mockPreview = {
-      subject: `Weekly Six-Figure Jobs - ${new Date().toLocaleDateString()}`,
-      htmlContent: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
-          <div style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 30px 20px; text-align: center;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: 700;">Weekly Six-Figure Jobs</h1>
-            <p style="margin: 10px 0 0; opacity: 0.9;">${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-          </div>
-          
-          <div style="padding: 30px 20px;">
-            <p>Hello {{firstName}},</p>
-            <p>Here are this week's best six-figure opportunities curated just for you:</p>
-            
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; text-align: center;">
-                <div>
-                  <div style="font-size: 24px; font-weight: 700; color: #2563eb;">5</div>
-                  <div style="font-size: 14px; color: #64748b;">New This Week</div>
-                </div>
-                <div>
-                  <div style="font-size: 24px; font-weight: 700; color: #2563eb;">${stats.totalSubscribers}</div>
-                  <div style="font-size: 14px; color: #64748b;">Total Subscribers</div>
-                </div>
-              </div>
-            </div>
-            
-            <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
-              <div style="font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 8px;">Senior Software Engineer</div>
-              <div style="color: #2563eb; font-weight: 500; margin-bottom: 4px;">TechCorp Inc.</div>
-              <div style="color: #64748b; font-size: 14px; margin-bottom: 8px;">San Francisco, CA (Remote)</div>
-              <div style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px; font-size: 14px; font-weight: 500; display: inline-block; margin-bottom: 10px;">$150K-$200K</div>
-              <div style="color: #475569; font-size: 14px; line-height: 1.5;">Build scalable systems for millions of users. Work with cutting-edge technology stack.</div>
-              <a href="https://www.sixfigjob.com/jobs/senior-engineer-techcorp" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; margin-top: 15px;">View Job Details</a>
-            </div>
-            
-            <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
-              <div style="font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 8px;">Product Manager</div>
-              <div style="color: #2563eb; font-weight: 500; margin-bottom: 4px;">InnovateCo</div>
-              <div style="color: #64748b; font-size: 14px; margin-bottom: 8px;">New York, NY</div>
-              <div style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px; font-size: 14px; font-weight: 500; display: inline-block; margin-bottom: 10px;">$140K-$180K</div>
-              <div style="color: #475569; font-size: 14px; line-height: 1.5;">Lead product strategy for our flagship platform. Drive innovation and growth.</div>
-              <a href="https://www.sixfigjob.com/jobs/product-manager-innovateco" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; margin-top: 15px;">View Job Details</a>
-            </div>
-            
-            <p style="text-align: center;">
-              <a href="https://www.sixfigjob.com/jobs" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; margin: 20px 0;">Browse All Jobs</a>
-            </p>
-            
-            <p>Have a great week ahead!</p>
-            <p>The SixFigJob Team</p>
-          </div>
-          
-          <div style="background: #f1f5f9; padding: 20px; text-align: center; font-size: 14px; color: #64748b;">
-            <p>You're receiving this because you subscribed to our weekly newsletter.</p>
-            <p>
-              <a href="https://www.sixfigjob.com/unsubscribe?email={{email}}" style="color: #2563eb; text-decoration: none;">Unsubscribe</a> | 
-              <a href="https://www.sixfigjob.com" style="color: #2563eb; text-decoration: none;">Visit Website</a>
-            </p>
-          </div>
-        </div>
-      `,
-      jobsData: [
-        {
-          JobTitle: 'Senior Software Engineer',
-          Company: 'TechCorp Inc.',
-          Location: 'San Francisco, CA',
-          formatted_salary: '$150K-$200K',
-          is_remote: true
-        },
-        {
-          JobTitle: 'Product Manager', 
-          Company: 'InnovateCo',
-          Location: 'New York, NY',
-          formatted_salary: '$140K-$180K',
-          is_remote: false
-        }
-      ],
-      stats: { totalJobs: stats.totalSubscribers + 50, newJobs: 5 }
-    };
+    const response = await fetch('/api/newsletter/generate-content', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_NEWSLETTER_SECRET}`,
+        'Content-Type': 'application/json'
+      }
+    });
     
-    setPreview(mockPreview);
+    if (!response.ok) {
+      throw new Error(`Failed to generate content: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    setPreview(data);
     setShowPreview(true);
-    setSendStatus('✅ Mock preview generated successfully! (Demo mode)');
+    setSendStatus('✅ Newsletter preview generated successfully!');
   } catch (error) {
     console.error('Error generating preview:', error);
-    setSendStatus('❌ Failed to generate preview');
+    setSendStatus('❌ Failed to generate preview. Check console for details.');
   } finally {
     setLoading(false);
   }
 };
 
-  const sendNewsletter = async () => {
+const sendNewsletter = async () => {
   if (!preview) {
     setSendStatus('Please generate preview first');
     return;
   }
 
   setLoading(true);
-  setSendStatus('Demo mode: Newsletter sending is disabled for safety.');
-  
-  // Simulate sending delay
-  setTimeout(() => {
-    setSendStatus(`📧 Demo: Would send newsletter to ${stats.totalSubscribers} subscribers. Set up RESEND_API_KEY and NEWSLETTER_API_SECRET to enable real sending.`);
+  setSendStatus('Sending newsletter...');
+
+  try {
+    const response = await fetch('/api/newsletter/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_NEWSLETTER_SECRET}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        subject: preview.subject,
+        htmlContent: preview.htmlContent,
+        jobsData: preview.jobsData
+      })
+    });
+
+    const result = await response.json();
+    
+    if (response.ok) {
+      setSendStatus(`✅ Newsletter sent to ${result.stats.sent} subscribers! (${result.stats.failed} failed)`);
+      fetchStats(); // Refresh stats
+    } else {
+      setSendStatus(`❌ Failed to send newsletter: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('Error sending newsletter:', error);
+    setSendStatus('❌ Failed to send newsletter');
+  } finally {
     setLoading(false);
-  }, 2000);
+  }
 };
 
 const exportSubscribers = async () => {
   try {
-    setSendStatus('Generating subscriber export...');
+    setSendStatus('Exporting subscribers...');
     
-    // Create a mock CSV export
-    const csvContent = `Email,First Name,Last Name,User Type,Subscribed Date
-demo@example.com,Demo,User,job_seeker,${new Date().toLocaleDateString()}
-test@sixfigjob.com,Test,Subscriber,job_seeker,${new Date().toLocaleDateString()}
-newsletter@example.org,Newsletter,Fan,job_seeker,${new Date().toLocaleDateString()}`;
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const response = await fetch('/api/newsletter/export', {
+      headers: {
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_NEWSLETTER_SECRET}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Export failed');
+    }
+    
+    const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `newsletter-subscribers-demo-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = 'newsletter-subscribers.csv';
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
     
-    setSendStatus('✅ Demo export downloaded! Set up NEWSLETTER_API_SECRET for real subscriber data.');
+    setSendStatus('✅ Subscriber list exported successfully!');
   } catch (error) {
     console.error('Error exporting subscribers:', error);
     setSendStatus('❌ Export failed');
