@@ -1,107 +1,20 @@
-// src/components/Navigation.tsx - ROBUST FIX FOR BROWSER NAVIGATION
+// src/components/Navigation.tsx - USING GLOBAL AUTH CONTEXT
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { User, LogOut, Briefcase } from 'lucide-react';
-import { supabase } from '@/lib/supabase/client';
+import { useAuth } from '@/components/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 
 export default function Navigation() {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
+  const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
-  useEffect(() => {
-    let mounted = true;
-    let retryCount = 0;
-    const maxRetries = 3;
-
-    const checkAuth = async () => {
-      try {
-        console.log('Navigation: Checking auth... Retry:', retryCount);
-        
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Auth session error:', error);
-        }
-
-        if (mounted) {
-          const currentUser = session?.user ?? null;
-          setUser(currentUser);
-          setLoading(false);
-          setAuthChecked(true);
-          
-          console.log('Navigation: Auth check complete. User:', currentUser?.email || 'None');
-          
-          // If no user found and we haven't hit max retries, try again
-          if (!currentUser && retryCount < maxRetries) {
-            retryCount++;
-            setTimeout(checkAuth, 500); // Retry after 500ms
-          }
-        }
-      } catch (error) {
-        console.error('Auth check error:', error);
-        if (mounted) {
-          setLoading(false);
-          setAuthChecked(true);
-        }
-      }
-    };
-
-    // Initial auth check
-    checkAuth();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Navigation: Auth state changed:', event, session?.user?.email || 'None');
-      
-      if (mounted) {
-        setUser(session?.user ?? null);
-        setLoading(false);
-        setAuthChecked(true);
-        retryCount = 0; // Reset retry count on auth change
-      }
-    });
-
-    // Listen for browser navigation events
-    const handleFocus = () => {
-      console.log('Navigation: Window focus - rechecking auth');
-      checkAuth();
-    };
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        console.log('Navigation: Page visible - rechecking auth');
-        checkAuth();
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [pathname]); // Re-run when pathname changes (navigation)
-
   const handleSignOut = async () => {
-    try {
-      setLoading(true);
-      await supabase.auth.signOut();
-      setUser(null);
-      setLoading(false);
-      router.push('/');
-    } catch (error) {
-      console.error('Sign out error:', error);
-      setLoading(false);
-    }
+    await signOut();
+    router.push('/');
   };
 
   const getUserName = () => {
@@ -109,25 +22,6 @@ export default function Navigation() {
     const name = user.email.split('@')[0];
     return name.charAt(0).toUpperCase() + name.slice(1);
   };
-
-  // Show loading state until we've actually checked auth
-  if (!authChecked) {
-    return (
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <Briefcase className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-blue-600">SixFigJob.com</span>
-            </Link>
-            <div className="w-32 h-8 bg-gray-200 animate-pulse rounded"></div>
-          </div>
-        </div>
-      </nav>
-    );
-  }
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -172,6 +66,11 @@ export default function Navigation() {
               <div className="w-24 h-8 bg-gray-200 animate-pulse rounded"></div>
             ) : user ? (
               <div className="flex items-center space-x-3">
+                {/* Debug info - remove after testing */}
+                <div className="bg-green-100 px-2 py-1 rounded text-xs">
+                  LOGGED IN: {user.email?.split('@')[0]}
+                </div>
+                
                 {/* User Info */}
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
@@ -213,12 +112,19 @@ export default function Navigation() {
                 </button>
               </div>
             ) : (
-              <Link
-                href="/login"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                Sign In
-              </Link>
+              <div className="flex items-center space-x-2">
+                {/* Debug info */}
+                <div className="bg-red-100 px-2 py-1 rounded text-xs">
+                  NOT LOGGED IN
+                </div>
+                
+                <Link
+                  href="/login"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Sign In
+                </Link>
+              </div>
             )}
           </div>
         </div>
