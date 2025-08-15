@@ -101,7 +101,7 @@ export default function Navigation() {
                 </button>
               </div>
             ) : (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
                 {/* Show user is NOT logged in */}
                 <div className="bg-red-100 px-2 py-1 rounded text-sm">
                   ✗ Not logged in
@@ -109,9 +109,16 @@ export default function Navigation() {
                 
                 <Link
                   href="/login"
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700"
+                  className="text-gray-700 hover:text-blue-600 font-medium"
                 >
                   Sign In
+                </Link>
+                
+                <Link
+                  href="/signup"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700"
+                >
+                  Sign Up
                 </Link>
               </div>
             )}
