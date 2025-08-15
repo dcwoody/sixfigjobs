@@ -35,9 +35,12 @@ export default function Navigation() {
         }
 
         console.log('Navigation: Session found:', !!session, session?.user?.email);
+        console.log('Navigation: About to set user state:', session?.user ?? null);
 
         if (mounted) {
-          setUser(session?.user ?? null);
+          const newUser = session?.user ?? null;
+          setUser(newUser);
+          console.log('Navigation: User state set to:', newUser?.email);
           
           // Fetch user profile if we have a user
           if (session?.user) {
@@ -45,6 +48,7 @@ export default function Navigation() {
           }
           
           setLoading(false);
+          console.log('Navigation: Loading set to false');
         }
       } catch (error) {
         console.error('Navigation initialization error:', error);
@@ -104,10 +108,14 @@ export default function Navigation() {
         setUserProfile(data);
         console.log('Navigation: User profile loaded:', data.first_name);
       } else {
-        console.log('Navigation: No user profile found, user might be new');
+        console.log('Navigation: No user profile found, user might be new. Error:', error);
+        // Even without profile, we can still show the user menu
+        setUserProfile(null);
       }
     } catch (error) {
       console.error('Error fetching user profile in navigation:', error);
+      // Still allow navigation to work without profile
+      setUserProfile(null);
     }
   };
 
@@ -154,6 +162,10 @@ export default function Navigation() {
     }
     
     // Try user metadata
+    if (user.user_metadata?.first_name) {
+      return user.user_metadata.first_name;
+    }
+    
     if (user.user_metadata?.name) {
       return user.user_metadata.name.split(' ')[0];
     }
@@ -169,6 +181,23 @@ export default function Navigation() {
 
   return (
     <>
+      {/* Debug Info - Remove this after fixing */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-yellow-100 border-b border-yellow-300 p-2 text-xs">
+          <details>
+            <summary className="cursor-pointer font-medium">Navigation Debug Info (Click to expand)</summary>
+            <div className="mt-2 space-y-1">
+              <p><strong>User State:</strong> {user ? 'Found' : 'Not found'}</p>
+              <p><strong>Email:</strong> {user?.email || 'None'}</p>
+              <p><strong>Loading:</strong> {loading ? 'Yes' : 'No'}</p>
+              <p><strong>User Profile:</strong> {userProfile ? 'Found' : 'Not found'}</p>
+              <p><strong>Display Name:</strong> {getUserDisplay()}</p>
+              <p><strong>Should Show Menu:</strong> {!loading && user ? 'YES' : 'NO'}</p>
+              <p><strong>Menu Condition:</strong> loading={loading.toString()}, user={!!user}</p>
+            </div>
+          </details>
+        </div>
+      )}
       {/* Sign Out Success Overlay */}
       {showSignOutSuccess && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100]">
