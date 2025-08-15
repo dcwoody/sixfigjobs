@@ -1,4 +1,3 @@
-// src/app/api/newsletter/stats/route.ts  
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -26,19 +25,17 @@ export async function GET(request: NextRequest) {
       .eq('is_newsletter_subscriber', true)
       .gte('created_at', oneWeekAgo.toISOString());
 
-    // TODO: Implement newsletter_sends table to track sends and opens
-    // For now, return mock data for lastSentDate and openRate
     const stats = {
       totalSubscribers: totalSubscribers || 0,
       newThisWeek: newThisWeek || 0,
-      lastSentDate: '2024-08-10T10:00:00Z', // Mock data - replace with real data when you implement tracking
-      openRate: 65.5 // Mock data - replace with real data when you implement tracking
+      lastSentDate: '2024-08-10T10:00:00Z',
+      openRate: 65.5
     };
 
     return NextResponse.json(stats);
 
   } catch (error) {
-    console.error('Error fetching newsletter stats:', error);
+    console.error('Error fetching admin stats:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

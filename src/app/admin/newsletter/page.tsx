@@ -47,15 +47,26 @@ export default function AdminNewsletterPage() {
     fetchStats();
   }, []);
 
-  const fetchStats = async () => {
-    try {
-      const response = await fetch('/api/newsletter/stats');
-      const data = await response.json();
-      setStats(data);
-    } catch (error) {
-      console.error('Error fetching stats:', error);
+const fetchStats = async () => {
+  try {
+    // Use the new admin-stats route instead
+    const response = await fetch('/api/newsletter/admin-stats');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
+    const data = await response.json();
+    setStats(data);
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    // Set default stats if API fails
+    setStats({
+      totalSubscribers: 0,
+      newThisWeek: 0,
+      lastSentDate: '',
+      openRate: 0
+    });
+  }
+};
 
   const generatePreview = async () => {
     setLoading(true);
