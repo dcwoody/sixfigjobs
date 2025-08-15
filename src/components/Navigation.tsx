@@ -115,7 +115,7 @@ export default function Navigation() {
               <div className="flex items-center space-x-2">
                 {/* Debug info */}
                 <div className="bg-red-100 px-2 py-1 rounded text-xs">
-                  NOT LOGGED IN
+                  NOT LOGGED IN (Loading: {loading ? 'YES' : 'NO'})
                 </div>
                 
                 <Link
