@@ -88,8 +88,7 @@ export default function NewsletterSignup() {
             last_name: '',
             user_type: 'job_seeker',
             is_newsletter_subscriber: true,
-            is_verified: true,
-            auth_user_id: null
+            is_verified: true
           }]);
 
         if (insertError) {
