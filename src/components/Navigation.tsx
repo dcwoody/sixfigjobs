@@ -1,4 +1,4 @@
-// src/components/Navigation.tsx - Enhanced with Sign Out Notification
+// src/components/Navigation.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -15,6 +15,7 @@ export default function Navigation() {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [showSignOutSuccess, setShowSignOutSuccess] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createClient();
@@ -25,12 +26,16 @@ export default function Navigation() {
     // Get initial user and set up auth listener
     const initializeAuth = async () => {
       try {
+        console.log('Navigation: Initializing auth...');
+        
         // Get current session
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Navigation auth error:', error);
         }
+
+        console.log('Navigation: Session found:', !!session, session?.user?.email);
 
         if (mounted) {
           setUser(session?.user ?? null);
@@ -41,6 +46,14 @@ export default function Navigation() {
           }
           
           setLoading(false);
+          
+          // Set debug info
+          setDebugInfo({
+            hasSession: !!session,
+            hasUser: !!session?.user,
+            userEmail: session?.user?.email,
+            timestamp: new Date().toISOString()
+          });
         }
       } catch (error) {
         console.error('Navigation initialization error:', error);
@@ -65,13 +78,49 @@ export default function Navigation() {
       } else {
         setUserProfile(null);
       }
+      
+      // Update debug info
+      setDebugInfo({
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        userEmail: session?.user?.email,
+        event: event,
+        timestamp: new Date().toISOString()
+      });
     });
+
+    // Listen for custom auth change events
+    const handleAuthChange = () => {
+      console.log('Navigation: Custom auth change event received');
+      initializeAuth();
+    };
+
+    window.addEventListener('auth-change', handleAuthChange);
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      window.removeEventListener('auth-change', handleAuthChange);
     };
   }, []);
+
+  // Force refresh after a delay to catch any timing issues
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!user && !loading) {
+        console.log('Navigation: Force checking auth after delay...');
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user && !user) {
+            console.log('Navigation: Found session on retry:', session.user.email);
+            setUser(session.user);
+            fetchUserProfile(session.user.id);
+          }
+        });
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [user, loading]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -83,8 +132,9 @@ export default function Navigation() {
 
       if (!error && data) {
         setUserProfile(data);
+        console.log('Navigation: User profile loaded:', data.first_name);
       } else {
-        console.log('No user profile found, user might be new');
+        console.log('Navigation: No user profile found, user might be new');
       }
     } catch (error) {
       console.error('Error fetching user profile in navigation:', error);
@@ -94,9 +144,6 @@ export default function Navigation() {
   const handleSignOut = async () => {
     try {
       setSigningOut(true);
-      
-      // Show signing out state for 2 seconds
-      await new Promise(resolve => setTimeout(resolve, 2000));
       
       const { error } = await supabase.auth.signOut();
       
@@ -114,12 +161,12 @@ export default function Navigation() {
       // Show success message
       setShowSignOutSuccess(true);
       
-      // Hide success message and redirect after 3 seconds
+      // Hide success message and redirect after 2 seconds
       setTimeout(() => {
         setShowSignOutSuccess(false);
-        // Force a hard refresh to clear any cached state
-        window.location.href = '/';
-      }, 3000);
+        router.push('/');
+        router.refresh();
+      }, 2000);
       
     } catch (error) {
       console.error('Sign out error:', error);
@@ -152,6 +199,16 @@ export default function Navigation() {
 
   return (
     <>
+      {/* Debug Info - Remove this after fixing */}
+      {process.env.NODE_ENV === 'development' && debugInfo && (
+        <div className="bg-yellow-100 border-b border-yellow-300 p-2 text-xs">
+          <details>
+            <summary className="cursor-pointer font-medium">Auth Debug Info (Click to expand)</summary>
+            <pre className="mt-2 text-xs">{JSON.stringify(debugInfo, null, 2)}</pre>
+          </details>
+        </div>
+      )}
+
       {/* Sign Out Success Overlay */}
       {showSignOutSuccess && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100]">
@@ -163,7 +220,7 @@ export default function Navigation() {
               Signed Out Successfully
             </h3>
             <p className="text-gray-600 text-sm">
-              You have been safely signed out. Redirecting to home page...
+              Redirecting to home page...
             </p>
           </div>
         </div>
@@ -201,32 +258,37 @@ export default function Navigation() {
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
-              {user ? (
-                <>
-                  {/* Logged in users see Jobs and Companies */}
-                  <Link 
-                    href="/jobs" 
-                    className={`font-medium transition-colors ${
-                      pathname.startsWith('/jobs') 
-                        ? 'text-blue-600' 
-                        : 'text-gray-700 hover:text-blue-600'
-                    }`}
-                  >
-                    Jobs
-                  </Link>
-                  <Link 
-                    href="/companies" 
-                    className={`font-medium transition-colors ${
-                      pathname.startsWith('/companies') 
-                        ? 'text-blue-600' 
-                        : 'text-gray-700 hover:text-blue-600'
-                    }`}
-                  >
-                    Companies
-                  </Link>
-                </>
-              ) : null}
-                           
+              <Link 
+                href="/jobs" 
+                className={`font-medium transition-colors ${
+                  pathname.startsWith('/jobs') 
+                    ? 'text-blue-600' 
+                    : 'text-gray-700 hover:text-blue-600'
+                }`}
+              >
+                Jobs
+              </Link>
+              <Link 
+                href="/companies" 
+                className={`font-medium transition-colors ${
+                  pathname.startsWith('/companies') 
+                    ? 'text-blue-600' 
+                    : 'text-gray-700 hover:text-blue-600'
+                }`}
+              >
+                Companies
+              </Link>
+              <Link 
+                href="/about" 
+                className={`font-medium transition-colors ${
+                  pathname.startsWith('/about') 
+                    ? 'text-blue-600' 
+                    : 'text-gray-700 hover:text-blue-600'
+                }`}
+              >
+                About
+              </Link>
+              
               {loading ? (
                 <div className="w-24 h-10 bg-gray-100 animate-pulse rounded-lg"></div>
               ) : user ? (
@@ -279,21 +341,12 @@ export default function Navigation() {
                   </div>
                 </div>
               ) : (
-                /* Non-logged in users see Sign In and Sign Up */
-                <div className="flex items-center space-x-4">
-                  <Link 
-                    href="/login" 
-                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
-                  >
-                    Sign In
-                  </Link>
-                  <Link 
-                    href="/signup" 
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    Sign Up
-                  </Link>
-                </div>
+                <Link 
+                  href="/login" 
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  Sign In
+                </Link>
               )}
             </div>
 
@@ -311,33 +364,28 @@ export default function Navigation() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 bg-white/95 backdrop-blur-sm">
             <div className="px-2 pt-2 pb-3 space-y-1">
-              {user && (
-                <>
-                  <Link
-                    href="/jobs"
-                    className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                      pathname.startsWith('/jobs')
-                        ? 'text-blue-600 bg-blue-50'
-                        : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
-                    }`}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Jobs
-                  </Link>
-                  <Link
-                    href="/companies"
-                    className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                      pathname.startsWith('/companies')
-                        ? 'text-blue-600 bg-blue-50'
-                        : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
-                    }`}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Companies
-                  </Link>
-                </>
-              )}
-              
+              <Link
+                href="/jobs"
+                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  pathname.startsWith('/jobs')
+                    ? 'text-blue-600 bg-blue-50'
+                    : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Jobs
+              </Link>
+              <Link
+                href="/companies"
+                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  pathname.startsWith('/companies')
+                    ? 'text-blue-600 bg-blue-50'
+                    : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Companies
+              </Link>
               <Link
                 href="/about"
                 className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
@@ -400,22 +448,13 @@ export default function Navigation() {
                   </button>
                 </>
               ) : (
-                <div className="border-t border-gray-200 mt-2 pt-2 space-y-1">
-                  <Link
-                    href="/login"
-                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    href="/signup"
-                    className="block px-3 py-2 rounded-md text-base font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Sign Up
-                  </Link>
-                </div>
+                <Link
+                  href="/login"
+                  className="block px-3 py-2 rounded-md text-base font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Sign In
+                </Link>
               )}
             </div>
           </div>
