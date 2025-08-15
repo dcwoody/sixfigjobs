@@ -71,6 +71,26 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
   const [newsletterLoading, setNewsletterLoading] = useState(false);
   const [newsletterMessage, setNewsletterMessage] = useState('');
 
+const [debugInfo, setDebugInfo] = useState<any>(null);
+
+useEffect(() => {
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    setDebugInfo({
+      hasSession: !!session,
+      hasUser: !!user,
+      sessionUserEmail: session?.user?.email,
+      userEmail: user?.email,
+      cookies: document.cookie
+    });
+  };
+  
+  checkAuth();
+}, []);
+
+  
   useEffect(() => {
     // If no profile, create one
     if (!userProfile && session) {
@@ -338,6 +358,14 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
               </div>
             </div>
           )}
+
+      // Add this somewhere in your JSX (temporarily)
+      {debugInfo && (
+        <div className="bg-red-100 p-4 rounded-lg mb-4">
+          <h3 className="font-bold">Debug Info:</h3>
+          <pre className="text-xs">{JSON.stringify(debugInfo, null, 2)}</pre>
+        </div>
+      )}
 
           {/* Rest of the dashboard content... */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
