@@ -1,9 +1,10 @@
-// src/components/NewsletterSignup.tsx
+// Enhanced src/components/NewsletterSignup.tsx
 'use client';
 
 import { useState } from 'react';
 import { Mail, CheckCircle, Loader2, Calendar, Shield } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { sendWelcomeEmail } from '@/lib/newsletter';
 
 export default function NewsletterSignup() {
   const [email, setEmail] = useState('');
@@ -40,6 +41,8 @@ export default function NewsletterSignup() {
         .eq('email', email)
         .single();
 
+      let isNewSubscriber = false;
+
       if (existingUser) {
         if (existingUser.is_newsletter_subscriber) {
           setError('You\'re already subscribed to our newsletter!');
@@ -61,6 +64,7 @@ export default function NewsletterSignup() {
             setLoading(false);
             return;
           }
+          isNewSubscriber = true;
         }
       } else {
         // Create new newsletter-only subscriber
@@ -82,6 +86,17 @@ export default function NewsletterSignup() {
           setLoading(false);
           return;
         }
+        isNewSubscriber = true;
+      }
+
+      // Send welcome email for new subscribers
+      if (isNewSubscriber) {
+        try {
+          await sendWelcomeEmail(email, firstName);
+        } catch (emailError) {
+          console.error('Welcome email error:', emailError);
+          // Don't fail the signup if welcome email fails
+        }
       }
 
       // Success!
@@ -100,6 +115,37 @@ export default function NewsletterSignup() {
     }
   };
 
+  if (success) {
+    return (
+      <section id="newsletter" className="bg-gray-900 py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="bg-green-600 rounded-2xl p-8 text-white">
+              <CheckCircle className="w-16 h-16 mx-auto mb-4" />
+              <h2 className="text-3xl font-bold mb-4">Welcome to the team! 🎉</h2>
+              <p className="text-xl text-green-100 mb-6">
+                You're now subscribed to our weekly six-figure jobs newsletter. 
+                Check your email for a welcome message!
+              </p>
+              <div className="bg-green-700/30 rounded-lg p-4 text-green-100">
+                <p className="text-sm">
+                  📧 Your first newsletter arrives next Monday morning<br />
+                  💼 Meanwhile, browse our current job listings
+                </p>
+              </div>
+              <a 
+                href="/jobs"
+                className="inline-block mt-6 bg-white text-green-600 px-6 py-3 rounded-lg font-semibold hover:bg-green-50 transition-colors"
+              >
+                Browse Jobs Now
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section id="newsletter" className="bg-gray-900 py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -110,11 +156,11 @@ export default function NewsletterSignup() {
             {/* Left Side - Content */}
             <div className="text-white">
               <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                Subscribe to our newsletter
+                Get the best six-figure jobs weekly
               </h2>
               <p className="text-xl text-gray-300 mb-8 leading-relaxed">
-                Get the best six-figure jobs delivered weekly. Join 25,000+ ambitious professionals 
-                getting curated $100k+ opportunities, salary insights, and career advice.
+                Join 25,000+ ambitious professionals getting curated $100k+ opportunities, 
+                salary insights, and career advice delivered every Monday.
               </p>
               
               {/* Benefits */}
@@ -124,9 +170,9 @@ export default function NewsletterSignup() {
                     <Calendar className="w-4 h-4 text-blue-400" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white mb-1">Weekly articles</h3>
+                    <h3 className="font-semibold text-white mb-1">Weekly delivery</h3>
                     <p className="text-gray-400 text-sm">
-                      Curated job opportunities and career insights delivered every Monday morning.
+                      Curated opportunities delivered every Monday morning to start your week right.
                     </p>
                   </div>
                 </div>
@@ -144,74 +190,91 @@ export default function NewsletterSignup() {
                 </div>
               </div>
             </div>
-
+            
             {/* Right Side - Form */}
-            <div>
-              {/* Success State */}
-              {success && (
-                <div className="bg-green-900/50 border border-green-500/50 rounded-2xl p-8 text-center">
-                  <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle className="w-8 h-8 text-green-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">
-                    🎉 Welcome to SixFigHires!
-                  </h3>
-                  <p className="text-green-300">
-                    Check your inbox for confirmation. Your first newsletter arrives next Monday.
-                  </p>
+            <div className="bg-white rounded-2xl shadow-2xl p-8">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  Start your career upgrade
+                </h3>
+                <p className="text-gray-600">
+                  Join thousands who've found their dream job through our newsletter
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                    First Name (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="Your first name"
+                  />
                 </div>
-              )}
 
-              {/* Signup Form */}
-              {!success && (
-                <form onSubmit={handleSubmit} className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-2xl p-8">
-                  <div className="space-y-4 mb-6">
-                    <input
-                      type="text"
-                      placeholder="First name (optional)"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    />
-                    <input
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    />
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="you@company.com"
+                  />
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-red-700 text-sm">{error}</p>
                   </div>
+                )}
 
-                  {error && (
-                    <div className="mb-6 p-4 bg-red-900/50 border border-red-500/50 rounded-xl text-red-300 text-sm">
-                      {error}
-                    </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Subscribing...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-5 h-5 mr-2" />
+                      Subscribe Free
+                    </>
                   )}
+                </button>
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-8 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin inline" />
-                        Subscribing...
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="w-5 h-5 mr-2 inline" />
-                        Subscribe
-                      </>
-                    )}
-                  </button>
+                <p className="text-xs text-gray-500 text-center">
+                  By subscribing, you agree to receive our weekly newsletter. 
+                  Unsubscribe at any time. No spam, ever.
+                </p>
+              </form>
 
-                  <p className="text-sm text-gray-400 mt-4 text-center">
-                    No spam. Unsubscribe anytime. Join 25,000+ professionals.
-                  </p>
-                </form>
-              )}
+              {/* Social Proof */}
+              <div className="mt-6 pt-6 border-t border-gray-100">
+                <div className="flex items-center justify-center space-x-6 text-sm text-gray-600">
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    25,000+ subscribers
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                    65% open rate
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

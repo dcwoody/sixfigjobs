@@ -87,19 +87,6 @@ export default function Navigation() {
           
           {/* Navigation Links */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link 
-              href="/jobs" 
-              className="text-gray-700 hover:text-blue-600 font-medium"
-            >
-              Jobs
-            </Link>
-            <Link 
-              href="/companies" 
-              className="text-gray-700 hover:text-blue-600 font-medium"
-            >
-              Companies
-            </Link>
-            
             {/* Auth Section - ALWAYS show something */}
             {loading ? (
               <div className="bg-yellow-100 px-3 py-1 rounded text-sm">
