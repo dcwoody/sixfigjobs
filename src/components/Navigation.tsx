@@ -1,4 +1,4 @@
-// src/components/Navigation.tsx - SIMPLE FIX - Back to what worked
+// src/components/Navigation.tsx - EMERGENCY SIMPLE VERSION
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -14,67 +14,35 @@ export default function Navigation() {
   const pathname = usePathname();
 
   useEffect(() => {
-    let mounted = true;
-
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (mounted) {
-          setUser(session?.user ?? null);
-          setLoading(false);
-          console.log('Navigation: User set to:', session?.user?.email || 'None');
-        }
-      } catch (error) {
-        console.error('Auth error:', error);
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    checkAuth();
+    console.log('🚨 Navigation: Starting...');
+    
+    // Simple auth check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('🚨 Navigation: Session check result:', session?.user?.email || 'No user');
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (mounted) {
-        setUser(session?.user ?? null);
-        console.log('Navigation: Auth changed to:', session?.user?.email || 'None');
-      }
+      console.log('🚨 Navigation: Auth changed:', event, session?.user?.email || 'No user');
+      setUser(session?.user ?? null);
     });
 
-    // SIMPLE FIX: Re-check auth when page becomes visible (fixes browser back button)
-    const handleVisibilityChange = () => {
-      if (!document.hidden && mounted) {
-        console.log('Navigation: Page visible - checking auth');
-        checkAuth();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSignOut = async () => {
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-      router.push('/');
-    } catch (error) {
-      console.error('Sign out error:', error);
-    }
+    await supabase.auth.signOut();
+    router.push('/');
   };
 
   const getUserName = () => {
     if (!user?.email) return 'User';
-    const name = user.email.split('@')[0];
-    return name.charAt(0).toUpperCase() + name.slice(1);
+    return user.email.split('@')[0];
   };
+
+  console.log('🚨 Navigation: Rendering - Loading:', loading, 'User:', user?.email || 'None');
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -95,76 +63,57 @@ export default function Navigation() {
           <div className="hidden md:flex items-center space-x-8">
             <Link 
               href="/jobs" 
-              className={`font-medium transition-colors ${
-                pathname.startsWith('/jobs') 
-                  ? 'text-blue-600' 
-                  : 'text-gray-700 hover:text-blue-600'
-              }`}
+              className="text-gray-700 hover:text-blue-600 font-medium"
             >
               Jobs
             </Link>
             <Link 
               href="/companies" 
-              className={`font-medium transition-colors ${
-                pathname.startsWith('/companies') 
-                  ? 'text-blue-600' 
-                  : 'text-gray-700 hover:text-blue-600'
-              }`}
+              className="text-gray-700 hover:text-blue-600 font-medium"
             >
               Companies
             </Link>
             
-            {/* Auth Section */}
+            {/* Auth Section - ALWAYS show something */}
             {loading ? (
-              <div className="w-24 h-8 bg-gray-200 animate-pulse rounded"></div>
+              <div className="bg-yellow-100 px-3 py-1 rounded text-sm">
+                Loading...
+              </div>
             ) : user ? (
               <div className="flex items-center space-x-3">
-                {/* User Info */}
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                    <User className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">
-                    {getUserName()}
-                  </span>
+                {/* Show user is logged in */}
+                <div className="bg-green-100 px-2 py-1 rounded text-sm">
+                  ✓ {getUserName()}
                 </div>
                 
-                {/* Action Buttons */}
                 <Link
                   href="/welcome"
-                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                    pathname === '/welcome'
-                      ? 'bg-blue-200 text-blue-800'
-                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                  }`}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
                 >
                   Dashboard
                 </Link>
-                <Link
-                  href="/profile"
-                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                    pathname === '/profile'
-                      ? 'bg-gray-200 text-gray-800'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Profile
-                </Link>
+                
                 <button
                   onClick={handleSignOut}
-                  className="bg-red-100 text-red-700 px-3 py-1 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors flex items-center space-x-1"
+                  className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
                 >
-                  <LogOut className="w-3 h-3" />
-                  <span>Sign Out</span>
+                  Sign Out
                 </button>
               </div>
             ) : (
-              <Link
-                href="/login"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                Sign In
-              </Link>
+              <div className="flex items-center space-x-2">
+                {/* Show user is NOT logged in */}
+                <div className="bg-red-100 px-2 py-1 rounded text-sm">
+                  ✗ Not logged in
+                </div>
+                
+                <Link
+                  href="/login"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700"
+                >
+                  Sign In
+                </Link>
+              </div>
             )}
           </div>
         </div>
