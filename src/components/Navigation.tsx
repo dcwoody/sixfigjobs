@@ -1,20 +1,73 @@
-// src/components/Navigation.tsx - USING GLOBAL AUTH CONTEXT
+// src/components/Navigation.tsx - SIMPLE FIX - Back to what worked
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { User, LogOut, Briefcase } from 'lucide-react';
-import { useAuth } from '@/components/AuthContext';
+import { supabase } from '@/lib/supabase/client';
 import { useRouter, usePathname } from 'next/navigation';
 
 export default function Navigation() {
-  const { user, loading, signOut } = useAuth();
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
+  useEffect(() => {
+    let mounted = true;
+
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (mounted) {
+          setUser(session?.user ?? null);
+          setLoading(false);
+          console.log('Navigation: User set to:', session?.user?.email || 'None');
+        }
+      } catch (error) {
+        console.error('Auth error:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    checkAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (mounted) {
+        setUser(session?.user ?? null);
+        console.log('Navigation: Auth changed to:', session?.user?.email || 'None');
+      }
+    });
+
+    // SIMPLE FIX: Re-check auth when page becomes visible (fixes browser back button)
+    const handleVisibilityChange = () => {
+      if (!document.hidden && mounted) {
+        console.log('Navigation: Page visible - checking auth');
+        checkAuth();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   const handleSignOut = async () => {
-    await signOut();
-    router.push('/');
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      router.push('/');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
   };
 
   const getUserName = () => {
@@ -66,11 +119,6 @@ export default function Navigation() {
               <div className="w-24 h-8 bg-gray-200 animate-pulse rounded"></div>
             ) : user ? (
               <div className="flex items-center space-x-3">
-                {/* Debug info - remove after testing */}
-                <div className="bg-green-100 px-2 py-1 rounded text-xs">
-                  LOGGED IN: {user.email?.split('@')[0]}
-                </div>
-                
                 {/* User Info */}
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
@@ -104,27 +152,19 @@ export default function Navigation() {
                 </Link>
                 <button
                   onClick={handleSignOut}
-                  disabled={loading}
-                  className="bg-red-100 text-red-700 px-3 py-1 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors flex items-center space-x-1 disabled:opacity-50"
+                  className="bg-red-100 text-red-700 px-3 py-1 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors flex items-center space-x-1"
                 >
                   <LogOut className="w-3 h-3" />
                   <span>Sign Out</span>
                 </button>
               </div>
             ) : (
-              <div className="flex items-center space-x-2">
-                {/* Debug info */}
-                <div className="bg-red-100 px-2 py-1 rounded text-xs">
-                  NOT LOGGED IN (Loading: {loading ? 'YES' : 'NO'})
-                </div>
-                
-                <Link
-                  href="/login"
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Sign In
-                </Link>
-              </div>
+              <Link
+                href="/login"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Sign In
+              </Link>
             )}
           </div>
         </div>

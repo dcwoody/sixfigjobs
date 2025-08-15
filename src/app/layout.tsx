@@ -1,9 +1,8 @@
-// src/app/layout.tsx
+// src/app/layout.tsx - ORIGINAL WORKING VERSION
 import type { Metadata } from 'next';
 import '@/app/global.css';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
-import { AuthProvider } from '@/components/AuthContext';
 import { SavedJobsProvider } from '@/hooks/useSavedJobs';
 
 export const metadata: Metadata = {
@@ -19,13 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
-          <SavedJobsProvider>
-            <Navigation />
-            <main>{children}</main>
-            <Footer />
-          </SavedJobsProvider>
-        </AuthProvider>
+        <SavedJobsProvider>
+          <Navigation />
+          <main>{children}</main>
+          <Footer />
+        </SavedJobsProvider>
       </body>
     </html>
   );

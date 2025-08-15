@@ -1,4 +1,4 @@
-// src/app/welcome/WelcomeDashboard.tsx
+// src/app/welcome/WelcomeDashboard.tsx - SIMPLIFIED WITH SINGLE AUTH SOURCE
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
 import { Session } from '@supabase/supabase-js';
-import { useAuth } from '@/components/AuthContext'; // Use global auth
-import { useSavedJobs } from '@/hooks/useSavedJobs';
 import { 
   BookmarkIcon, 
   BriefcaseIcon, 
@@ -61,8 +59,6 @@ interface WelcomeDashboardProps {
 
 export default function WelcomeDashboard({ initialSession, initialProfile }: WelcomeDashboardProps) {
   const router = useRouter();
-  const { user } = useAuth(); // Use global auth context
-  const savedJobsHook = useSavedJobs(); // Get saved jobs functionality
   
   const [session, setSession] = useState<Session>(initialSession);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(initialProfile);
@@ -73,32 +69,46 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
   const [newsletterMessage, setNewsletterMessage] = useState('');
 
   useEffect(() => {
-    if (user) {
-      console.log('📊 Dashboard: User found from global auth:', user.email);
-      
-      // If no profile, create one
-      if (!userProfile) {
-        createUserProfile(user.id);
-      } else {
-        fetchDashboardData(user.id);
-      }
-    } else {
-      console.log('📊 Dashboard: No user, redirecting to login');
+    // Use session.user consistently throughout
+    const currentUser = session.user;
+    
+    if (!currentUser) {
       router.push('/login');
+      return;
     }
-  }, [user, userProfile, router]);
 
-  // Fetch saved jobs when user changes
-  useEffect(() => {
-    if (user) {
-      fetchSavedJobsWithDetails(user.id);
+    // If no profile, create one
+    if (!userProfile) {
+      createUserProfile(currentUser.id);
+    } else {
+      fetchDashboardData(currentUser.id);
     }
-  }, [user]);
+
+    // Fetch saved jobs with details
+    fetchSavedJobsWithDetails(currentUser.id);
+
+    // Set up auth listener that updates session state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      console.log('Auth state changed in dashboard:', _event, newSession?.user?.email);
+      
+      if (_event === 'SIGNED_OUT' || !newSession) {
+        router.push('/login');
+      } else if (newSession) {
+        setSession(newSession);
+        // Update profile and data when session changes
+        if (newSession.user.id !== currentUser.id) {
+          fetchUserProfile(newSession.user.id);
+          fetchDashboardData(newSession.user.id);
+          fetchSavedJobsWithDetails(newSession.user.id);
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [session.user?.id, userProfile, router]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      console.log('📊 Dashboard: Fetching user profile for:', userId);
-      
       const { data, error } = await supabase
         .from('users_db')
         .select('*')
@@ -106,28 +116,20 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
         .single();
 
       if (!error && data) {
-        console.log('📊 Dashboard: User profile found:', data.first_name);
         setUserProfile(data);
-        return data;
-      } else {
-        console.log('📊 Dashboard: No profile found, will create one');
-        return null;
       }
     } catch (error) {
-      console.error('📊 Dashboard: Error fetching user profile:', error);
-      return null;
+      console.error('Error fetching user profile:', error);
     }
   };
 
   const createUserProfile = async (userId: string) => {
     try {
-      console.log('📊 Dashboard: Creating user profile for:', userId);
-      
       const newProfile = {
         auth_user_id: userId,
-        email: user?.email || '',
-        first_name: user?.user_metadata?.name?.split(' ')[0] || '',
-        last_name: user?.user_metadata?.name?.split(' ').slice(1).join(' ') || '',
+        email: session.user.email || '',
+        first_name: session.user.user_metadata?.name?.split(' ')[0] || '',
+        last_name: session.user.user_metadata?.name?.split(' ').slice(1).join(' ') || '',
         user_type: 'job_seeker',
         is_newsletter_subscriber: false,
         is_verified: true
@@ -140,50 +142,16 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
         .single();
 
       if (!error && createdProfile) {
-        console.log('📊 Dashboard: Profile created successfully');
         setUserProfile(createdProfile);
         fetchDashboardData(userId);
-      } else {
-        console.error('📊 Dashboard: Error creating profile:', error);
       }
     } catch (error) {
-      console.error('📊 Dashboard: Error creating profile:', error);
-    }
-  };
-
-  const fetchDashboardData = async (userId: string) => {
-    try {
-      console.log('📊 Dashboard: Fetching dashboard data for:', userId);
-      
-      // Fetch job statistics
-      const { count: totalJobs } = await supabase
-        .from('job_listings_db')
-        .select('*', { count: 'exact', head: true });
-
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-      
-      const { count: newJobs } = await supabase
-        .from('job_listings_db')
-        .select('*', { count: 'exact', head: true })
-        .gte('PostedDate', oneWeekAgo.toISOString());
-
-      setJobStats({
-        total_jobs: totalJobs || 0,
-        new_this_week: newJobs || 0,
-        avg_salary: '$150K+',
-      });
-
-      console.log('📊 Dashboard: Job stats loaded');
-    } catch (error) {
-      console.error('📊 Dashboard: Error fetching dashboard data:', error);
+      console.error('Error creating profile:', error);
     }
   };
 
   const fetchSavedJobsWithDetails = async (userId: string) => {
     try {
-      console.log('📊 Dashboard: Fetching saved jobs with details for:', userId);
-      
       const { data: savedJobsData, error: savedJobsError } = await supabase
         .from('saved_jobs')
         .select(`
@@ -212,14 +180,36 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
             ? item.job_listings_db[0] 
             : item.job_listings_db
         })) || [];
-        
         setSavedJobs(transformedJobs);
-        console.log('📊 Dashboard: Saved jobs loaded:', transformedJobs.length);
-      } else {
-        console.error('📊 Dashboard: Error fetching saved jobs:', savedJobsError);
       }
     } catch (error) {
-      console.error('📊 Dashboard: Error fetching saved jobs:', error);
+      console.error('Error fetching saved jobs with details:', error);
+    }
+  };
+
+  const fetchDashboardData = async (userId: string) => {
+    try {
+      // Fetch job statistics
+      const { count: totalJobs } = await supabase
+        .from('job_listings_db')
+        .select('*', { count: 'exact', head: true });
+
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      
+      const { count: newJobs } = await supabase
+        .from('job_listings_db')
+        .select('*', { count: 'exact', head: true })
+        .gte('PostedDate', oneWeekAgo.toISOString());
+
+      setJobStats({
+        total_jobs: totalJobs || 0,
+        new_this_week: newJobs || 0,
+        avg_salary: '$150K+',
+      });
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
     }
   };
 
@@ -282,12 +272,12 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
     );
   }
 
-  if (!user) {
+  if (!session.user) {
     return null; // Will redirect to login
   }
 
-  const firstName = userProfile?.first_name || user?.email?.split('@')[0] || 'there';
-  const userEmail = userProfile?.email || user?.email;
+  const firstName = userProfile?.first_name || session.user?.email?.split('@')[0] || 'there';
+  const userEmail = userProfile?.email || session.user?.email;
   const isNewsletterSubscribed = userProfile?.is_newsletter_subscriber || false;
 
   return (
@@ -328,19 +318,6 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
             </div>
           </div>
 
-          {/* Debug Info - Remove this after testing */}
-          <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <details>
-              <summary className="cursor-pointer font-medium">Dashboard Debug Info</summary>
-              <div className="mt-2 text-sm space-y-1">
-                <p><strong>User from global auth:</strong> {user?.email || 'None'}</p>
-                <p><strong>User profile:</strong> {userProfile ? 'Found' : 'Not found'}</p>
-                <p><strong>Saved jobs count:</strong> {savedJobs.length}</p>
-                <p><strong>Job stats:</strong> {jobStats ? 'Loaded' : 'Not loaded'}</p>
-              </div>
-            </details>
-          </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             {/* Main Content */}
@@ -353,7 +330,7 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
                     <BookmarkIcon className="w-6 h-6 mr-2 text-blue-600" />
                     Recently Saved Jobs
                   </h2>
-                  <Link href="/saved-jobs" className="text-blue-600 hover:text-blue-700 font-medium">
+                  <Link href="/profile" className="text-blue-600 hover:text-blue-700 font-medium">
                     View All
                   </Link>
                 </div>
@@ -462,7 +439,7 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                 <div className="space-y-3">
                   <Link
-                    href="/saved-jobs"
+                    href="/profile"
                     className="flex items-center p-3 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
                   >
                     <BookmarkIcon className="w-5 h-5 mr-3" />
