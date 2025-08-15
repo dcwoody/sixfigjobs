@@ -17,11 +17,16 @@ export default function Navigation() {
     console.log('🚨 Navigation: Starting...');
     
     // Simple auth check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('🚨 Navigation: Session check result:', session?.user?.email || 'No user');
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const checkAuth = () => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        console.log('🚨 Navigation: Session check result:', session?.user?.email || 'No user');
+        setUser(session?.user ?? null);
+        setLoading(false);
+      });
+    };
+
+    // Initial check
+    checkAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -29,7 +34,28 @@ export default function Navigation() {
       setUser(session?.user ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    // BROWSER BACK BUTTON FIX: Re-check auth when page becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('🚨 Navigation: Page visible - rechecking auth');
+        checkAuth();
+      }
+    };
+
+    // BROWSER BACK BUTTON FIX: Re-check auth when window gets focus
+    const handleFocus = () => {
+      console.log('🚨 Navigation: Window focus - rechecking auth');
+      checkAuth();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const handleSignOut = async () => {
