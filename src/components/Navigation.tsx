@@ -15,7 +15,6 @@ export default function Navigation() {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [showSignOutSuccess, setShowSignOutSuccess] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createClient();
@@ -46,14 +45,6 @@ export default function Navigation() {
           }
           
           setLoading(false);
-          
-          // Set debug info
-          setDebugInfo({
-            hasSession: !!session,
-            hasUser: !!session?.user,
-            userEmail: session?.user?.email,
-            timestamp: new Date().toISOString()
-          });
         }
       } catch (error) {
         console.error('Navigation initialization error:', error);
@@ -78,34 +69,9 @@ export default function Navigation() {
       } else {
         setUserProfile(null);
       }
-      
-      // Update debug info
-      setDebugInfo({
-        hasSession: !!session,
-        hasUser: !!session?.user,
-        userEmail: session?.user?.email,
-        event: event,
-        timestamp: new Date().toISOString()
-      });
     });
 
-    // Listen for custom auth change events
-    const handleAuthChange = () => {
-      console.log('Navigation: Custom auth change event received');
-      initializeAuth();
-    };
-
-    window.addEventListener('auth-change', handleAuthChange);
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-      window.removeEventListener('auth-change', handleAuthChange);
-    };
-  }, []);
-
-  // Force refresh after a delay to catch any timing issues
-  useEffect(() => {
+    // Force refresh after a delay to catch timing issues
     const timer = setTimeout(() => {
       if (!user && !loading) {
         console.log('Navigation: Force checking auth after delay...');
@@ -119,7 +85,11 @@ export default function Navigation() {
       }
     }, 1000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      clearTimeout(timer);
+    };
   }, [user, loading]);
 
   const fetchUserProfile = async (userId: string) => {
@@ -199,16 +169,6 @@ export default function Navigation() {
 
   return (
     <>
-      {/* Debug Info - Remove this after fixing */}
-      {process.env.NODE_ENV === 'development' && debugInfo && (
-        <div className="bg-yellow-100 border-b border-yellow-300 p-2 text-xs">
-          <details>
-            <summary className="cursor-pointer font-medium">Auth Debug Info (Click to expand)</summary>
-            <pre className="mt-2 text-xs">{JSON.stringify(debugInfo, null, 2)}</pre>
-          </details>
-        </div>
-      )}
-
       {/* Sign Out Success Overlay */}
       {showSignOutSuccess && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100]">
