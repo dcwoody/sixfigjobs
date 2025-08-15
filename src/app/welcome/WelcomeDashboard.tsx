@@ -4,8 +4,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { Session } from '@supabase/supabase-js';
+import { useAuth } from '@/components/AuthContext'; // Use global auth
 import { useSavedJobs } from '@/hooks/useSavedJobs';
 import { 
   BookmarkIcon, 
@@ -60,8 +61,8 @@ interface WelcomeDashboardProps {
 
 export default function WelcomeDashboard({ initialSession, initialProfile }: WelcomeDashboardProps) {
   const router = useRouter();
-  const supabase = createClient();
-  const { user: savedJobsUser } = useSavedJobs(); // Use the hook's user state
+  const { user } = useAuth(); // Use global auth context
+  const savedJobsHook = useSavedJobs(); // Get saved jobs functionality
   
   const [session, setSession] = useState<Session>(initialSession);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(initialProfile);
@@ -71,62 +72,33 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
   const [newsletterLoading, setNewsletterLoading] = useState(false);
   const [newsletterMessage, setNewsletterMessage] = useState('');
 
-const [debugInfo, setDebugInfo] = useState<any>(null);
-
-useEffect(() => {
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    setDebugInfo({
-      hasSession: !!session,
-      hasUser: !!user,
-      sessionUserEmail: session?.user?.email,
-      userEmail: user?.email,
-      cookies: document.cookie
-    });
-  };
-  
-  checkAuth();
-}, []);
-
-  
   useEffect(() => {
-    // If no profile, create one
-    if (!userProfile && session) {
-      createUserProfile(session.user.id);
-    } else if (userProfile) {
-      fetchDashboardData(session.user.id);
-    }
-
-    // Set up auth listener that updates session state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      console.log('Auth state changed in dashboard:', _event, newSession?.user?.email);
+    if (user) {
+      console.log('📊 Dashboard: User found from global auth:', user.email);
       
-      if (_event === 'SIGNED_OUT' || !newSession) {
-        router.push('/login');
-      } else if (newSession) {
-        setSession(newSession);
-        // Update profile and data when session changes
-        if (newSession.user.id !== session?.user.id) {
-          fetchUserProfile(newSession.user.id);
-          fetchDashboardData(newSession.user.id);
-        }
+      // If no profile, create one
+      if (!userProfile) {
+        createUserProfile(user.id);
+      } else {
+        fetchDashboardData(user.id);
       }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Fetch saved jobs when savedJobsUser changes
-  useEffect(() => {
-    if (savedJobsUser) {
-      fetchSavedJobsWithDetails(savedJobsUser.id);
+    } else {
+      console.log('📊 Dashboard: No user, redirecting to login');
+      router.push('/login');
     }
-  }, [savedJobsUser]);
+  }, [user, userProfile, router]);
+
+  // Fetch saved jobs when user changes
+  useEffect(() => {
+    if (user) {
+      fetchSavedJobsWithDetails(user.id);
+    }
+  }, [user]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('📊 Dashboard: Fetching user profile for:', userId);
+      
       const { data, error } = await supabase
         .from('users_db')
         .select('*')
@@ -134,20 +106,28 @@ useEffect(() => {
         .single();
 
       if (!error && data) {
+        console.log('📊 Dashboard: User profile found:', data.first_name);
         setUserProfile(data);
+        return data;
+      } else {
+        console.log('📊 Dashboard: No profile found, will create one');
+        return null;
       }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('📊 Dashboard: Error fetching user profile:', error);
+      return null;
     }
   };
 
   const createUserProfile = async (userId: string) => {
     try {
+      console.log('📊 Dashboard: Creating user profile for:', userId);
+      
       const newProfile = {
         auth_user_id: userId,
-        email: session.user.email || '',
-        first_name: session.user.user_metadata?.name?.split(' ')[0] || '',
-        last_name: session.user.user_metadata?.name?.split(' ').slice(1).join(' ') || '',
+        email: user?.email || '',
+        first_name: user?.user_metadata?.name?.split(' ')[0] || '',
+        last_name: user?.user_metadata?.name?.split(' ').slice(1).join(' ') || '',
         user_type: 'job_seeker',
         is_newsletter_subscriber: false,
         is_verified: true
@@ -160,16 +140,50 @@ useEffect(() => {
         .single();
 
       if (!error && createdProfile) {
+        console.log('📊 Dashboard: Profile created successfully');
         setUserProfile(createdProfile);
         fetchDashboardData(userId);
+      } else {
+        console.error('📊 Dashboard: Error creating profile:', error);
       }
     } catch (error) {
-      console.error('Error creating profile:', error);
+      console.error('📊 Dashboard: Error creating profile:', error);
+    }
+  };
+
+  const fetchDashboardData = async (userId: string) => {
+    try {
+      console.log('📊 Dashboard: Fetching dashboard data for:', userId);
+      
+      // Fetch job statistics
+      const { count: totalJobs } = await supabase
+        .from('job_listings_db')
+        .select('*', { count: 'exact', head: true });
+
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      
+      const { count: newJobs } = await supabase
+        .from('job_listings_db')
+        .select('*', { count: 'exact', head: true })
+        .gte('PostedDate', oneWeekAgo.toISOString());
+
+      setJobStats({
+        total_jobs: totalJobs || 0,
+        new_this_week: newJobs || 0,
+        avg_salary: '$150K+',
+      });
+
+      console.log('📊 Dashboard: Job stats loaded');
+    } catch (error) {
+      console.error('📊 Dashboard: Error fetching dashboard data:', error);
     }
   };
 
   const fetchSavedJobsWithDetails = async (userId: string) => {
     try {
+      console.log('📊 Dashboard: Fetching saved jobs with details for:', userId);
+      
       const { data: savedJobsData, error: savedJobsError } = await supabase
         .from('saved_jobs')
         .select(`
@@ -198,36 +212,14 @@ useEffect(() => {
             ? item.job_listings_db[0] 
             : item.job_listings_db
         })) || [];
+        
         setSavedJobs(transformedJobs);
+        console.log('📊 Dashboard: Saved jobs loaded:', transformedJobs.length);
+      } else {
+        console.error('📊 Dashboard: Error fetching saved jobs:', savedJobsError);
       }
     } catch (error) {
-      console.error('Error fetching saved jobs with details:', error);
-    }
-  };
-
-  const fetchDashboardData = async (userId: string) => {
-    try {
-      // Fetch job statistics
-      const { count: totalJobs } = await supabase
-        .from('job_listings_db')
-        .select('*', { count: 'exact', head: true });
-
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-      
-      const { count: newJobs } = await supabase
-        .from('job_listings_db')
-        .select('*', { count: 'exact', head: true })
-        .gte('PostedDate', oneWeekAgo.toISOString());
-
-      setJobStats({
-        total_jobs: totalJobs || 0,
-        new_this_week: newJobs || 0,
-        avg_salary: '$150K+',
-      });
-
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error('📊 Dashboard: Error fetching saved jobs:', error);
     }
   };
 
@@ -243,15 +235,17 @@ useEffect(() => {
         .update({ is_newsletter_subscriber: newStatus })
         .eq('auth_user_id', userProfile.auth_user_id);
 
-      if (!error) {
+      if (error) {
+        console.error('Error updating newsletter subscription:', error);
+        setNewsletterMessage('Failed to update subscription. Please try again.');
+      } else {
         setNewsletterMessage(
           newStatus 
             ? '✅ Successfully subscribed to weekly job alerts!' 
             : '📭 Unsubscribed from newsletter.'
         );
+        
         setUserProfile(prev => prev ? { ...prev, is_newsletter_subscriber: newStatus } : null);
-      } else {
-        setNewsletterMessage('Failed to update subscription. Please try again.');
       }
     } catch (error) {
       console.error('Newsletter subscription error:', error);
@@ -277,17 +271,27 @@ useEffect(() => {
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const firstName = userProfile?.first_name || userProfile?.email?.split('@')[0] || session.user.user_metadata?.name?.split(' ')[0] || 'there';
-  const userEmail = userProfile?.email || session.user.email;
+  if (!user) {
+    return null; // Will redirect to login
+  }
+
+  const firstName = userProfile?.first_name || user?.email?.split('@')[0] || 'there';
+  const userEmail = userProfile?.email || user?.email;
   const isNewsletterSubscribed = userProfile?.is_newsletter_subscriber || false;
 
   return (
-    <div className="min-h-screen bg-gray-50">      
+    <div className="min-h-screen bg-gray-50">
       <div className="py-8 px-4">
         <div className="max-w-7xl mx-auto">
           
@@ -302,86 +306,58 @@ useEffect(() => {
                   <p className="text-blue-100 text-lg">
                     Ready to discover your next six-figure opportunity?
                   </p>
-                  <p className="text-blue-200 text-sm mt-1">{userEmail}</p>
+                  <p className="text-blue-200 text-sm mt-2">{userEmail}</p>
                 </div>
-                <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
-                  <Link 
+                <div className="flex space-x-4 mt-6 md:mt-0">
+                  <Link
                     href="/jobs"
-                    className="inline-flex items-center px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+                    className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center"
                   >
                     <BriefcaseIcon className="w-5 h-5 mr-2" />
                     Browse Jobs
                   </Link>
-                  <button
-                    onClick={handleNewsletterToggle}
-                    disabled={newsletterLoading}
-                    className={`inline-flex items-center px-6 py-3 font-semibold rounded-lg transition-colors shadow-sm ${
-                      isNewsletterSubscribed
-                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                    } ${newsletterLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  <Link
+                    href="/newsletter"
+                    className="bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-400 transition-colors flex items-center"
                   >
                     <MailIcon className="w-5 h-5 mr-2" />
-                    {newsletterLoading ? 'Updating...' : (
-                      isNewsletterSubscribed ? 'Unsubscribe' : 'Join Newsletter'
-                    )}
-                  </button>
+                    Join Newsletter
+                  </Link>
                 </div>
               </div>
-              
-              {newsletterMessage && (
-                <div className="mt-4 bg-white bg-opacity-20 text-white p-3 rounded-lg">
-                  {newsletterMessage}
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Job Stats */}
-          {jobStats && (
-            <div className="mb-8">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-gray-900">{jobStats.total_jobs.toLocaleString()}</p>
-                    <p className="text-gray-600">Total Jobs</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-gray-900">{jobStats.new_this_week}</p>
-                    <p className="text-gray-600">New This Week</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-gray-900">{jobStats.avg_salary}</p>
-                    <p className="text-gray-600">Average Salary</p>
-                  </div>
-                </div>
+          {/* Debug Info - Remove this after testing */}
+          <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <details>
+              <summary className="cursor-pointer font-medium">Dashboard Debug Info</summary>
+              <div className="mt-2 text-sm space-y-1">
+                <p><strong>User from global auth:</strong> {user?.email || 'None'}</p>
+                <p><strong>User profile:</strong> {userProfile ? 'Found' : 'Not found'}</p>
+                <p><strong>Saved jobs count:</strong> {savedJobs.length}</p>
+                <p><strong>Job stats:</strong> {jobStats ? 'Loaded' : 'Not loaded'}</p>
               </div>
-            </div>
-          )}
+            </details>
+          </div>
 
-      // Add this somewhere in your JSX (temporarily)
-      {debugInfo && (
-        <div className="bg-red-100 p-4 rounded-lg mb-4">
-          <h3 className="font-bold">Debug Info:</h3>
-          <pre className="text-xs">{JSON.stringify(debugInfo, null, 2)}</pre>
-        </div>
-      )}
-
-          {/* Rest of the dashboard content... */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Recently Saved Jobs section */}
+              
+              {/* Recently Saved Jobs */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-900 flex items-center">
-                    <BookmarkIcon className="w-5 h-5 mr-2 text-blue-600" />
+                  <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                    <BookmarkIcon className="w-6 h-6 mr-2 text-blue-600" />
                     Recently Saved Jobs
                   </h2>
-                  <Link href="/profile" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                  <Link href="/saved-jobs" className="text-blue-600 hover:text-blue-700 font-medium">
                     View All
                   </Link>
                 </div>
-
+                
                 {savedJobs.length > 0 ? (
                   <div className="space-y-4">
                     {savedJobs.map((savedJob) => {
@@ -439,12 +415,12 @@ useEffect(() => {
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <BookmarkIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <BookmarkIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No saved jobs yet</h3>
                     <p className="text-gray-600 mb-4">Start browsing and save jobs you're interested in!</p>
-                    <Link 
+                    <Link
                       href="/jobs"
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                      className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       <BriefcaseIcon className="w-4 h-4 mr-2" />
                       Browse Jobs
@@ -453,25 +429,29 @@ useEffect(() => {
                 )}
               </div>
 
-              {/* Job Recommendations */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                  <BarChart3Icon className="w-5 h-5 mr-2 text-blue-600" />
-                  Recommended for You
-                </h2>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-blue-800 mb-3">
-                    Set up your job preferences to get personalized recommendations!
-                  </p>
-                  <Link 
-                    href="/preferences"
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <CogIcon className="w-4 h-4 mr-2" />
-                    Set Preferences
-                  </Link>
+              {/* Job Market Stats */}
+              {jobStats && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                    <BarChart3Icon className="w-6 h-6 mr-2 text-blue-600" />
+                    Job Market Overview
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <div className="text-3xl font-bold text-blue-600">{jobStats.total_jobs.toLocaleString()}</div>
+                      <div className="text-blue-800 font-medium">Total Jobs</div>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <div className="text-3xl font-bold text-green-600">{jobStats.new_this_week}</div>
+                      <div className="text-green-800 font-medium">New This Week</div>
+                    </div>
+                    <div className="text-center p-4 bg-purple-50 rounded-lg">
+                      <div className="text-3xl font-bold text-purple-600">{jobStats.avg_salary}</div>
+                      <div className="text-purple-800 font-medium">Average Salary</div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Sidebar */}
@@ -481,52 +461,58 @@ useEffect(() => {
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                 <div className="space-y-3">
-                  <Link 
-                    href="/profile" 
-                    className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  <Link
+                    href="/saved-jobs"
+                    className="flex items-center p-3 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
                   >
-                    <BookmarkIcon className="w-5 h-5 text-blue-600 mr-3" />
+                    <BookmarkIcon className="w-5 h-5 mr-3" />
                     <div>
-                      <p className="font-medium text-gray-900">Saved Jobs</p>
-                      <p className="text-sm text-gray-600">View your bookmarked positions</p>
+                      <div className="font-medium">Saved Jobs</div>
+                      <div className="text-sm text-blue-600">View your bookmarked positions</div>
                     </div>
                   </Link>
-                  <Link 
+                  
+                  <Link
                     href="/preferences"
-                    className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="flex items-center p-3 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
                   >
-                    <CogIcon className="w-5 h-5 text-blue-600 mr-3" />
+                    <CogIcon className="w-5 h-5 mr-3" />
                     <div>
-                      <p className="font-medium text-gray-900">Job Preferences</p>
-                      <p className="text-sm text-gray-600">Set your criteria and alerts</p>
+                      <div className="font-medium">Job Preferences</div>
+                      <div className="text-sm text-gray-600">Set your criteria and alerts</div>
                     </div>
                   </Link>
                 </div>
               </div>
 
-              {/* Newsletter Status */}
+              {/* Newsletter */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Newsletter Status</h3>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Weekly job alerts</p>
-                    <p className={`font-medium ${isNewsletterSubscribed ? 'text-green-600' : 'text-gray-600'}`}>
-                      {isNewsletterSubscribed ? 'Subscribed ✓' : 'Not subscribed'}
-                    </p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">Weekly job alerts</p>
+                      <p className="text-sm text-gray-600">
+                        {isNewsletterSubscribed ? 'Subscribed ✓' : 'Not subscribed'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleNewsletterToggle}
+                      disabled={newsletterLoading}
+                      className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                        isNewsletterSubscribed
+                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                      }`}
+                    >
+                      {newsletterLoading ? 'Updating...' : (
+                        isNewsletterSubscribed ? 'Unsubscribe' : 'Subscribe Now'
+                      )}
+                    </button>
                   </div>
-                  <button
-                    onClick={handleNewsletterToggle}
-                    disabled={newsletterLoading}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      isNewsletterSubscribed
-                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                    }`}
-                  >
-                    {newsletterLoading ? 'Updating...' : (
-                      isNewsletterSubscribed ? 'Unsubscribe' : 'Subscribe Now'
-                    )}
-                  </button>
+                  {newsletterMessage && (
+                    <p className="text-sm text-green-600">{newsletterMessage}</p>
+                  )}
                 </div>
               </div>
 

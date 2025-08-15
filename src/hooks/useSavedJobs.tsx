@@ -1,9 +1,10 @@
+// src/hooks/useSavedJobs.tsx
 'use client';
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
+import { useAuth } from '@/components/AuthContext'; // Use global auth
 import { useRouter } from 'next/navigation';
-import type { User } from '@supabase/supabase-js';
 
 interface SavedJobsContextType {
   savedJobIds: Set<string>;
@@ -11,7 +12,6 @@ interface SavedJobsContextType {
   saveJob: (jobId: string) => Promise<boolean>;
   unsaveJob: (jobId: string) => Promise<boolean>;
   loading: boolean;
-  user: User | null;
 }
 
 const SavedJobsContext = createContext<SavedJobsContextType>({
@@ -20,90 +20,71 @@ const SavedJobsContext = createContext<SavedJobsContextType>({
   saveJob: async () => false,
   unsaveJob: async () => false,
   loading: true,
-  user: null,
 });
 
 export function SavedJobsProvider({ children }: { children: ReactNode }) {
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
-
-  const supabase = createClient();
+  const { user } = useAuth(); // Use global auth instead of separate auth check
   const router = useRouter();
 
   useEffect(() => {
     let isMounted = true;
 
-    const initializeAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    const fetchSavedJobs = async (userId: string) => {
+      try {
+        console.log('💾 SavedJobs: Fetching saved jobs for user:', userId);
+        
+        const { data, error } = await supabase
+          .from('saved_jobs')
+          .select('job_id')
+          .eq('user_id', userId);
 
-      if (!isMounted) return;
-
-      if (session?.user) {
-        setUser(session.user);
-        await fetchSavedJobs(session.user.id);
-      } else {
-        setLoading(false);
+        if (error) {
+          console.error('💾 SavedJobs: Error fetching saved jobs:', error);
+          return;
+        }
+        
+        if (isMounted && data) {
+          const jobIds = new Set<string>(data.map((item) => item.job_id as string));
+          setSavedJobIds(jobIds);
+          console.log('💾 SavedJobs: Loaded', jobIds.size, 'saved jobs');
+        }
+      } catch (err) {
+        console.error('💾 SavedJobs: Error fetching saved jobs:', err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    initializeAuth();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!isMounted) return;
-
-      if (session?.user) {
-        setUser(session.user);
-        await fetchSavedJobs(session.user.id);
-      } else {
-        setUser(null);
-        setSavedJobIds(new Set());
-        setLoading(false);
-      }
-    });
+    if (user) {
+      console.log('💾 SavedJobs: User found, fetching saved jobs for:', user.email);
+      fetchSavedJobs(user.id);
+    } else {
+      console.log('💾 SavedJobs: No user, clearing saved jobs');
+      setSavedJobIds(new Set());
+      setLoading(false);
+    }
 
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchSavedJobs = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('saved_jobs')
-        .select('job_id')
-        .eq('user_id', userId);
-
-      if (error) {
-        console.error('Error fetching saved jobs:', error);
-        return;
-      }
-      if (data) {
-        const jobIds = new Set<string>(data.map((item) => item.job_id as string));
-        setSavedJobIds(jobIds);
-      }
-    } catch (err) {
-      console.error('Error fetching saved jobs:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [user]); // Only depend on user from global auth context
 
   const isJobSaved = (jobId: string): boolean => savedJobIds.has(jobId);
 
   const saveJob = async (jobId: string): Promise<boolean> => {
     if (!user) {
+      console.log('💾 SavedJobs: No user, redirecting to login');
       router.push('/login');
       return false;
     }
 
     try {
+      console.log('💾 SavedJobs: Saving job:', jobId, 'for user:', user.email);
+      
       const { error } = await supabase.from('saved_jobs').insert([
         {
           user_id: user.id,
@@ -113,14 +94,15 @@ export function SavedJobsProvider({ children }: { children: ReactNode }) {
       ]);
 
       if (error) {
-        console.error('Error saving job:', error);
+        console.error('💾 SavedJobs: Error saving job:', error);
         return false;
       }
 
       setSavedJobIds((prev) => new Set([...prev, jobId]));
+      console.log('💾 SavedJobs: Job saved successfully');
       return true;
     } catch (err) {
-      console.error('Error saving job:', err);
+      console.error('💾 SavedJobs: Error saving job:', err);
       return false;
     }
   };
@@ -129,6 +111,8 @@ export function SavedJobsProvider({ children }: { children: ReactNode }) {
     if (!user) return false;
 
     try {
+      console.log('💾 SavedJobs: Unsaving job:', jobId, 'for user:', user.email);
+      
       const { error } = await supabase
         .from('saved_jobs')
         .delete()
@@ -136,7 +120,7 @@ export function SavedJobsProvider({ children }: { children: ReactNode }) {
         .eq('job_id', jobId);
 
       if (error) {
-        console.error('Error unsaving job:', error);
+        console.error('💾 SavedJobs: Error unsaving job:', error);
         return false;
       }
 
@@ -145,9 +129,10 @@ export function SavedJobsProvider({ children }: { children: ReactNode }) {
         next.delete(jobId);
         return next;
       });
+      console.log('💾 SavedJobs: Job unsaved successfully');
       return true;
     } catch (err) {
-      console.error('Error unsaving job:', err);
+      console.error('💾 SavedJobs: Error unsaving job:', err);
       return false;
     }
   };
@@ -160,7 +145,6 @@ export function SavedJobsProvider({ children }: { children: ReactNode }) {
         saveJob,
         unsaveJob,
         loading,
-        user,
       }}
     >
       {children}
@@ -170,8 +154,6 @@ export function SavedJobsProvider({ children }: { children: ReactNode }) {
 
 export function useSavedJobs() {
   const context = useContext(SavedJobsContext);
-  // With a default value provided, context is never undefined,
-  // but we keep this for clearer error messages if refactored.
   if (!context) {
     throw new Error('useSavedJobs must be used within a SavedJobsProvider');
   }
