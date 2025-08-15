@@ -30,6 +30,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+// Add this right after getting the authHeader (temporary debugging):
+console.log('=== AUTH DEBUG ===');
+console.log('Auth header received:', authHeader);
+console.log('Expected secret:', process.env.NEWSLETTER_API_SECRET);
+console.log('Token after Bearer removal:', authHeader?.replace('Bearer ', ''));
+console.log('Frontend secret:', process.env.NEXT_PUBLIC_NEWSLETTER_SECRET);
+console.log('==================');
+
     const supabase = createClient();
 
     // Get latest jobs for newsletter (last 7 days)
@@ -92,7 +100,7 @@ function generateNewsletterHTML(jobs: JobListing[], stats: { totalJobs: number; 
   });
 
   const domain = process.env.NEXT_PUBLIC_DOMAIN || 'https://yourdomain.com';
-
+  
   return `
 <!DOCTYPE html>
 <html>
