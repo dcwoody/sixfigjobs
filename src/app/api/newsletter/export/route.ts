@@ -16,9 +16,19 @@ interface Subscriber {
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.includes(process.env.NEWSLETTER_API_SECRET || '')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+const expectedSecret = process.env.NEWSLETTER_API_SECRET;
+
+if (!authHeader || !expectedSecret) {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
+
+// Extract token from "Bearer TOKEN" format
+const token = authHeader.replace('Bearer ', '');
+
+if (token !== expectedSecret) {
+  console.log('Auth failed:', { received: token, expected: expectedSecret });
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
 
     const supabase = createClient();
     

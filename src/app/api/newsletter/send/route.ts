@@ -23,12 +23,19 @@ export async function POST(request: NextRequest) {
   try {
     // Verify API key or admin authentication
     const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.includes(process.env.NEWSLETTER_API_SECRET || '')) {
+    const expectedSecret = process.env.NEWSLETTER_API_SECRET;
+    if (!authHeader || !expectedSecret) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+const token = authHeader.replace('Bearer ', '');
+if (token !== expectedSecret) {
+  console.log('Auth failed:', { received: token, expected: expectedSecret });
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
+
     const supabase = createClient();
-    
+
     // Get all newsletter subscribers
     const { data: subscribers, error } = await supabase
       .from('users_db')
@@ -56,7 +63,7 @@ export async function POST(request: NextRequest) {
     const emailPromises = subscribers.map(async (subscriber: Subscriber): Promise<SendResult> => {
       try {
         const personalizedContent = htmlContent.replace(
-          '{{firstName}}', 
+          '{{firstName}}',
           subscriber.first_name || 'there'
         ).replace(
           '{{email}}',
@@ -76,9 +83,9 @@ export async function POST(request: NextRequest) {
         return { email: subscriber.email, status: 'sent' };
       } catch (error) {
         console.error(`Failed to send to ${subscriber.email}:`, error);
-        return { 
-          email: subscriber.email, 
-          status: 'failed', 
+        return {
+          email: subscriber.email,
+          status: 'failed',
           error: error instanceof Error ? error.message : 'Unknown error'
         };
       }
@@ -101,7 +108,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Newsletter send error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' }, 
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

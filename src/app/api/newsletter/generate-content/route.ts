@@ -19,7 +19,14 @@ interface JobListing {
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.includes(process.env.NEWSLETTER_API_SECRET || '')) {
+    const expectedSecret = process.env.NEWSLETTER_API_SECRET;
+    if (!authHeader || !expectedSecret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    if (token !== expectedSecret) {
+      console.log('Auth failed:', { received: token, expected: expectedSecret });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -77,11 +84,11 @@ export async function POST(request: NextRequest) {
 }
 
 function generateNewsletterHTML(jobs: JobListing[], stats: { totalJobs: number; newJobs: number }): string {
-  const currentDate = new Date().toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   });
 
   const domain = process.env.NEXT_PUBLIC_DOMAIN || 'https://yourdomain.com';
