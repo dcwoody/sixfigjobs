@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { Heart, Bookmark, Check, Loader2 } from 'lucide-react';
+import { useAuth } from '@/components/AuthContext'; // Use global auth
 import { useSavedJobs } from '@/hooks/useSavedJobs';
 
 interface SaveJobButtonProps {
@@ -20,7 +21,8 @@ export default function SaveJobButton({
   showText = false,
   className = ''
 }: SaveJobButtonProps) {
-  const { isJobSaved, saveJob, unsaveJob, user } = useSavedJobs();
+  const { user } = useAuth(); // Get user from global auth context
+  const { isJobSaved, saveJob, unsaveJob } = useSavedJobs(); // Get save functionality
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState('');
 
@@ -34,6 +36,7 @@ export default function SaveJobButton({
     }
 
     setIsLoading(true);
+    console.log('💖 SaveJobButton: Toggling save for job:', jobId, 'User:', user.email);
     
     try {
       let success = false;
@@ -41,20 +44,23 @@ export default function SaveJobButton({
         success = await unsaveJob(jobId);
         if (success) {
           setFeedback('Job removed from saved');
+          console.log('💖 SaveJobButton: Job unsaved successfully');
         }
       } else {
         success = await saveJob(jobId);
         if (success) {
           setFeedback('Job saved!');
+          console.log('💖 SaveJobButton: Job saved successfully');
         }
       }
       
       if (!success) {
         setFeedback('Something went wrong. Please try again.');
+        console.log('💖 SaveJobButton: Save/unsave failed');
       }
     } catch (error) {
       setFeedback('Something went wrong. Please try again.');
-      console.error('Error toggling save job:', error);
+      console.error('💖 SaveJobButton: Error toggling save job:', error);
     } finally {
       setIsLoading(false);
       setTimeout(() => setFeedback(''), 3000);
