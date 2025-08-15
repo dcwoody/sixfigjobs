@@ -6,23 +6,16 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify this request is from Vercel cron (multiple methods)
+    // Verify this request is from Vercel cron using the official method
     const authHeader = request.headers.get('authorization');
-    const userAgent = request.headers.get('user-agent');
-    const cronSecret = process.env.CRON_SECRET;
     
-    // Method 1: Check for your custom secret (for manual testing)
-    // Method 2: Check for Vercel's cron user agent
-    const isVercelCron = userAgent?.includes('vercel-cron') || userAgent?.includes('Vercel');
-    const isManualTest = authHeader === `Bearer ${cronSecret}`;
-    
-    if (!isVercelCron && !isManualTest) {
-      console.log('Unauthorized cron access attempt:', { authHeader, userAgent });
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      console.log('Unauthorized cron access attempt:', { authHeader });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     console.log('🚀 Newsletter cron job started at:', new Date().toISOString());
-    console.log('Triggered by:', isVercelCron ? 'Vercel Cron' : 'Manual Test');
+    console.log('Triggered by: Vercel Cron');
 
     // Step 1: Generate newsletter content
     const generateResponse = await fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/api/newsletter/generate-content`, {
