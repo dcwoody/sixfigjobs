@@ -1,7 +1,7 @@
-// postcss.config.mjs
+// postcss.config.mjs - FIXED VERSION
 const config = {
   plugins: {
-    '@tailwindcss/postcss': {},
+    tailwindcss: {},
     autoprefixer: {},
   },
 };
