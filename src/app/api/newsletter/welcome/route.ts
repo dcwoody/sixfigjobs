@@ -1,25 +1,27 @@
-// src/app/api/newsletter/welcome/route.ts
+// src/app/api/newsletter/welcome/route.ts - FIXED VERSION
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function POST(request: NextRequest) {
   try {
     const { email, firstName } = await request.json();
 
     if (!email) {
-      return NextResponse.json({ error: 'Email required' }, { status: 400 });
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
+    // Validate API key
+    if (!process.env.RESEND_API_KEY) {
+      return NextResponse.json({ 
+        error: 'Email service not configured' 
+      }, { status: 500 });
     }
+
+    // Initialize Resend inside the function
+    const resend = new Resend(process.env.RESEND_API_KEY);
 
     const welcomeHTML = `
 <!DOCTYPE html>
@@ -27,28 +29,25 @@ export async function POST(request: NextRequest) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Our Newsletter</title>
+  <title>Welcome to SixFigHires!</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
     .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
-    .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 40px 20px; text-align: center; }
-    .header h1 { margin: 0; font-size: 32px; font-weight: 700; }
-    .content { padding: 40px 20px; }
-    .welcome-message { font-size: 18px; color: #374151; margin-bottom: 30px; }
-    .feature-list { background: #f8fafc; padding: 30px; border-radius: 8px; margin: 30px 0; }
+    .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 30px 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; font-weight: 700; }
+    .content { padding: 30px 20px; }
+    .feature-list { margin: 30px 0; }
     .feature { display: flex; align-items: flex-start; margin-bottom: 20px; }
-    .feature-icon { width: 24px; height: 24px; background: #2563eb; border-radius: 50%; margin-right: 15px; flex-shrink: 0; margin-top: 2px; }
-    .feature h3 { margin: 0 0 5px; font-size: 16px; font-weight: 600; color: #1f2937; }
-    .feature p { margin: 0; font-size: 14px; color: #6b7280; }
-    .cta-button { display: inline-block; background: #2563eb; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 30px 0; }
-    .footer { background: #f1f5f9; padding: 30px 20px; text-align: center; color: #6b7280; }
+    .feature-icon { width: 20px; height: 20px; background: #2563eb; border-radius: 50%; margin-right: 15px; margin-top: 2px; }
+    .cta-button { display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; margin: 20px 0; }
+    .footer { background: #f1f5f9; padding: 20px; text-align: center; font-size: 14px; color: #64748b; }
     .footer a { color: #2563eb; text-decoration: none; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>Welcome to the Team! 🎉</h1>
+      <h1>Welcome to SixFigHires! 🎉</h1>
     </div>
     
     <div class="content">
@@ -96,7 +95,7 @@ export async function POST(request: NextRequest) {
       <a href="${process.env.NEXT_PUBLIC_DOMAIN || 'https://yourdomain.com'}/jobs" class="cta-button">Browse Current Jobs</a>
       
       <p>Welcome aboard!</p>
-      <p>The JobBoard Team</p>
+      <p>The SixFigHires Team</p>
     </div>
     
     <div class="footer">
@@ -112,7 +111,7 @@ export async function POST(request: NextRequest) {
     `;
 
     await resend.emails.send({
-      from: process.env.WELCOME_FROM_EMAIL || 'JobBoard <welcome@yourdomain.com>',
+      from: process.env.NEWSLETTER_FROM_EMAIL || 'SixFigHires <welcome@yourdomain.com>',
       to: email,
       subject: '🎉 Welcome to Six-Figure Jobs Newsletter!',
       html: welcomeHTML,

@@ -1,176 +1,257 @@
-// src/hooks/useSavedJobs.tsx - ORIGINAL WORKING VERSION
+// src/hooks/useSavedJobs.tsx - UPDATED with Provider
 'use client';
 
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
-import type { User } from '@supabase/supabase-js';
 
-interface SavedJobsContextType {
-  savedJobIds: Set<string>;
-  isJobSaved: (jobId: string) => boolean;
-  saveJob: (jobId: string) => Promise<boolean>;
-  unsaveJob: (jobId: string) => Promise<boolean>;
-  loading: boolean;
-  user: User | null;
+// Define types locally to avoid import issues
+interface Session {
+  user: {
+    id: string;
+    email?: string;
+    user_metadata?: any;
+  };
 }
 
-const SavedJobsContext = createContext<SavedJobsContextType>({
-  savedJobIds: new Set(),
-  isJobSaved: () => false,
-  saveJob: async () => false,
-  unsaveJob: async () => false,
-  loading: true,
-  user: null,
-});
+type AuthChangeEvent = 'SIGNED_IN' | 'SIGNED_OUT' | 'TOKEN_REFRESHED' | 'USER_UPDATED' | 'PASSWORD_RECOVERY';
 
-export function SavedJobsProvider({ children }: { children: ReactNode }) {
-  const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
+interface SavedJob {
+  id: string;
+  job_id: string;
+  user_id: string;
+  saved_at: string;
+}
+
+interface JobListing {
+  JobID: string;
+  JobTitle: string;
+  Company: string;
+  Location: string;
+  formatted_salary: string;
+  slug: string;
+  ShortDescription: string;
+  PostedDate: string;
+  is_remote: boolean;
+  JobType: string;
+}
+
+interface SavedJobWithDetails {
+  id: string;
+  job_id: string;
+  saved_at: string;
+  job_listings_db?: JobListing;
+}
+
+interface SavedJobsContextType {
+  savedJobs: SavedJobWithDetails[];
+  loading: boolean;
+  error: string | null;
+  saveJob: (jobId: string) => Promise<boolean>;
+  removeSavedJob: (savedJobId: string) => Promise<boolean>;
+  isJobSaved: (jobId: string) => boolean;
+  refreshSavedJobs: () => Promise<void>;
+}
+
+// Create context
+const SavedJobsContext = createContext<SavedJobsContextType | undefined>(undefined);
+
+// Provider component
+export function SavedJobsProvider({ children }: { children: React.ReactNode }) {
+  const [savedJobs, setSavedJobs] = useState<SavedJobWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
-
-  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    let isMounted = true;
-
-    const initializeAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!isMounted) return;
-
-      if (session?.user) {
-        setUser(session.user);
+    // Get initial session
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        setCurrentUserId(session.user.id);
         await fetchSavedJobs(session.user.id);
       } else {
         setLoading(false);
       }
     };
 
-    initializeAuth();
+    getSession();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!isMounted) return;
-
-      if (session?.user) {
-        setUser(session.user);
-        await fetchSavedJobs(session.user.id);
-      } else {
-        setUser(null);
-        setSavedJobIds(new Set());
-        setLoading(false);
+    // Listen for auth changes with proper types
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, session: Session | null) => {
+        if (session?.user?.id) {
+          setCurrentUserId(session.user.id);
+          fetchSavedJobs(session.user.id);
+        } else {
+          setCurrentUserId(null);
+          setSavedJobs([]);
+          setLoading(false);
+        }
       }
-    });
+    );
 
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => subscription.unsubscribe();
   }, []);
 
   const fetchSavedJobs = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('saved_jobs')
-        .select('job_id')
-        .eq('user_id', userId);
+      setLoading(true);
+      setError(null);
 
-      if (error) {
-        console.error('Error fetching saved jobs:', error);
-        return;
+      const { data, error: fetchError } = await supabase
+        .from('saved_jobs')
+        .select(`
+          id,
+          job_id,
+          saved_at,
+          job_listings_db!inner (
+            JobID,
+            JobTitle,
+            Company,
+            Location,
+            formatted_salary,
+            slug,
+            ShortDescription,
+            PostedDate,
+            is_remote,
+            JobType
+          )
+        `)
+        .eq('user_id', userId)
+        .order('saved_at', { ascending: false });
+
+      if (fetchError) {
+        throw fetchError;
       }
-      if (data) {
-        const jobIds = new Set<string>(data.map((item) => item.job_id as string));
-        setSavedJobIds(jobIds);
-      }
+
+      // Transform the data to handle the nested structure with proper typing
+      const transformedJobs = data?.map((item: any) => ({
+        id: item.id,
+        job_id: item.job_id,
+        saved_at: item.saved_at,
+        job_listings_db: Array.isArray(item.job_listings_db) 
+          ? item.job_listings_db[0] 
+          : item.job_listings_db
+      })) || [];
+
+      setSavedJobs(transformedJobs);
     } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch saved jobs');
       console.error('Error fetching saved jobs:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const isJobSaved = (jobId: string): boolean => savedJobIds.has(jobId);
-
   const saveJob = async (jobId: string): Promise<boolean> => {
-    if (!user) {
-      router.push('/login');
+    if (!currentUserId) {
+      setError('User must be logged in to save jobs');
       return false;
     }
 
     try {
-      const { error } = await supabase.from('saved_jobs').insert([
-        {
-          user_id: user.id,
-          job_id: jobId,
-          saved_at: new Date().toISOString(),
-        },
-      ]);
+      setError(null);
 
-      if (error) {
-        console.error('Error saving job:', error);
+      // Check if job is already saved
+      const { data: existingJob } = await supabase
+        .from('saved_jobs')
+        .select('id')
+        .eq('user_id', currentUserId)
+        .eq('job_id', jobId)
+        .single();
+
+      if (existingJob) {
+        setError('Job is already saved');
         return false;
       }
 
-      setSavedJobIds((prev) => new Set([...prev, jobId]));
+      // Save the job
+      const { error: saveError } = await supabase
+        .from('saved_jobs')
+        .insert([
+          {
+            user_id: currentUserId,
+            job_id: jobId,
+            saved_at: new Date().toISOString()
+          }
+        ]);
+
+      if (saveError) {
+        throw saveError;
+      }
+
+      // Refresh saved jobs list
+      await fetchSavedJobs(currentUserId);
       return true;
+
     } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save job');
       console.error('Error saving job:', err);
       return false;
     }
   };
 
-  const unsaveJob = async (jobId: string): Promise<boolean> => {
-    if (!user) return false;
+  const removeSavedJob = async (savedJobId: string): Promise<boolean> => {
+    if (!currentUserId) {
+      setError('User must be logged in');
+      return false;
+    }
 
     try {
-      const { error } = await supabase
+      setError(null);
+
+      const { error: deleteError } = await supabase
         .from('saved_jobs')
         .delete()
-        .eq('user_id', user.id)
-        .eq('job_id', jobId);
+        .eq('id', savedJobId)
+        .eq('user_id', currentUserId); // Extra security check
 
-      if (error) {
-        console.error('Error unsaving job:', error);
-        return false;
+      if (deleteError) {
+        throw deleteError;
       }
 
-      setSavedJobIds((prev) => {
-        const next = new Set(prev);
-        next.delete(jobId);
-        return next;
-      });
+      // Update local state
+      setSavedJobs(prev => prev.filter(job => job.id !== savedJobId));
       return true;
+
     } catch (err) {
-      console.error('Error unsaving job:', err);
+      setError(err instanceof Error ? err.message : 'Failed to remove saved job');
+      console.error('Error removing saved job:', err);
       return false;
     }
   };
 
+  const isJobSaved = (jobId: string): boolean => {
+    return savedJobs.some(savedJob => savedJob.job_id === jobId);
+  };
+
+  const refreshSavedJobs = async (): Promise<void> => {
+    if (currentUserId) {
+      await fetchSavedJobs(currentUserId);
+    }
+  };
+
+  const value = {
+    savedJobs,
+    loading,
+    error,
+    saveJob,
+    removeSavedJob,
+    isJobSaved,
+    refreshSavedJobs
+  };
+
   return (
-    <SavedJobsContext.Provider
-      value={{
-        savedJobIds,
-        isJobSaved,
-        saveJob,
-        unsaveJob,
-        loading,
-        user,
-      }}
-    >
+    <SavedJobsContext.Provider value={value}>
       {children}
     </SavedJobsContext.Provider>
   );
 }
 
+// Hook to use the context
 export function useSavedJobs() {
   const context = useContext(SavedJobsContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useSavedJobs must be used within a SavedJobsProvider');
   }
   return context;

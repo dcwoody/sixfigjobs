@@ -1,9 +1,19 @@
-// src/components/SaveJobButton.tsx - ORIGINAL WORKING VERSION
+// src/components/SaveJobButton.tsx - FIXED VERSION
 'use client';
 
-import { useState } from 'react';
-import { Heart, Bookmark, Check, Loader2 } from 'lucide-react';
-import { useSavedJobs } from '@/hooks/useSavedJobs';
+import { useState, useEffect } from 'react';
+import { Heart, Bookmark } from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
+
+// Define types locally
+interface Session {
+  user: {
+    id: string;
+    email?: string;
+  };
+}
+
+type AuthChangeEvent = 'SIGNED_IN' | 'SIGNED_OUT' | 'TOKEN_REFRESHED' | 'USER_UPDATED' | 'PASSWORD_RECOVERY';
 
 interface SaveJobButtonProps {
   jobId: string;
@@ -15,132 +25,146 @@ interface SaveJobButtonProps {
 
 export default function SaveJobButton({ 
   jobId, 
-  variant = 'heart', 
+  variant = 'bookmark', 
   size = 'md', 
-  showText = false,
+  showText = true,
   className = ''
 }: SaveJobButtonProps) {
-  const { isJobSaved, saveJob, unsaveJob, user } = useSavedJobs();
-  const [isLoading, setIsLoading] = useState(false);
-  const [feedback, setFeedback] = useState('');
+  const [isSaved, setIsSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<Session['user'] | null>(null);
 
-  const isSaved = isJobSaved(jobId);
+  // Size classes
+  const sizeClasses = {
+    sm: 'p-1.5',
+    md: 'p-2',
+    lg: 'p-3'
+  };
 
-  const handleClick = async () => {
+  const iconSizes = {
+    sm: 'w-4 h-4',
+    md: 'w-5 h-5',
+    lg: 'w-6 h-6'
+  };
+
+  useEffect(() => {
+    // Get initial session and check if job is saved
+    const initializeButton = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        setUser(session.user);
+        await checkIfJobSaved(session.user.id);
+      }
+    };
+
+    initializeButton();
+
+    // Listen for auth changes with proper types
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event: AuthChangeEvent, session: Session | null) => {
+        if (session?.user) {
+          setUser(session.user);
+          await checkIfJobSaved(session.user.id);
+        } else {
+          setUser(null);
+          setIsSaved(false);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [jobId]);
+
+  const checkIfJobSaved = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('saved_jobs')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('job_id', jobId)
+        .single();
+
+      setIsSaved(!!data && !error);
+    } catch (error) {
+      // Job not found is expected for unsaved jobs
+      setIsSaved(false);
+    }
+  };
+
+  const handleSaveToggle = async () => {
     if (!user) {
-      setFeedback('Please sign in to save jobs');
-      setTimeout(() => setFeedback(''), 3000);
+      // Redirect to login if not authenticated
+      window.location.href = '/login';
       return;
     }
 
-    setIsLoading(true);
-    
+    setLoading(true);
+
     try {
-      let success = false;
       if (isSaved) {
-        success = await unsaveJob(jobId);
-        if (success) {
-          setFeedback('Job removed from saved');
+        // Remove from saved jobs
+        const { error } = await supabase
+          .from('saved_jobs')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('job_id', jobId);
+
+        if (!error) {
+          setIsSaved(false);
         }
       } else {
-        success = await saveJob(jobId);
-        if (success) {
-          setFeedback('Job saved!');
+        // Add to saved jobs
+        const { error } = await supabase
+          .from('saved_jobs')
+          .insert([
+            {
+              user_id: user.id,
+              job_id: jobId,
+              saved_at: new Date().toISOString()
+            }
+          ]);
+
+        if (!error) {
+          setIsSaved(true);
         }
       }
-      
-      if (!success) {
-        setFeedback('Something went wrong. Please try again.');
-      }
     } catch (error) {
-      setFeedback('Something went wrong. Please try again.');
-      console.error('Error toggling save job:', error);
+      console.error('Error toggling saved job:', error);
     } finally {
-      setIsLoading(false);
-      setTimeout(() => setFeedback(''), 3000);
+      setLoading(false);
     }
   };
 
-  const getSizeClasses = () => {
-    switch (size) {
-      case 'sm':
-        return 'w-4 h-4';
-      case 'lg':
-        return 'w-6 h-6';
-      default:
-        return 'w-5 h-5';
-    }
-  };
-
-  const getButtonClasses = () => {
-    const baseClasses = 'transition-colors duration-200 flex items-center gap-2';
-    const sizeClasses = size === 'sm' ? 'p-1' : size === 'lg' ? 'p-3' : 'p-2';
-    
-    if (variant === 'bookmark') {
-      return `${baseClasses} ${sizeClasses} rounded-lg border-2 ${
-        isSaved 
-          ? 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100' 
-          : 'bg-white border-gray-200 text-gray-400 hover:text-blue-600 hover:border-blue-200'
-      }`;
-    }
-    
-    // Heart variant
-    return `${baseClasses} ${sizeClasses} ${
-      isSaved 
-        ? 'text-red-500 hover:text-red-600' 
-        : 'text-gray-400 hover:text-red-500'
-    }`;
-  };
-
-  const getIcon = () => {
-    const iconClasses = getSizeClasses();
-    
-    if (isLoading) {
-      return <Loader2 className={`${iconClasses} animate-spin`} />;
-    }
-
-    if (variant === 'bookmark') {
-      return isSaved 
-        ? <div className="relative"><Bookmark className={`${iconClasses} fill-current`} /><Check className="w-3 h-3 absolute top-0 right-0 text-white" /></div>
-        : <Bookmark className={iconClasses} />;
-    }
-    
-    // Heart variant
-    return <Heart className={`${iconClasses} ${isSaved ? 'fill-current' : ''}`} />;
-  };
-
-  const getText = () => {
-    if (!showText) return null;
-    
-    if (variant === 'bookmark') {
-      return isSaved ? 'Saved' : 'Save Job';
-    }
-    
-    return isSaved ? 'Saved' : 'Save';
-  };
+  const Icon = variant === 'heart' ? Heart : Bookmark;
 
   return (
-    <div className="relative">
-      <button
-        onClick={handleClick}
-        disabled={isLoading}
-        className={`${getButtonClasses()} ${className} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-        title={isSaved ? 'Remove from saved jobs' : 'Save this job'}
-      >
-        {getIcon()}
-        {showText && (
-          <span className={`font-medium ${size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm'}`}>
-            {getText()}
-          </span>
-        )}
-      </button>
-      
-      {feedback && (
-        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-lg whitespace-nowrap z-10">
-          {feedback}
-          <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-800 rotate-45"></div>
-        </div>
+    <button
+      onClick={handleSaveToggle}
+      disabled={loading}
+      className={`
+        inline-flex items-center justify-center rounded-lg transition-all
+        ${sizeClasses[size]}
+        ${isSaved 
+          ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+        }
+        ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
+        ${className}
+      `}
+      title={isSaved ? 'Remove from saved jobs' : 'Save job'}
+    >
+      <Icon 
+        className={`
+          ${iconSizes[size]}
+          ${isSaved ? 'fill-current' : ''}
+        `}
+      />
+      {showText && (
+        <span className="ml-1.5 text-sm font-medium">
+          {loading ? 'Saving...' : isSaved ? 'Saved' : 'Save'}
+        </span>
       )}
-    </div>
+    </button>
   );
 }
