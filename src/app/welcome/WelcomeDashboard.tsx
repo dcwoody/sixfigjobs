@@ -1,11 +1,15 @@
-// src/app/welcome/WelcomeDashboard.tsx - SIMPLIFIED WITH SINGLE AUTH SOURCE
+// src/app/welcome/WelcomeDashboard.tsx - REVIEWED VERSION
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+// Alternative import - use your existing Supabase client types
 import { supabase } from '@/lib/supabase/client';
-import { Session } from '@supabase/supabase-js';
+
+// Define types locally if needed
+type Session = any; // You can replace with your actual session type
+type AuthChangeEvent = 'SIGNED_IN' | 'SIGNED_OUT' | 'TOKEN_REFRESHED' | 'USER_UPDATED' | 'PASSWORD_RECOVERY';
 import { 
   BookmarkIcon, 
   BriefcaseIcon, 
@@ -88,21 +92,23 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
     fetchSavedJobsWithDetails(currentUser.id);
 
     // Set up auth listener that updates session state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      console.log('Auth state changed in dashboard:', _event, newSession?.user?.email);
-      
-      if (_event === 'SIGNED_OUT' || !newSession) {
-        router.push('/login');
-      } else if (newSession) {
-        setSession(newSession);
-        // Update profile and data when session changes
-        if (newSession.user.id !== currentUser.id) {
-          fetchUserProfile(newSession.user.id);
-          fetchDashboardData(newSession.user.id);
-          fetchSavedJobsWithDetails(newSession.user.id);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, newSession: Session | null) => {
+        console.log('Auth state changed in dashboard:', _event, newSession?.user?.email);
+        
+        if (_event === 'SIGNED_OUT' || !newSession) {
+          router.push('/login');
+        } else if (newSession) {
+          setSession(newSession);
+          // Update profile and data when session changes
+          if (newSession.user.id !== currentUser.id) {
+            fetchUserProfile(newSession.user.id);
+            fetchDashboardData(newSession.user.id);
+            fetchSavedJobsWithDetails(newSession.user.id);
+          }
         }
       }
-    });
+    );
 
     return () => subscription.unsubscribe();
   }, [session.user?.id, userProfile, router]);

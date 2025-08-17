@@ -1,3 +1,4 @@
+// src/app/api/newsletter/generate-content/route.ts - REVIEWED VERSION
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -18,8 +19,10 @@ interface JobListing {
 
 export async function POST(request: NextRequest) {
   try {
+    // Authentication check
     const authHeader = request.headers.get('authorization');
     const expectedSecret = process.env.NEWSLETTER_API_SECRET;
+    
     if (!authHeader || !expectedSecret) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -30,7 +33,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    // Create Supabase client (await if needed)
+    const supabase = await createClient();
 
     // Get latest jobs for newsletter (last 7 days)
     const sevenDaysAgo = new Date();
@@ -68,7 +72,18 @@ export async function POST(request: NextRequest) {
       .select('*', { count: 'exact', head: true })
       .gte('PostedDate', sevenDaysAgo.toISOString());
 
-    const newsletter = generateNewsletterHTML(latestJobs || [], { totalJobs: totalJobs || 0, newJobs: newJobs || 0 });
+    // Generate newsletter content
+    const newsletter = generateNewsletterHTML(latestJobs || [], { 
+      totalJobs: totalJobs || 0, 
+      newJobs: newJobs || 0 
+    });
+
+    // Log the content generation
+    console.log('📝 Newsletter content generated:', {
+      jobsFound: latestJobs?.length || 0,
+      totalJobs: totalJobs || 0,
+      newJobs: newJobs || 0
+    });
 
     return NextResponse.json({
       subject: `Weekly Six-Figure Jobs - ${newJobs || 0} New Opportunities`,
@@ -79,7 +94,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Content generation error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
   }
 }
 
@@ -92,6 +110,17 @@ function generateNewsletterHTML(jobs: JobListing[], stats: { totalJobs: number; 
   });
 
   const domain = process.env.NEXT_PUBLIC_DOMAIN || 'https://yourdomain.com';
+  
+  // Helper function to safely escape HTML
+  const escapeHtml = (text: string): string => {
+    if (!text) return '';
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
   
   return `
 <!DOCTYPE html>
@@ -151,11 +180,11 @@ function generateNewsletterHTML(jobs: JobListing[], stats: { totalJobs: number; 
       
       ${jobs.length > 0 ? jobs.map(job => `
         <div class="job-card">
-          <div class="job-title">${job.JobTitle}</div>
-          <div class="job-company">${job.Company}</div>
-          <div class="job-location">${job.Location}${job.is_remote ? ' (Remote)' : ''}</div>
-          ${job.formatted_salary ? `<div class="job-salary">${job.formatted_salary}</div>` : ''}
-          <div class="job-description">${job.ShortDescription || ''}</div>
+          <div class="job-title">${escapeHtml(job.JobTitle)}</div>
+          <div class="job-company">${escapeHtml(job.Company)}</div>
+          <div class="job-location">${escapeHtml(job.Location)}${job.is_remote ? ' (Remote)' : ''}</div>
+          ${job.formatted_salary ? `<div class="job-salary">${escapeHtml(job.formatted_salary)}</div>` : ''}
+          <div class="job-description">${escapeHtml(job.ShortDescription || '')}</div>
           <a href="${domain}/jobs/${job.slug}" class="cta-button">View Job Details</a>
         </div>
       `).join('') : `
