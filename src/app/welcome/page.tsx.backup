@@ -1,0 +1,668 @@
+// src/app/welcome/page.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/';
+import { Session, User } from '@supabase/supabase-js';
+import { 
+  BookmarkIcon, 
+  BriefcaseIcon, 
+  CogIcon, 
+  UserIcon,
+  BarChart3Icon,
+  BellIcon,
+  MapPinIcon,
+  ClockIcon,
+  EyeIcon,
+  PlusIcon,
+  MailIcon,
+  CheckIcon,
+  XIcon
+} from 'lucide-react';
+
+interface UserProfile {
+  auth_user_id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  user_type: string;
+  is_newsletter_subscriber: boolean;
+  is_verified: boolean;
+}
+
+interface SavedJob {
+  id: string;
+  job_id: string;
+  saved_at: string;
+  job_listings_db?: {
+    JobID: string;
+    JobTitle: string;
+    Company: string;
+    Location: string;
+    formatted_salary: string;
+    slug: string;
+  };
+}
+
+interface JobStats {
+  total_jobs: number;
+  new_this_week: number;
+  avg_salary: string;
+}
+
+export default function WelcomePage() {
+  const router = useRouter();
+  const supabase = createClient();
+  
+  const [session, setSession] = useState<Session | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
+  const [jobStats, setJobStats] = useState<JobStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [newsletterLoading, setNewsletterLoading] = useState(false);
+  const [newsletterMessage, setNewsletterMessage] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+
+    // Get initial session
+    const initializeAuth = async () => {
+      try {
+        console.log('Initializing auth...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session error:', error);
+          if (mounted) {
+            setLoading(false);
+            router.push('/login');
+          }
+          return;
+        }
+
+        console.log('Session found:', session?.user?.email);
+        
+        if (session && mounted) {
+          setSession(session);
+          await fetchUserProfile(session.user.id);
+        } else if (!session && mounted) {
+          console.log('No session, redirecting to login');
+          setLoading(false);
+          router.push('/login');
+        }
+      } catch (error) {
+        console.error('Error in initializeAuth:', error);
+        if (mounted) {
+          setLoading(false);
+          router.push('/login');
+        }
+      }
+    };
+
+    initializeAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('Auth state changed:', _event);
+      
+      if (!mounted) return;
+      
+      if (_event === 'SIGNED_OUT') {
+        router.push('/login');
+      } else if (_event === 'SIGNED_IN' && session) {
+        setSession(session);
+        await fetchUserProfile(session.user.id);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []); // Empty dependency array - only run once
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      // First, check if user exists in users_db
+      let { data: profile, error } = await supabase
+        .from('users_db')
+        .select('*')
+        .eq('auth_user_id', userId)
+        .single();
+
+      if (error && error.code === 'PGRST116') {
+        // User doesn't exist in users_db, create them
+        console.log('Creating user profile for:', userId);
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const newProfile = {
+            auth_user_id: userId,
+            email: user.email || '',
+            first_name: user.user_metadata?.name?.split(' ')[0] || '',
+            last_name: user.user_metadata?.name?.split(' ').slice(1).join(' ') || '',
+            user_type: 'job_seeker',
+            is_newsletter_subscriber: false,
+            is_verified: true
+          };
+
+          const { data: createdProfile, error: createError } = await supabase
+            .from('users_db')
+            .insert([newProfile])
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Error creating user profile:', createError);
+            // Don't redirect to login if profile creation fails, continue anyway
+          } else {
+            profile = createdProfile;
+          }
+        }
+      } else if (error) {
+        console.error('Error fetching user profile:', error);
+      }
+
+      if (profile) {
+        setUserProfile(profile);
+        await fetchDashboardData(userId);
+      } else {
+        // Even if no profile, stop loading
+        console.log('No profile found, but continuing...');
+      }
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+    } finally {
+      // Always stop loading
+      setLoading(false);
+    }
+  };
+
+  const fetchDashboardData = async (userId: string) => {
+    try {
+      // Fetch saved jobs with job details
+      const { data: savedJobsData, error: savedJobsError } = await supabase
+        .from('saved_jobs')
+        .select(`
+          id,
+          job_id,
+          saved_at,
+          job_listings_db!inner (
+            JobID,
+            JobTitle,
+            Company,
+            Location,
+            formatted_salary,
+            slug
+          )
+        `)
+        .eq('user_id', userId)
+        .order('saved_at', { ascending: false })
+        .limit(3);
+
+      if (savedJobsError) {
+        console.error('Error fetching saved jobs:', savedJobsError);
+      } else {
+        // Transform the data to handle the nested structure
+        const transformedJobs = savedJobsData?.map((item: any) => ({
+          id: item.id,
+          job_id: item.job_id,
+          saved_at: item.saved_at,
+          job_listings_db: Array.isArray(item.job_listings_db) 
+            ? item.job_listings_db[0] 
+            : item.job_listings_db
+        })) || [];
+        setSavedJobs(transformedJobs);
+      }
+
+      // Fetch job statistics
+      const { count: totalJobs } = await supabase
+        .from('job_listings_db')
+        .select('*', { count: 'exact', head: true });
+
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      
+      const { count: newJobs } = await supabase
+        .from('job_listings_db')
+        .select('*', { count: 'exact', head: true })
+        .gte('PostedDate', oneWeekAgo.toISOString());
+
+      setJobStats({
+        total_jobs: totalJobs || 0,
+        new_this_week: newJobs || 0,
+        avg_salary: '$150K+',
+      });
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    }
+  };
+
+  const handleNewsletterToggle = async () => {
+    if (!userProfile?.auth_user_id) return;
+
+    setNewsletterLoading(true);
+    const newStatus = !userProfile.is_newsletter_subscriber;
+
+    try {
+      const { error } = await supabase
+        .from('users_db')
+        .update({ is_newsletter_subscriber: newStatus })
+        .eq('auth_user_id', userProfile.auth_user_id);
+
+      if (error) {
+        console.error('Error updating newsletter subscription:', error);
+        setNewsletterMessage('Failed to update subscription. Please try again.');
+      } else {
+        setNewsletterMessage(
+          newStatus 
+            ? '✅ Successfully subscribed to weekly job alerts!' 
+            : '📭 Unsubscribed from newsletter.'
+        );
+        
+        // Update local state
+        setUserProfile(prev => prev ? { ...prev, is_newsletter_subscriber: newStatus } : null);
+      }
+    } catch (error) {
+      console.error('Newsletter subscription error:', error);
+      setNewsletterMessage('An error occurred. Please try again.');
+    } finally {
+      setNewsletterLoading(false);
+      setTimeout(() => setNewsletterMessage(''), 3000);
+    }
+  };
+
+  const removeSavedJob = async (savedJobId: string) => {
+    try {
+      const { error } = await supabase
+        .from('saved_jobs')
+        .delete()
+        .eq('id', savedJobId);
+
+      if (!error) {
+        setSavedJobs(prev => prev.filter(job => job.id !== savedJobId));
+      }
+    } catch (error) {
+      console.error('Error removing saved job:', error);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return null; // Will redirect to login
+  }
+
+  const firstName = userProfile?.first_name || userProfile?.email?.split('@')[0] || 'there';
+  const userEmail = userProfile?.email || session.user.email;
+  const isNewsletterSubscribed = userProfile?.is_newsletter_subscriber || false;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Simple Navigation */}
+      <nav className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <Link href="/" className="text-xl font-bold text-gray-900">
+                SixFigJob
+              </Link>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Link href="/jobs" className="text-gray-700 hover:text-gray-900">
+                Browse Jobs
+              </Link>
+              <Link href="/preferences" className="text-gray-700 hover:text-gray-900">
+                Preferences
+              </Link>
+              <button
+                onClick={handleSignOut}
+                className="text-gray-700 hover:text-gray-900"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+      
+      <div className="py-8 px-4">
+        <div className="max-w-7xl mx-auto">
+          
+          {/* Header Section */}
+          <div className="mb-8">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl shadow-lg p-8 text-white">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold mb-2">
+                    Welcome back, {firstName}! 👋
+                  </h1>
+                  <p className="text-blue-100 text-lg">
+                    Ready to discover your next six-figure opportunity?
+                  </p>
+                  <p className="text-blue-200 text-sm mt-1">{userEmail}</p>
+                </div>
+                <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
+                  <Link 
+                    href="/jobs"
+                    className="inline-flex items-center px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+                  >
+                    <BriefcaseIcon className="w-5 h-5 mr-2" />
+                    Browse Jobs
+                  </Link>
+                  <button
+                    onClick={handleNewsletterToggle}
+                    disabled={newsletterLoading}
+                    className={`inline-flex items-center px-6 py-3 font-semibold rounded-lg transition-colors shadow-sm ${
+                      isNewsletterSubscribed
+                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                        : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                    } disabled:opacity-50`}
+                  >
+                    {newsletterLoading ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current mr-2"></div>
+                    ) : isNewsletterSubscribed ? (
+                      <CheckIcon className="w-5 h-5 mr-2" />
+                    ) : (
+                      <MailIcon className="w-5 h-5 mr-2" />
+                    )}
+                    {isNewsletterSubscribed ? 'Subscribed' : 'Join Newsletter'}
+                  </button>
+                </div>
+              </div>
+              
+              {/* Newsletter Message */}
+              {newsletterMessage && (
+                <div className="mt-4 p-3 bg-white/10 rounded-lg">
+                  <p className="text-white text-sm">{newsletterMessage}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Stats Overview */}
+          {jobStats && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center">
+                  <div className="p-3 bg-blue-100 rounded-lg">
+                    <BriefcaseIcon className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">{jobStats.total_jobs.toLocaleString()}</p>
+                    <p className="text-gray-600">Total Jobs Available</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center">
+                  <div className="p-3 bg-green-100 rounded-lg">
+                    <PlusIcon className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">{jobStats.new_this_week}</p>
+                    <p className="text-gray-600">New This Week</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center">
+                  <div className="p-3 bg-yellow-100 rounded-lg">
+                    <BarChart3Icon className="w-6 h-6 text-yellow-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">{jobStats.avg_salary}</p>
+                    <p className="text-gray-600">Average Salary</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            {/* Main Content Area */}
+            <div className="lg:col-span-2 space-y-6">
+              
+              {/* Recently Saved Jobs */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                    <BookmarkIcon className="w-5 h-5 mr-2 text-blue-600" />
+                    Recently Saved Jobs
+                  </h2>
+                  <Link 
+                    href="/saved" 
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  >
+                    View All
+                  </Link>
+                </div>
+
+                {savedJobs.length > 0 ? (
+                  <div className="space-y-4">
+                    {savedJobs.map((savedJob) => {
+                      const job = savedJob.job_listings_db;
+                      if (!job) return null;
+                      
+                      return (
+                        <div key={savedJob.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between">
+                                <Link 
+                                  href={`/jobs/${job.slug}`}
+                                  className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                                >
+                                  {job.JobTitle}
+                                </Link>
+                                <button
+                                  onClick={() => removeSavedJob(savedJob.id)}
+                                  className="text-gray-400 hover:text-red-500 transition-colors ml-2"
+                                  title="Remove from saved jobs"
+                                >
+                                  <XIcon className="w-5 h-5" />
+                                </button>
+                              </div>
+                              <p className="text-gray-600 flex items-center mt-1">
+                                <BriefcaseIcon className="w-4 h-4 mr-1" />
+                                {job.Company}
+                              </p>
+                              <div className="flex items-center text-sm text-gray-500 mt-2 space-x-4">
+                                <span className="flex items-center">
+                                  <MapPinIcon className="w-4 h-4 mr-1" />
+                                  {job.Location}
+                                </span>
+                                <span className="flex items-center">
+                                  <ClockIcon className="w-4 h-4 mr-1" />
+                                  Saved {new Date(savedJob.saved_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right ml-4">
+                              <p className="text-lg font-bold text-green-600">{job.formatted_salary}</p>
+                              <Link 
+                                href={`/jobs/${job.slug}`}
+                                className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center mt-1"
+                              >
+                                <EyeIcon className="w-4 h-4 mr-1" />
+                                View Details
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <BookmarkIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No saved jobs yet</h3>
+                    <p className="text-gray-600 mb-4">Start browsing and save jobs you're interested in!</p>
+                    <Link 
+                      href="/jobs"
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <BriefcaseIcon className="w-4 h-4 mr-2" />
+                      Browse Jobs
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Job Recommendations */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <BarChart3Icon className="w-5 h-5 mr-2 text-blue-600" />
+                  Recommended for You
+                </h2>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-blue-800 mb-3">
+                    Set up your job preferences to get personalized recommendations!
+                  </p>
+                  <Link 
+                    href="/preferences"
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <CogIcon className="w-4 h-4 mr-2" />
+                    Set Preferences
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              
+              {/* Quick Actions */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <div className="space-y-3">
+                  <Link 
+                    href="/saved" 
+                    className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <BookmarkIcon className="w-5 h-5 text-blue-600 mr-3" />
+                    <div>
+                      <p className="font-medium text-gray-900">Saved Jobs</p>
+                      <p className="text-sm text-gray-600">View your bookmarked positions</p>
+                    </div>
+                  </Link>
+
+                  <Link 
+                    href="/preferences" 
+                    className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <CogIcon className="w-5 h-5 text-blue-600 mr-3" />
+                    <div>
+                      <p className="font-medium text-gray-900">Job Preferences</p>
+                      <p className="text-sm text-gray-600">Set your ideal role criteria</p>
+                    </div>
+                  </Link>
+
+                  <Link 
+                    href="/settings" 
+                    className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <UserIcon className="w-5 h-5 text-blue-600 mr-3" />
+                    <div>
+                      <p className="font-medium text-gray-900">Account Settings</p>
+                      <p className="text-sm text-gray-600">Update your profile details</p>
+                    </div>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Newsletter Management */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <BellIcon className="w-5 h-5 mr-2 text-blue-600" />
+                  Weekly Newsletter
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">Job Alerts</p>
+                      <p className="text-sm text-gray-600">Get weekly premium job updates</p>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      isNewsletterSubscribed 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {isNewsletterSubscribed ? 'Subscribed' : 'Not subscribed'}
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={handleNewsletterToggle}
+                    disabled={newsletterLoading}
+                    className={`w-full px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 ${
+                      isNewsletterSubscribed
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
+                  >
+                    {newsletterLoading ? 'Updating...' : (
+                      isNewsletterSubscribed ? 'Unsubscribe' : 'Subscribe Now'
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Profile Completion */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Profile Completion</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Basic info</span>
+                    <span className="text-green-600 font-medium">✓ Complete</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Newsletter subscription</span>
+                    <span className={`font-medium ${isNewsletterSubscribed ? 'text-green-600' : 'text-gray-400'}`}>
+                      {isNewsletterSubscribed ? '✓ Complete' : 'Optional'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Job preferences</span>
+                    <Link href="/preferences" className="text-blue-600 font-medium">Set up →</Link>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                      style={{width: `${isNewsletterSubscribed ? '75%' : '50%'}`}}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    {isNewsletterSubscribed ? '75%' : '50%'} complete
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
