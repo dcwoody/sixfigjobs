@@ -16,175 +16,265 @@ export default async function HomePage() {
   const totalCompanies = companiesData.count || 0;
 
   // Calculate average salary from real data
-  const salaries = jobsData.data?.filter(job => job.formatted_salary).map(job => {
+  const salaries = jobsData.data?.filter((job: any) => job.formatted_salary).map((job: any) => {
     const salary = job.formatted_salary.replace(/[^\d]/g, '');
     return parseInt(salary);
-  }).filter(salary => salary > 50000) || [];
+  }).filter((salary: number) => salary > 50000) || [];
 
   const avgSalary = salaries.length > 0
-    ? Math.round(salaries.reduce((a, b) => a + b, 0) / salaries.length)
+    ? Math.round(salaries.reduce((a: number, b: number) => a + b, 0) / salaries.length)
     : 150000;
 
-  const remoteJobs = jobsData.data?.filter(job => job.is_remote).length || 0;
-  const remotePercentage = totalJobs > 0 ? Math.round((remoteJobs / totalJobs) * 100) : 10;
+  const remoteJobs = jobsData.data?.filter((job: any) => job.is_remote).length || 0;
+  const remotePercentage = totalJobs > 0 ? Math.round((remoteJobs / totalJobs) * 100) : 0;
+
+  // Get featured jobs
+  const { data: featuredJobs } = await supabase
+    .from('job_listings_db')
+    .select('*')
+    .order('PostedDate', { ascending: false })
+    .limit(3);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50">
+    <div className="min-h-screen bg-white">
+
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-blue-600 to-purple-700 overflow-hidden">
-        <div className="absolute inset-0 bg-black opacity-10"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-20 pb-32">
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.1),transparent_70%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(168,85,247,0.1),transparent_70%)]" />
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <div className="flex items-center justify-center mb-6">
-              <Briefcase className="w-16 h-16 text-white mr-4" />
-              <h1 className="text-4xl lg:text-6xl font-bold text-white">
-                Six-Figure Career Opportunities
-              </h1>
+            {/* Badge */}
+            <div className="inline-flex items-center bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 mb-8 shadow-sm border border-white/20">
+              <Sparkles className="w-4 h-4 text-blue-600 mr-2" />
+              <span className="text-sm font-medium text-gray-700">Join {totalJobs.toLocaleString()}+ Premium Opportunities</span>
             </div>
-            <h2 className="text-xl lg:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto">
-              Find Your Next
-            </h2>
-            <p className="text-lg text-blue-100 mb-12 max-w-2xl mx-auto">
-              Discover high-paying opportunities at top companies.{totalJobs.toLocaleString()} active positions waiting for talented professionals like you.
+
+            {/* Main Headline */}
+            <h1 className="text-5xl md:text-7xl font-bold mb-8">
+              <span className="bg-gradient-to-r from-gray-900 via-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Six-Figure
+              </span>
+              <br />
+              <span className="text-gray-900">Career Opportunities</span>
+            </h1>
+
+            {/* Subheadline */}
+            <p className="text-xl md:text-2xl text-gray-600 max-w-4xl mx-auto mb-12 leading-relaxed">
+              Connect with top companies offering $100K+ positions. Your next breakthrough is waiting.
             </p>
-            
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-              <Link 
-                href="/jobs" 
-                className="flex items-center px-8 py-4 bg-white text-blue-600 rounded-lg font-semibold text-lg hover:bg-blue-50 transition-all duration-200 shadow-lg"
-              >
-                <Search className="w-5 h-5 mr-2" />
-                Browse {totalJobs.toLocaleString()} Jobs
-              </Link>
-              <Link 
-                href="/companies" 
-                className="flex items-center px-8 py-4 bg-transparent border-2 border-white text-white rounded-lg font-semibold text-lg hover:bg-white hover:text-blue-600 transition-all duration-200"
-              >
-                <Building2 className="w-5 h-5 mr-2" />
-                View Companies
-              </Link>
+
+            {/* Search Bar */}
+            <div className="max-w-4xl mx-auto mb-12">
+              <form action="/jobs" method="GET" className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      name="q"
+                      placeholder="Job title, keywords, or company"
+                      className="w-full pl-12 pr-4 py-4 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none text-gray-700 placeholder-gray-500"
+                    />
+                  </div>
+                  <div className="flex-1 relative">
+                    <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      name="location"
+                      placeholder="City, state, or remote"
+                      className="w-full pl-12 pr-4 py-4 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none text-gray-700 placeholder-gray-500"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                  >
+                    Find Jobs
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-white/20">
+                <div className="text-3xl font-bold text-blue-600 mb-1">{totalJobs.toLocaleString()}</div>
+                <div className="text-gray-600 text-sm">Active Jobs</div>
+              </div>
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-white/20">
+                <div className="text-3xl font-bold text-green-600 mb-1">${Math.round(avgSalary / 1000)}K+</div>
+                <div className="text-gray-600 text-sm">Avg. Salary</div>
+              </div>
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-white/20">
+                <div className="text-3xl font-bold text-purple-600 mb-1">{totalCompanies}</div>
+                <div className="text-gray-600 text-sm">Companies</div>
+              </div>
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-white/20">
+                <div className="text-3xl font-bold text-orange-600 mb-1">{remotePercentage}%</div>
+                <div className="text-gray-600 text-sm">Remote Jobs</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Stats Section */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-blue-600">{totalJobs.toLocaleString()}</div>
-              <div className="text-gray-600">Active Jobs</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-green-600">${Math.round(avgSalary/1000)}K</div>
-              <div className="text-gray-600">Avg Salary</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-purple-600">{totalCompanies}</div>
-              <div className="text-gray-600">Companies</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-orange-600">{remotePercentage}%</div>
-              <div className="text-gray-600">Remote</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Why Choose SixFigHires Section */}
-      <div className="bg-gray-50 py-20">
+      {/* Features Section */}
+      <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Why Choose SixFigHires?
-            </h2>
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">Why Choose SixFigHires?</h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              We specialize in connecting talented professionals with premium career opportunities
+              We connect ambitious professionals with premium opportunities at top-tier companies.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {/* Feature 1 */}
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <DollarSign className="w-8 h-8 text-blue-600" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-200">
+                <TrendingUp className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Six-Figure Focus</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Premium Positions</h3>
               <p className="text-gray-600">
-                Every position pays $100K+ annually. No time wasted on low-paying opportunities.
+                Access exclusive six-figure opportunities from Fortune 500 companies and fast-growing startups.
               </p>
             </div>
 
-            {/* Feature 2 */}
-            <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Building2 className="w-8 h-8 text-green-600" />
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-200">
+                <CheckCircle className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Top Companies</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Verified Companies</h3>
               <p className="text-gray-600">
-                Fortune 500s, unicorns, and growing companies that value talent and pay accordingly.
+                All companies are thoroughly vetted to ensure legitimate opportunities and competitive compensation.
               </p>
             </div>
 
-            {/* Feature 3 */}
-            <div className="text-center">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Globe className="w-8 h-8 text-purple-600" />
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-200">
+                <Globe className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">Remote Friendly</h3>
               <p className="text-gray-600">
-                {remotePercentage}% of our positions offer remote work options for the best work-life balance.
+                {remotePercentage}% of our positions offer remote or hybrid work options for maximum flexibility.
               </p>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Newsletter Section */}
-      <div className="bg-white py-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              <Sparkles className="w-8 h-8 inline mr-2 text-yellow-500" />
-              Weekly Job Alerts
-            </h2>
-            <p className="text-xl text-gray-600">
-              Get the best six-figure opportunities delivered to your inbox every week
-            </p>
-          </div>
-          <NewsletterSignup />
-        </div>
-      </div>
+      {/* Featured Jobs */}
+      {featuredJobs && featuredJobs.length > 0 && (
+        <section className="py-24 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold text-gray-900 mb-6">Featured Opportunities</h2>
+              <p className="text-xl text-gray-600">
+                Hand-picked positions from our top partner companies
+              </p>
+            </div>
 
-      {/* CTA Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-700 py-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
-            Ready to Find Your Dream Job?
-          </h2>
-          <p className="text-xl text-blue-100 mb-12 max-w-2xl mx-auto">
-            Join thousands of professionals who've found six-figure careers through our platform
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link 
-              href="/jobs" 
-              className="inline-flex items-center px-8 py-4 bg-white text-blue-600 rounded-lg font-semibold text-lg hover:bg-blue-50 transition-all duration-200 shadow-lg"
-            >
-              Start Your Search
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Link>
-            <Link 
-              href="/companies" 
-              className="inline-flex items-center px-8 py-4 bg-transparent border-2 border-white text-white rounded-lg font-semibold text-lg hover:bg-white hover:text-blue-600 transition-all duration-200"
-            >
-              Browse Companies
-              <Building2 className="w-5 h-5 ml-2" />
-            </Link>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {featuredJobs.map((job: any) => (
+                <div key={job.JobID} className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 hover:shadow-xl transition-shadow duration-200 group">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">
+                        {job.Company.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    {job.is_remote && (
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                        Remote
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                    {job.JobTitle}
+                  </h3>
+                  <p className="text-blue-600 font-medium mb-4">{job.Company}</p>
+
+                  <div className="flex items-center text-gray-600 text-sm mb-4">
+                    <MapPin className="w-4 h-4 mr-2" />
+                    {job.Location}
+                  </div>
+
+                  <div className="flex items-center text-green-600 font-bold text-lg mb-4">
+                    <DollarSign className="w-5 h-5" />
+                    {job.formatted_salary || 'Competitive'}
+                  </div>
+
+                  <p className="text-gray-600 mb-6 line-clamp-3">{job.ShortDescription}</p>
+
+                  <Link
+                    href={`/jobs/${job.slug}`}
+                    className="inline-flex items-center text-blue-600 font-semibold hover:text-blue-700 transition-colors"
+                  >
+                    View Details <ArrowRight className="w-4 h-4 ml-2" />
+                  </Link>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-center mt-12">
+              <Link
+                href="/jobs"
+                className="inline-flex items-center px-8 py-4 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors transform hover:scale-105"
+              >
+                View All Jobs <ArrowRight className="w-5 h-5 ml-2" />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Newsletter Signup */}
+      <NewsletterSignup />
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="col-span-1 md:col-span-2">
+              <div className="flex items-center space-x-2 mb-6">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
+                  <Briefcase className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold">SixFigHires</span>
+              </div>
+              <p className="text-gray-400 mb-6 max-w-md">
+                Your premier destination for six-figure career opportunities. Connect with top companies and advance your career.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
+              <ul className="space-y-2 text-gray-400">
+                <li><Link href="/jobs" className="hover:text-white transition-colors">Browse Jobs</Link></li>
+                <li><Link href="/companies" className="hover:text-white transition-colors">Companies</Link></li>
+                <li><Link href="/login" className="hover:text-white transition-colors">Sign In</Link></li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Support</h3>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
+            <p>&copy; 2024 SixFigHires. All rights reserved.</p>
           </div>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }
