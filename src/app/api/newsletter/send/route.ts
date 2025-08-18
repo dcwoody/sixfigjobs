@@ -7,7 +7,7 @@ import { Resend } from 'resend';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-// Conditional instantiation to avoid build errors
+// Lazy factory — only reads env when called (not at build time)
 const getResendClient = () => {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -29,27 +29,25 @@ interface SendResult {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check API key first
+    // --- Ensure email provider key exists ---
     if (!process.env.RESEND_API_KEY) {
-      return NextResponse.json({ 
-        error: 'RESEND_API_KEY not configured' 
-      }, { status: 500 });
+      return NextResponse.json(
+        { error: 'RESEND_API_KEY not configured' },
+        { status: 500 }
+      );
     }
 
-    // Verify API key or admin authentication
-    const authHeader = request.headers.get('authorization');
+    // --- Auth guard (Bearer <token>) ---
     const expectedSecret = process.env.NEWSLETTER_API_SECRET;
-    if (!authHeader || !expectedSecret) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    if (token !== expectedSecret) {
+    const authHeader = request.headers.get('authorization') ?? '';
+    const [scheme, token] = authHeader.split(' ');
+    if (!expectedSecret || scheme !== 'Bearer' || !token || token !== expectedSecret) {
       console.log('Auth failed:', { received: token, expected: expectedSecret });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Create Supabase client using standard server pattern
+    // --- Supabase server client ---
+    // NOTE: In your environment, cookies() returns a Promise, so await it:
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -63,7 +61,7 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Get all newsletter subscribers
+    // --- Fetch verified newsletter subscribers ---
     const { data: subscribers, error } = await supabase
       .from('users_db')
       .select('email, first_name')
@@ -79,65 +77,77 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'No subscribers found' }, { status: 200 });
     }
 
-    // Get request body for email content
-    const { subject, htmlContent } = await request.json();
+    // --- Parse request body safely ---
+    const body = await request.json().catch(() => ({} as any));
+    const subject: string | undefined = body?.subject;
+    const htmlContent: string | undefined = body?.htmlContent;
 
     if (!subject || !htmlContent) {
-      return NextResponse.json({ error: 'Subject and htmlContent are required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Subject and htmlContent are required' },
+        { status: 400 }
+      );
     }
 
-    // Only instantiate Resend when actually sending
+    // --- Prepare stable site URL for headers/links ---
+    const siteUrl =
+      process.env.SITE_URL?.replace(/\/+$/, '') ||
+      process.env.NEXT_PUBLIC_DOMAIN?.replace(/\/+$/, '') ||
+      'https://sixfigjob.com';
+
+    // --- Resend client (runtime) ---
     const resend = getResendClient();
 
-    // Send newsletter to all subscribers
-    const emailPromises = subscribers.map(async (subscriber: Subscriber): Promise<SendResult> => {
-      try {
-        const personalizedContent = htmlContent.replace(
-          '{{firstName}}',
-          subscriber.first_name || 'there'
-        ).replace(
-          '{{email}}',
-          subscriber.email
-        );
+    // --- Send newsletter (parallel) ---
+    const results = await Promise.all(
+      subscribers.map(async (subscriber: Subscriber): Promise<SendResult> => {
+        try {
+          const personalizedContent = htmlContent
+            .replace('{{firstName}}', subscriber.first_name || 'there')
+            .replace('{{email}}', subscriber.email);
 
-        await resend.emails.send({
-          from: process.env.NEWSLETTER_FROM_EMAIL || 'JobBoard <newsletter@yourdomain.com>',
-          to: subscriber.email,
-          subject: subject,
-          html: personalizedContent,
-          headers: {
-            'List-Unsubscribe': `<${process.env.NEXT_PUBLIC_DOMAIN || 'https://yourdomain.com'}/unsubscribe?email=${encodeURIComponent(subscriber.email)}>`,
-          },
-        });
+          await resend.emails.send({
+            from: process.env.NEWSLETTER_FROM_EMAIL || 'JobBoard <newsletter@sixfigjob.com>',
+            to: subscriber.email,
+            subject,
+            html: personalizedContent,
+            headers: {
+              'List-Unsubscribe': `<${siteUrl}/unsubscribe?email=${encodeURIComponent(
+                subscriber.email
+              )}>`,
+            },
+          });
 
-        return { email: subscriber.email, status: 'sent' };
-      } catch (error) {
-        console.error(`Failed to send to ${subscriber.email}:`, error);
-        return {
-          email: subscriber.email,
-          status: 'failed',
-          error: error instanceof Error ? error.message : 'Unknown error'
-        };
-      }
-    });
+          return { email: subscriber.email, status: 'sent' };
+        } catch (err) {
+          console.error(`Failed to send to ${subscriber.email}:`, err);
+          return {
+            email: subscriber.email,
+            status: 'failed',
+            error: err instanceof Error ? err.message : 'Unknown error',
+          };
+        }
+      })
+    );
 
-    const results = await Promise.all(emailPromises);
-    const sent = results.filter((r: SendResult) => r.status === 'sent').length;
-    const failed = results.filter((r: SendResult) => r.status === 'failed').length;
+    const sent = results.filter((r) => r.status === 'sent').length;
+    const failed = results.length - sent;
 
     return NextResponse.json({
       success: true,
       totalSubscribers: subscribers.length,
       sent,
       failed,
-      results
+      results,
     });
-
   } catch (error) {
     console.error('Newsletter send error:', error);
-    return NextResponse.json({ 
-      error: 'Failed to send newsletter',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: 'Failed to send newsletter',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
 }

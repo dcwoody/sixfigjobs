@@ -1,4 +1,4 @@
-// Fix for src/app/api/newsletter/test-send/route.ts
+// src/app/api/newsletter/test/route.ts
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 

@@ -1,6 +1,9 @@
 // src/app/companies/[slug]/page.tsx
 import React from 'react';
 import Link from 'next/link';
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 import { notFound } from 'next/navigation';
 import { MapPin, Users, Calendar, Building, Star, ExternalLink, DollarSign } from 'lucide-react';
 import { loadCompanyData, loadJobData } from '@/lib/data';

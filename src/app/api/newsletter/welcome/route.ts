@@ -1,4 +1,4 @@
-// src/app/api/newsletter/welcome/route.ts - FIXED VERSION
+// src/app/api/newsletter/welcome/route.ts
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -13,15 +13,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    // Validate API key
-    if (!process.env.RESEND_API_KEY) {
+    // Check for API key at runtime, not build time
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.error('RESEND_API_KEY is not configured in environment variables');
       return NextResponse.json({ 
-        error: 'Email service not configured' 
+        error: 'Email service not configured. Please check server configuration.' 
       }, { status: 500 });
     }
 
-    // Initialize Resend inside the function
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    // Initialize Resend only when we have the API key
+    const resend = new Resend(apiKey);
 
     const welcomeHTML = `
 <!DOCTYPE html>
@@ -53,56 +55,44 @@ export async function POST(request: NextRequest) {
     <div class="content">
       <div class="welcome-message">
         <p>Hi ${firstName || 'there'},</p>
-        <p>Thank you for subscribing to our weekly six-figure jobs newsletter! You've just joined thousands of ambitious professionals who are serious about advancing their careers.</p>
+        <p>Thank you for subscribing to our weekly six-figure jobs newsletter!</p>
+        
+        <div class="feature-list">
+          <div class="feature">
+            <div class="feature-icon"></div>
+            <div>
+              <strong>Weekly Updates:</strong> Every week, we'll send you the latest high-paying job opportunities from top companies.
+            </div>
+          </div>
+          
+          <div class="feature">
+            <div class="feature-icon"></div>
+            <div>
+              <strong>Curated Jobs:</strong> Only positions with $100K+ compensation packages.
+            </div>
+          </div>
+          
+          <div class="feature">
+            <div class="feature-icon"></div>
+            <div>
+              <strong>Direct Links:</strong> Apply directly through company career pages.
+            </div>
+          </div>
+        </div>
+        
+        <p>Your first newsletter will arrive this Friday with the latest opportunities!</p>
+        
+        <a href="${process.env.NEXT_PUBLIC_DOMAIN || 'https://sixfigjob.com'}" class="cta-button">
+          Browse Current Jobs
+        </a>
       </div>
-
-      <div class="feature-list">
-        <div class="feature">
-          <div class="feature-icon"></div>
-          <div>
-            <h3>Curated Opportunities</h3>
-            <p>Hand-picked jobs paying $100K+ from top companies across various industries</p>
-          </div>
-        </div>
-        
-        <div class="feature">
-          <div class="feature-icon"></div>
-          <div>
-            <h3>Weekly Delivery</h3>
-            <p>Fresh opportunities delivered every Monday morning to start your week right</p>
-          </div>
-        </div>
-        
-        <div class="feature">
-          <div class="feature-icon"></div>
-          <div>
-            <h3>Career Insights</h3>
-            <p>Salary trends, interview tips, and career advancement strategies</p>
-          </div>
-        </div>
-        
-        <div class="feature">
-          <div class="feature-icon"></div>
-          <div>
-            <h3>No Spam Promise</h3>
-            <p>Quality over quantity. Unsubscribe anytime with one click</p>
-          </div>
-        </div>
-      </div>
-
-      <p>Your first newsletter will arrive next Monday. In the meantime, feel free to browse our current job listings:</p>
-      
-      <a href="${process.env.NEXT_PUBLIC_DOMAIN || 'https://yourdomain.com'}/jobs" class="cta-button">Browse Current Jobs</a>
-      
-      <p>Welcome aboard!</p>
-      <p>The SixFigHires Team</p>
     </div>
     
     <div class="footer">
-      <p>You're receiving this because you subscribed to our newsletter at ${process.env.NEXT_PUBLIC_DOMAIN || 'yourdomain.com'}</p>
+      <p>You're receiving this because you subscribed at SixFigHires.</p>
       <p>
-        <a href="${process.env.NEXT_PUBLIC_DOMAIN || 'https://yourdomain.com'}/unsubscribe?email=${encodeURIComponent(email)}">Unsubscribe</a> | 
-        <a href="${process.env.NEXT_PUBLIC_DOMAIN || 'https://yourdomain.com'}">Visit Website</a>
+        <a href="${process.env.NEXT_PUBLIC_DOMAIN || 'https://sixfigjob.com'}/unsubscribe?email=${encodeURIComponent(email)}">Unsubscribe</a> | 
+        <a href="${process.env.NEXT_PUBLIC_DOMAIN || 'https://sixfigjob.com'}/preferences">Update Preferences</a>
       </p>
     </div>
   </div>
@@ -111,16 +101,22 @@ export async function POST(request: NextRequest) {
     `;
 
     await resend.emails.send({
-      from: process.env.NEWSLETTER_FROM_EMAIL || 'SixFigHires <welcome@yourdomain.com>',
+      from: process.env.NEWSLETTER_FROM_EMAIL || 'JobBoard <newsletter@sixfigjob.com>',
       to: email,
-      subject: '🎉 Welcome to Six-Figure Jobs Newsletter!',
+      subject: 'Welcome to SixFigHires - Your Weekly Six-Figure Jobs Newsletter!',
       html: welcomeHTML,
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      message: 'Welcome email sent successfully' 
+    });
 
   } catch (error) {
     console.error('Welcome email error:', error);
-    return NextResponse.json({ error: 'Failed to send welcome email' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to send welcome email',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
