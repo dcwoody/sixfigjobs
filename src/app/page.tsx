@@ -38,34 +38,74 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-white">
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-20 pb-32">
+      {/* Hero Section - Dark Theme */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 pt-20 pb-32">
+        {/* Background Effects */}
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.1),transparent_70%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(168,85,247,0.1),transparent_70%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(59,130,246,0.3),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(168,85,247,0.3),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_40%_80%,rgba(34,197,94,0.2),transparent_50%)]" />
+        </div>
+
+        {/* Animated Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div
+            className="absolute inset-0 animate-[float_20s_ease-in-out_infinite]"
+            style={{
+              backgroundImage: `radial-gradient(circle at 25% 25%, white 2px, transparent 2px)`,
+              backgroundSize: '60px 60px'
+            }}
+          />
+        </div>
+
+        {/* Floating Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+          <div className="absolute top-3/4 right-1/4 w-1 h-1 bg-purple-400 rounded-full animate-ping" />
+          <div className="absolute top-1/2 right-1/3 w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '1000ms' }} />
+          <div className="absolute bottom-1/4 left-1/3 w-1 h-1 bg-yellow-400 rounded-full animate-ping" style={{ animationDelay: '500ms' }} />
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             {/* Badge */}
-            <div className="inline-flex items-center bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 mb-8 shadow-sm border border-white/20">
-              <Sparkles className="w-4 h-4 text-blue-600 mr-2" />
-              <span className="text-sm font-medium text-gray-700">Join {totalJobs.toLocaleString()}+ Premium Opportunities</span>
+            <div className="inline-flex items-center bg-blue-500/20 backdrop-blur-sm rounded-full px-6 py-3 mb-8 shadow-lg border border-blue-400/30">
+              <Sparkles className="w-5 h-5 text-blue-300 mr-2" />
+              <span className="text-sm font-medium text-blue-100">Join {totalJobs.toLocaleString()}+ Opportuntiies Await!</span>
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-5xl md:text-7xl font-bold mb-8">
-              <span className="bg-gradient-to-r from-gray-900 via-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Six-Figure
+            <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight">
+              <span className="block text-white mb-4">Unlock Your</span>
+              <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-green-400 bg-clip-text text-transparent">
+                Six-Figure Future
               </span>
-              <br />
-              <span className="text-gray-900">Career Opportunities</span>
             </h1>
 
             {/* Subheadline */}
-            <p className="text-xl md:text-2xl text-gray-600 max-w-4xl mx-auto mb-12 leading-relaxed">
+            <p className="text-xl md:text-2xl text-gray-300 max-w-4xl mx-auto mb-12 leading-relaxed">
               Connect with top companies offering $100K+ positions. Your next breakthrough is waiting.
             </p>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
+              <Link
+                href="/jobs"
+                className="group inline-flex items-center bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold py-4 px-8 rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+              >
+                <Briefcase className="w-6 h-6 mr-2" />
+                Explore $100K+ Jobs
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Link>
+
+              <Link
+                href="/companies"
+                className="inline-flex items-center bg-white/10 backdrop-blur-sm text-white font-semibold py-4 px-8 rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300"
+              >
+                <Building2 className="w-6 h-6 mr-2" />
+                Top Companies
+              </Link>
+            </div>
 
             {/* Search Bar */}
             <div className="max-w-4xl mx-auto mb-12">
@@ -99,25 +139,6 @@ export default async function HomePage() {
               </form>
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-white/20">
-                <div className="text-3xl font-bold text-blue-600 mb-1">{totalJobs.toLocaleString()}</div>
-                <div className="text-gray-600 text-sm">Active Jobs</div>
-              </div>
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-white/20">
-                <div className="text-3xl font-bold text-green-600 mb-1">${Math.round(avgSalary / 1000)}K+</div>
-                <div className="text-gray-600 text-sm">Avg. Salary</div>
-              </div>
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-white/20">
-                <div className="text-3xl font-bold text-purple-600 mb-1">{totalCompanies}</div>
-                <div className="text-gray-600 text-sm">Companies</div>
-              </div>
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-white/20">
-                <div className="text-3xl font-bold text-orange-600 mb-1">{remotePercentage}%</div>
-                <div className="text-gray-600 text-sm">Remote Jobs</div>
-              </div>
-            </div>
           </div>
         </div>
       </section>

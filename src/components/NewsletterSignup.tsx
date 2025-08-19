@@ -128,7 +128,7 @@ export default function NewsletterSignup() {
     return (
       <section id="newsletter" className="bg-gray-900 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto text-center">
+          <div className="max-w-3xl mx-auto text-center">
             <div className="bg-green-600 rounded-2xl p-8 text-white">
               <CheckCircle className="w-16 h-16 mx-auto mb-4" />
               <h2 className="text-3xl font-bold mb-4">Welcome to the team! 🎉</h2>
@@ -158,7 +158,7 @@ export default function NewsletterSignup() {
   return (
     <section id="newsletter" className="bg-gray-900 py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-1xl mx-auto">
           
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             

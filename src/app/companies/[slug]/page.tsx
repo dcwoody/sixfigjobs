@@ -3,6 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+import Footer from "@/components/Footer"
 
 import { notFound } from 'next/navigation';
 import { MapPin, Users, Calendar, Building, Star, ExternalLink, DollarSign } from 'lucide-react';
@@ -225,6 +226,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
           </div>
         </div>
       </div>
+<Footer />      
     </div>
   );
 }
