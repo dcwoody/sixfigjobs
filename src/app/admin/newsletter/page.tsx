@@ -73,7 +73,11 @@ class ErrorBoundary extends React.Component<
 }
 
 function AdminNewsletterContent() {
-  const [stats, setStats] = useState<NewsletterStats>({ totalSubscribers: 0, totalSent: 0, lastSentDate: null });
+  const [stats, setStats] = useState<NewsletterStats>({ 
+    totalSubscribers: 0, 
+    totalSent: 0, 
+    lastSentDate: null 
+  });
   const [preview, setPreview] = useState<NewsletterPreview | null>(null);
   const [loading, setLoading] = useState(false);
   const [sendStatus, setSendStatus] = useState('');
@@ -121,16 +125,25 @@ function AdminNewsletterContent() {
 
       if (response.ok) {
         const data = await response.json();
-        setStats(data);
+        // Ensure we have valid data with fallbacks
+        setStats({
+          totalSubscribers: data.totalSubscribers || 0,
+          totalSent: data.totalSent || 0,
+          lastSentDate: data.lastSentDate || null
+        });
         setSendStatus('✅ Stats loaded successfully');
       } else {
         const errorText = await response.text();
         console.error('Stats fetch failed:', response.status, errorText);
         setSendStatus(`❌ Failed to fetch stats: ${response.status}`);
+        // Keep default values if fetch fails
+        setStats({ totalSubscribers: 0, totalSent: 0, lastSentDate: null });
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
       setSendStatus(`❌ Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Keep default values if fetch fails
+      setStats({ totalSubscribers: 0, totalSent: 0, lastSentDate: null });
     }
   };
 
@@ -186,7 +199,7 @@ function AdminNewsletterContent() {
     }
 
     const confirmed = window.confirm(
-      `Are you sure you want to send this newsletter to ${stats.totalSubscribers} subscribers? This cannot be undone.`
+      `Are you sure you want to send this newsletter to ${stats?.totalSubscribers || 0} subscribers? This cannot be undone.`
     );
 
     if (!confirmed) return;
@@ -322,7 +335,7 @@ function AdminNewsletterContent() {
               <Users className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Subscribers</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalSubscribers.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">{(stats?.totalSubscribers || 0).toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -332,7 +345,7 @@ function AdminNewsletterContent() {
               <Mail className="h-8 w-8 text-green-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Sent</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalSent.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">{(stats?.totalSent || 0).toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -343,7 +356,7 @@ function AdminNewsletterContent() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Last Sent</p>
                 <p className="text-lg font-bold text-gray-900">
-                  {stats.lastSentDate ? new Date(stats.lastSentDate).toLocaleDateString() : 'Never'}
+                  {stats?.lastSentDate ? new Date(stats.lastSentDate).toLocaleDateString() : 'Never'}
                 </p>
               </div>
             </div>
