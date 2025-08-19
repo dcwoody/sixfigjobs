@@ -1,26 +1,13 @@
-// src/app/admin/newsletter/page.tsx
+// src/app/admin/newsletter/page.tsx - FIXED VERSION
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Mail,
-  Users,
-  Send,
-  Calendar,
-  TrendingUp,
-  Download,
-  RefreshCw,
-  Eye,
-  CheckCircle,
-  AlertCircle
-} from 'lucide-react';
-import { NewsletterTestPanel } from '@/components/NewsletterTestPanel';
+import { Send, Download, BarChart3, Users, Mail, Clock, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface NewsletterStats {
   totalSubscribers: number;
-  newThisWeek: number;
-  lastSentDate: string;
-  openRate: number;
+  totalSent: number;
+  lastSentDate: string | null;
 }
 
 interface NewsletterPreview {
@@ -31,17 +18,17 @@ interface NewsletterPreview {
 }
 
 export default function AdminNewsletterPage() {
-  const [stats, setStats] = useState<NewsletterStats>({
-    totalSubscribers: 0,
-    newThisWeek: 0,
-    lastSentDate: '',
-    openRate: 0
-  });
-
+  const [stats, setStats] = useState<NewsletterStats>({ totalSubscribers: 0, totalSent: 0, lastSentDate: null });
   const [preview, setPreview] = useState<NewsletterPreview | null>(null);
   const [loading, setLoading] = useState(false);
-  const [sendStatus, setSendStatus] = useState<string>('');
-  const [showPreview, setShowPreview] = useState(false);
+  const [sendStatus, setSendStatus] = useState('');
+
+  // Get the API secret from environment (this should be set on the server)
+  const getAPISecret = () => {
+    // In production, this should come from server-side environment variables
+    // For now, we'll use a fixed secret or prompt the user
+    return localStorage.getItem('newsletter_api_secret') || prompt('Enter Newsletter API Secret:');
+  };
 
   useEffect(() => {
     fetchStats();
@@ -49,43 +36,57 @@ export default function AdminNewsletterPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/newsletter/admin-stats');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const apiSecret = getAPISecret();
+      if (!apiSecret) {
+        setSendStatus('❌ Newsletter API Secret not configured');
+        return;
       }
-      const data = await response.json();
-      setStats(data);
+
+      const response = await fetch('/api/newsletter/stats', {
+        headers: {
+          'Authorization': `Bearer ${apiSecret}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      } else {
+        console.error('Failed to fetch stats');
+      }
     } catch (error) {
       console.error('Error fetching stats:', error);
-      setStats({
-        totalSubscribers: 0,
-        newThisWeek: 0,
-        lastSentDate: '',
-        openRate: 0
-      });
     }
   };
 
   const generatePreview = async () => {
     setLoading(true);
+    setSendStatus('Generating newsletter preview...');
+
     try {
+      const apiSecret = getAPISecret();
+      if (!apiSecret) {
+        setSendStatus('❌ Newsletter API Secret not configured');
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/newsletter/generate-content', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_NEWSLETTER_SECRET}`,
+          'Authorization': `Bearer ${apiSecret}`,
           'Content-Type': 'application/json'
         }
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to generate content: ${response.status} - ${errorText}`);
-      }
+      const result = await response.json();
 
-      const data = await response.json();
-      setPreview(data);
-      setShowPreview(true);
-      setSendStatus('✅ Newsletter preview generated successfully!');
+      if (response.ok) {
+        setPreview(result);
+        setSendStatus(`✅ Preview generated! Found ${result.jobsData.length} jobs to include.`);
+      } else {
+        setSendStatus(`❌ Failed to generate preview: ${result.error}`);
+      }
     } catch (error) {
       console.error('Error generating preview:', error);
       setSendStatus(`❌ Failed to generate preview: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -112,10 +113,17 @@ export default function AdminNewsletterPage() {
     setSendStatus('Sending newsletter to all subscribers...');
 
     try {
+      const apiSecret = getAPISecret();
+      if (!apiSecret) {
+        setSendStatus('❌ Newsletter API Secret not configured');
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/newsletter/send', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_NEWSLETTER_SECRET}`,
+          'Authorization': `Bearer ${apiSecret}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -128,7 +136,7 @@ export default function AdminNewsletterPage() {
       const result = await response.json();
 
       if (response.ok) {
-        setSendStatus(`✅ Newsletter sent successfully! Delivered to ${result.stats.sent} subscribers. ${result.stats.failed} failed.`);
+        setSendStatus(`✅ Newsletter sent successfully! Delivered to ${result.stats?.sent || 0} subscribers. ${result.stats?.failed || 0} failed.`);
         fetchStats();
       } else {
         setSendStatus(`❌ Failed to send newsletter: ${result.error}`);
@@ -141,13 +149,73 @@ export default function AdminNewsletterPage() {
     }
   };
 
+  const sendTestNewsletter = async () => {
+    if (!preview) {
+      setSendStatus('Please generate preview first');
+      return;
+    }
+
+    const testEmail = prompt('Enter your email address for test newsletter:');
+    if (!testEmail) return;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(testEmail)) {
+      setSendStatus('❌ Please enter a valid email address');
+      return;
+    }
+
+    setLoading(true);
+    setSendStatus(`Sending test newsletter to ${testEmail}...`);
+
+    try {
+      const apiSecret = getAPISecret();
+      if (!apiSecret) {
+        setSendStatus('❌ Newsletter API Secret not configured');
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch('/api/newsletter/test-send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiSecret}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          testEmail,
+          subject: preview.subject,
+          htmlContent: preview.htmlContent
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setSendStatus(`✅ Test newsletter sent to ${testEmail}! Check your inbox.`);
+      } else {
+        setSendStatus(`❌ Failed to send test: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error sending test:', error);
+      setSendStatus('❌ Failed to send test newsletter');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const exportSubscribers = async () => {
     try {
       setSendStatus('Exporting subscriber list...');
 
+      const apiSecret = getAPISecret();
+      if (!apiSecret) {
+        setSendStatus('❌ Newsletter API Secret not configured');
+        return;
+      }
+
       const response = await fetch('/api/newsletter/export', {
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_NEWSLETTER_SECRET}`
+          'Authorization': `Bearer ${apiSecret}`
         }
       });
 
@@ -173,63 +241,23 @@ export default function AdminNewsletterPage() {
     }
   };
 
-
-  const sendTestNewsletter = async () => {
-    if (!preview) {
-      setSendStatus('Please generate preview first');
-      return;
-    }
-
-    const testEmail = prompt('Enter your email address for test newsletter:');
-    if (!testEmail) return;
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(testEmail)) {
-      setSendStatus('❌ Please enter a valid email address');
-      return;
-    }
-
-    setLoading(true);
-    setSendStatus(`Sending test newsletter to ${testEmail}...`);
-
-    try {
-      const response = await fetch('/api/newsletter/test-send', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_NEWSLETTER_SECRET}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          testEmail,
-          subject: preview.subject,
-          htmlContent: preview.htmlContent
-        })
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        setSendStatus(`✅ Test newsletter sent to ${testEmail}! Check your inbox.`);
-      } else {
-        setSendStatus(`❌ Failed to send test: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Error sending test:', error);
-      setSendStatus('❌ Failed to send test newsletter');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const testWeeklyAutomation = async () => {
     setLoading(true);
     setSendStatus('Testing weekly automation...');
 
     try {
+      // Use the CRON_SECRET for automation testing
+      const cronSecret = localStorage.getItem('cron_secret') || prompt('Enter CRON Secret:');
+      if (!cronSecret) {
+        setSendStatus('❌ CRON Secret not configured');
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/newsletter/cron', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET}`,
+          'Authorization': `Bearer ${cronSecret}`,
           'Content-Type': 'application/json'
         }
       });
@@ -237,10 +265,9 @@ export default function AdminNewsletterPage() {
       const result = await response.json();
 
       if (response.ok) {
-        setSendStatus(`✅ Weekly automation test successful! Sent to ${result.summary.subscribersSent} subscribers.`);
-        fetchStats(); // Refresh stats
+        setSendStatus(`✅ Weekly automation test successful! ${result.summary ? `Jobs: ${result.summary.jobsIncluded}, Sent: ${result.summary.subscribersSent}` : ''}`);
       } else {
-        setSendStatus(`❌ Automation test failed: ${result.error}`);
+        setSendStatus(`❌ Weekly automation test failed: ${result.error}`);
       }
     } catch (error) {
       console.error('Error testing automation:', error);
@@ -251,202 +278,185 @@ export default function AdminNewsletterPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Newsletter Management</h1>
-        <p className="text-gray-600">Manage your weekly newsletter and subscriber communications</p>
-      </div>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Newsletter Administration</h1>
+          <p className="text-gray-600 mt-2">Manage and send newsletters to subscribers</p>
+        </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="flex items-center justify-between">
+        {/* Environment Setup Notice */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start">
+            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 mr-3" />
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Subscribers</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalSubscribers.toLocaleString()}</p>
+              <h3 className="text-blue-800 font-medium">Environment Variables Required</h3>
+              <div className="text-blue-700 text-sm mt-1">
+                <p>Make sure these are set in your deployment environment:</p>
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li><code>RESEND_API_KEY</code> - Your Resend API key</li>
+                  <li><code>NEWSLETTER_API_SECRET</code> - Secret for admin functions</li>
+                  <li><code>CRON_SECRET</code> - Secret for automated newsletter sending</li>
+                  <li><code>NEWSLETTER_FROM_EMAIL</code> - From email address</li>
+                </ul>
+              </div>
             </div>
-            <Users className="h-8 w-8 text-blue-600" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">New This Week</p>
-              <p className="text-2xl font-bold text-green-600">+{stats.newThisWeek}</p>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <div className="flex items-center">
+              <Users className="h-8 w-8 text-blue-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Subscribers</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalSubscribers.toLocaleString()}</p>
+              </div>
             </div>
-            <TrendingUp className="h-8 w-8 text-green-600" />
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <div className="flex items-center">
+              <Mail className="h-8 w-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Sent</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalSent.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <div className="flex items-center">
+              <Clock className="h-8 w-8 text-purple-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Last Sent</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {stats.lastSentDate ? new Date(stats.lastSentDate).toLocaleDateString() : 'Never'}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Last Sent</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {stats.lastSentDate ? new Date(stats.lastSentDate).toLocaleDateString() : 'Never'}
-              </p>
+        {/* Main Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
+          {/* Newsletter Generation */}
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Generate Newsletter</h2>
+            
+            <div className="space-y-4">
+              <button
+                onClick={generatePreview}
+                disabled={loading}
+                className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <BarChart3 className="h-5 w-5 mr-2" />
+                {loading ? 'Generating...' : 'Generate Preview'}
+              </button>
+
+              {preview && (
+                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <h3 className="font-medium text-gray-900 mb-2">Preview Ready</h3>
+                  <p className="text-sm text-gray-600 mb-1">Subject: {preview.subject}</p>
+                  <p className="text-sm text-gray-600">Jobs included: {preview.jobsData.length}</p>
+                </div>
+              )}
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={sendTestNewsletter}
+                  disabled={loading || !preview}
+                  className="flex-1 flex items-center justify-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Send Test
+                </button>
+
+                <button
+                  onClick={sendNewsletter}
+                  disabled={loading || !preview}
+                  className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send to All
+                </button>
+              </div>
             </div>
-            <Calendar className="h-8 w-8 text-purple-600" />
           </div>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Open Rate</p>
-              <p className="text-2xl font-bold text-orange-600">{stats.openRate}%</p>
+          {/* Additional Actions */}
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Management</h2>
+            
+            <div className="space-y-3">
+              <button
+                onClick={exportSubscribers}
+                className="w-full flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export Subscribers
+              </button>
+
+              <button
+                onClick={testWeeklyAutomation}
+                disabled={loading}
+                className="w-full flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Test Weekly Automation
+              </button>
+
+              <button
+                onClick={fetchStats}
+                className="w-full flex items-center justify-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh Stats
+              </button>
             </div>
-            <Mail className="h-8 w-8 text-orange-600" />
           </div>
-        </div>
-      </div>
-
-      {/* Test Panel */}
-      <NewsletterTestPanel />
-
-      {/* Actions */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Newsletter Actions</h2>
-
-        <div className="flex flex-wrap gap-4 mb-6">
-          <button
-            onClick={generatePreview}
-            disabled={loading}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Eye className="h-4 w-4 mr-2" />}
-            Generate Preview
-          </button>
-
-          <button
-            onClick={sendTestNewsletter}
-            disabled={loading || !preview}
-            className="flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Mail className="h-4 w-4 mr-2" />
-            Send Test to Me
-          </button>
-
-          <button
-            onClick={sendNewsletter}
-            disabled={loading || !preview}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Send className="h-4 w-4 mr-2" />
-            Send Newsletter
-          </button>
-
-          <button
-            onClick={exportSubscribers}
-            className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export Subscribers
-          </button>
-
-          <button
-            onClick={fetchStats}
-            className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh Stats
-          </button>
         </div>
 
         {/* Status Messages */}
         {sendStatus && (
-          <div className={`p-4 rounded-lg mb-4 flex items-center ${sendStatus.includes('✅') ? 'bg-green-50 text-green-700 border border-green-200' :
-              sendStatus.includes('❌') ? 'bg-red-50 text-red-700 border border-red-200' :
-                'bg-blue-50 text-blue-700 border border-blue-200'
-            }`}>
-            {sendStatus.includes('✅') ? <CheckCircle className="h-5 w-5 mr-2" /> :
-              sendStatus.includes('❌') ? <AlertCircle className="h-5 w-5 mr-2" /> :
-                <RefreshCw className="h-5 w-5 mr-2 animate-spin" />}
-            {sendStatus}
+          <div className={`mt-6 p-4 rounded-lg ${
+            sendStatus.includes('✅') ? 'bg-green-50 text-green-700 border border-green-200' :
+            sendStatus.includes('❌') ? 'bg-red-50 text-red-700 border border-red-200' :
+            'bg-blue-50 text-blue-700 border border-blue-200'
+          }`}>
+            <div className="flex items-start">
+              <div className="flex-shrink-0 mt-0.5">
+                {sendStatus.includes('✅') ? <CheckCircle className="h-5 w-5" /> :
+                 sendStatus.includes('❌') ? <AlertCircle className="h-5 w-5" /> :
+                 <Send className="h-5 w-5" />}
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium">{sendStatus}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Preview Display */}
+        {preview && (
+          <div className="mt-8 bg-white rounded-lg shadow-sm border">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Newsletter Preview</h2>
+            </div>
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Subject</label>
+                <p className="mt-1 text-sm text-gray-900">{preview.subject}</p>
+              </div>
+              <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 max-h-96 overflow-y-auto">
+                <div dangerouslySetInnerHTML={{ __html: preview.htmlContent }} />
+              </div>
+            </div>
           </div>
         )}
       </div>
-
-      {/* Preview Section */}
-      {showPreview && preview && (
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Newsletter Preview</h2>
-            <button
-              onClick={() => setShowPreview(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="mb-4">
-            <p className="text-sm text-gray-600 mb-2">Subject Line:</p>
-            <p className="font-medium text-gray-900 bg-gray-50 p-3 rounded border">{preview.subject}</p>
-          </div>
-
-          <div className="mb-4">
-            <p className="text-sm text-gray-600 mb-2">Jobs Included: {preview.jobsData.length}</p>
-            <div className="space-y-2">
-              {preview.jobsData.slice(0, 3).map((job, index) => (
-                <div key={index} className="bg-gray-50 p-3 rounded border">
-                  <p className="font-medium">{job.JobTitle} at {job.Company}</p>
-                  <p className="text-sm text-gray-600">{job.Location} • {job.formatted_salary}</p>
-                </div>
-              ))}
-              {preview.jobsData.length > 3 && (
-                <p className="text-sm text-gray-500">...and {preview.jobsData.length - 3} more jobs</p>
-              )}
-            </div>
-          </div>
-
-          <div className="border rounded-lg overflow-hidden">
-            <div className="bg-gray-50 p-3 border-b">
-              <p className="text-sm font-medium text-gray-700">HTML Preview:</p>
-            </div>
-            <div
-              className="p-4 max-h-96 overflow-y-auto"
-              dangerouslySetInnerHTML={{ __html: preview.htmlContent.replace('{{firstName}}', 'John') }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Subscriber Management */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Subscriber Management</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-medium text-gray-900 mb-2">Active Subscribers</h3>
-            <p className="text-2xl font-bold text-green-600">{stats.totalSubscribers}</p>
-            <p className="text-sm text-gray-600">Receiving newsletters</p>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-medium text-gray-900 mb-2">Growth Rate</h3>
-            <p className="text-2xl font-bold text-blue-600">+{((stats.newThisWeek / Math.max(stats.totalSubscribers, 1)) * 100).toFixed(1)}%</p>
-            <p className="text-sm text-gray-600">This week</p>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-medium text-gray-900 mb-2">Engagement</h3>
-            <p className="text-2xl font-bold text-purple-600">{stats.openRate}%</p>
-            <p className="text-sm text-gray-600">Average open rate</p>
-          </div>
-        </div>
-      </div>
-
-      <button
-        onClick={testWeeklyAutomation}
-        className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-      >
-        <Calendar className="h-4 w-4 mr-2" />
-        Test Weekly Automation
-      </button>
-
     </div>
   );
 }

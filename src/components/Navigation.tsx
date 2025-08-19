@@ -68,7 +68,6 @@ export default function Navigation({ session }: NavigationProps) {
   const navLinks = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/jobs', label: 'Jobs', icon: Briefcase },
-    { href: '/companies', label: 'Companies', icon: Building2 },
   ];
 
   return (
@@ -82,7 +81,7 @@ export default function Navigation({ session }: NavigationProps) {
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <Briefcase className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-900">SixFigHires</span>
+              <span className="text-xl font-bold text-gray-900">SixFigJob</span>
             </Link>
           </div>
 
@@ -112,9 +111,9 @@ export default function Navigation({ session }: NavigationProps) {
             {currentSession ? (
               <>
                 <Link
-                  href="/profile"
+                  href="/welcome"
                   className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive('/profile')
+                    isActive('/welcome')
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}
