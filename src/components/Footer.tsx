@@ -14,7 +14,7 @@ export default function Footer() {
               <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <Briefcase className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold">SixFigHires</span>
+              <span className="text-xl font-bold">SixFigJob.com</span>
             </Link>
             <p className="text-gray-400 mb-6 max-w-md">
               Your premier destination for six-figure career opportunities. Connect with top companies and advance your career with roles that match your ambitions.
@@ -23,7 +23,7 @@ export default function Footer() {
             {/* Social Links */}
             <div className="flex space-x-4">
               <a 
-                href="https://twitter.com/sixfighires" 
+                href="https://twitter.com/sixfigjobs" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-blue-400 transition-colors"
@@ -31,7 +31,7 @@ export default function Footer() {
                 <Twitter className="w-5 h-5" />
               </a>
               <a 
-                href="https://linkedin.com/company/sixfighires" 
+                href="https://linkedin.com/company/sixfigjobs" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-blue-400 transition-colors"
@@ -54,11 +54,6 @@ export default function Footer() {
               <li>
                 <Link href="/jobs" className="text-gray-400 hover:text-white transition-colors">
                   Browse Jobs
-                </Link>
-              </li>
-              <li>
-                <Link href="/companies" className="text-gray-400 hover:text-white transition-colors">
-                  Companies
                 </Link>
               </li>
               <li>
@@ -93,21 +88,6 @@ export default function Footer() {
                   Contact
                 </Link>
               </li>
-              <li>
-                <Link href="/blog" className="text-gray-400 hover:text-white transition-colors">
-                  Blog
-                </Link>
-              </li>
-              <li>
-                <Link href="/employers" className="text-gray-400 hover:text-white transition-colors">
-                  For Employers
-                </Link>
-              </li>
-              <li>
-                <Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">
-                  Pricing
-                </Link>
-              </li>
             </ul>
           </div>
         </div>
@@ -123,9 +103,6 @@ export default function Footer() {
             </Link>
             <Link href="/terms" className="text-gray-400 hover:text-white text-sm transition-colors">
               Terms of Service
-            </Link>
-            <Link href="/cookies" className="text-gray-400 hover:text-white text-sm transition-colors">
-              Cookie Policy
             </Link>
           </div>
         </div>

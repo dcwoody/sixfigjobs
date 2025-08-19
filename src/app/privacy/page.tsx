@@ -1,10 +1,11 @@
 // src/app/privacy/page.tsx
 import Link from 'next/link';
+import Footer from '@/components/Footer'
 import { Shield, Lock, Eye, Database } from 'lucide-react';
 
 export const metadata = {
-  title: 'Privacy Policy - SixFigHires',
-  description: 'Privacy Policy and data protection practices for SixFigHires job board platform.',
+  title: 'Privacy Policy - SixFigJob',
+  description: 'Privacy Policy and data protection practices for SixFigJob job board platform.',
 };
 
 export default function PrivacyPolicyPage() {
@@ -33,7 +34,7 @@ export default function PrivacyPolicyPage() {
             <div>
               <h3 className="text-green-800 font-semibold mb-2">Our Privacy Commitment</h3>
               <p className="text-green-700 text-sm">
-                At SixFigHires, we are committed to protecting your privacy and personal information. 
+                At SixFigJob, we are committed to protecting your privacy and personal information. 
                 This Privacy Policy explains how we collect, use, and safeguard your data when you use our platform.
               </p>
             </div>
@@ -46,7 +47,7 @@ export default function PrivacyPolicyPage() {
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Introduction</h2>
             <p className="text-gray-700 mb-4">
-              SixFigHires ("we," "our," or "us") operates the SixFigHires website and job board platform 
+              SixFigJob ("we," "our," or "us") operates the SixFigJob website and job board platform 
               (the "Service"). This Privacy Policy informs you of our policies regarding the collection, 
               use, and disclosure of personal information when you use our Service.
             </p>
@@ -191,7 +192,7 @@ export default function PrivacyPolicyPage() {
               <li>• <strong>Withdraw Consent:</strong> Withdraw consent where processing is based on consent</li>
             </ul>
             <p className="text-gray-700 mt-4">
-              To exercise these rights, please contact us at privacy@sixfighires.com
+              To exercise these rights, please contact us at privacy@SixFigJob.com
             </p>
           </section>
 
@@ -273,10 +274,10 @@ export default function PrivacyPolicyPage() {
               If you have any questions about this Privacy Policy or our privacy practices, please contact us:
             </p>
             <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-gray-700 mb-2"><strong>Privacy Officer:</strong> privacy@sixfighires.com</p>
-              <p className="text-gray-700 mb-2"><strong>General Inquiries:</strong> support@sixfighires.com</p>
-              <p className="text-gray-700 mb-2"><strong>Address:</strong> SixFigHires, Woodlawn, Virginia, United States</p>
-              <p className="text-gray-700"><strong>Website:</strong> <Link href="/" className="text-blue-600 hover:text-blue-800">sixfighires.com</Link></p>
+              <p className="text-gray-700 mb-2"><strong>Privacy Officer:</strong> privacy@SixFigJob.com</p>
+              <p className="text-gray-700 mb-2"><strong>General Inquiries:</strong> support@SixFigJob.com</p>
+              <p className="text-gray-700 mb-2"><strong>Address:</strong> SixFigJob, Woodlawn, Virginia, United States</p>
+              <p className="text-gray-700"><strong>Website:</strong> <Link href="/" className="text-blue-600 hover:text-blue-800">SixFigJob.com</Link></p>
             </div>
           </section>
 
@@ -293,7 +294,7 @@ export default function PrivacyPolicyPage() {
               <li>• <strong>Right to Non-Discrimination:</strong> Not be discriminated against for exercising your privacy rights</li>
             </ul>
             <p className="text-gray-700 mt-4">
-              To exercise these rights, please contact us at privacy@sixfighires.com or call us at our toll-free number.
+              To exercise these rights, please contact us at privacy@SixFigJob.com or call us at our toll-free number.
             </p>
           </section>
 
@@ -306,33 +307,15 @@ export default function PrivacyPolicyPage() {
             <ul className="text-gray-700 space-y-2 ml-6">
               <li>• <strong>Lawful Basis:</strong> We process your data based on consent, contract performance, or legitimate interests</li>
               <li>• <strong>Data Subject Rights:</strong> Access, rectification, erasure, portability, restriction, and objection</li>
-              <li>• <strong>Data Protection Officer:</strong> Contact our DPO at dpo@sixfighires.com</li>
+              <li>• <strong>Data Protection Officer:</strong> Contact our DPO at dpo@SixFigJob.com</li>
               <li>• <strong>Supervisory Authority:</strong> You have the right to lodge a complaint with your local data protection authority</li>
             </ul>
           </section>
 
         </div>
-
-        {/* Footer Links */}
-        <div className="mt-12 pt-8 border-t border-gray-200">
-          <div className="flex flex-col sm:flex-row justify-between items-center">
-            <div className="flex space-x-6 mb-4 sm:mb-0">
-              <Link href="/terms" className="text-blue-600 hover:text-blue-800 text-sm">
-                Terms of Service
-              </Link>
-              <Link href="/contact" className="text-blue-600 hover:text-blue-800 text-sm">
-                Contact Us
-              </Link>
-              <Link href="/" className="text-blue-600 hover:text-blue-800 text-sm">
-                Back to Home
-              </Link>
-            </div>
-            <p className="text-gray-500 text-sm">
-              Last updated: {new Date().toLocaleDateString()}
-            </p>
-          </div>
-        </div>
       </div>
+              {/* Footer Links */}
+        <Footer />
     </div>
   );
 }

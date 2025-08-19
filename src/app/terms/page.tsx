@@ -4,8 +4,8 @@ import { Shield, FileText, AlertCircle } from 'lucide-react';
 import Footer from '@/components/Footer';
 
 export const metadata = {
-  title: 'Terms of Service - SixFigHires',
-  description: 'Terms of Service and user agreement for SixFigHires job board platform.',
+  title: 'Terms of Service - SixFigJob',
+  description: 'Terms of Service and user agreement for SixFigJobs job board platform.',
 };
 
 export default function TermsOfServicePage() {
@@ -34,7 +34,7 @@ export default function TermsOfServicePage() {
             <div>
               <h3 className="text-amber-800 font-semibold mb-2">Important Notice</h3>
               <p className="text-amber-700 text-sm">
-                By accessing and using SixFigHires, you agree to be bound by these Terms of Service. 
+                By accessing and using SixFigJob, you agree to be bound by these Terms of Service. 
                 If you do not agree to these terms, please do not use our platform.
               </p>
             </div>
@@ -47,8 +47,8 @@ export default function TermsOfServicePage() {
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Acceptance of Terms</h2>
             <p className="text-gray-700 mb-4">
-              These Terms of Service ("Terms") govern your use of the SixFigHires website and services 
-              (collectively, the "Service") operated by SixFigHires ("we," "us," or "our").
+              These Terms of Service ("Terms") govern your use of the SixFigJob website and services 
+              (collectively, the "Service") operated by SixFigJob ("we," "us," or "our").
             </p>
             <p className="text-gray-700">
               By accessing or using our Service, you agree to be bound by these Terms. If you disagree 
@@ -60,7 +60,7 @@ export default function TermsOfServicePage() {
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">2. Description of Service</h2>
             <p className="text-gray-700 mb-4">
-              SixFigHires is a job board platform that connects job seekers with high-paying career 
+              SixFigJob is a job board platform that connects job seekers with high-paying career 
               opportunities, typically offering salaries of $100,000 or more annually. Our Service includes:
             </p>
             <ul className="text-gray-700 space-y-2 ml-6">
@@ -158,7 +158,7 @@ export default function TermsOfServicePage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">8. Intellectual Property</h2>
             <p className="text-gray-700 mb-4">
               The Service and its original content, features, and functionality are and will remain 
-              the exclusive property of SixFigHires and its licensors. The Service is protected by 
+              the exclusive property of SixFigJob and its licensors. The Service is protected by 
               copyright, trademark, and other laws.
             </p>
             <p className="text-gray-700">
@@ -186,7 +186,7 @@ export default function TermsOfServicePage() {
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">10. Limitation of Liability</h2>
             <p className="text-gray-700">
-              In no event shall SixFigHires, its directors, employees, partners, agents, suppliers, 
+              In no event shall SixFigJob, its directors, employees, partners, agents, suppliers, 
               or affiliates be liable for any indirect, incidental, special, consequential, or punitive 
               damages, including loss of profits, data, use, goodwill, or other intangible losses, 
               resulting from your use of the Service.
@@ -235,9 +235,9 @@ export default function TermsOfServicePage() {
               If you have any questions about these Terms of Service, please contact us:
             </p>
             <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-gray-700 mb-2"><strong>Email:</strong> legal@sixfighires.com</p>
-              <p className="text-gray-700 mb-2"><strong>Address:</strong> SixFigHires, Woodlawn, Virginia, United States</p>
-              <p className="text-gray-700"><strong>Website:</strong> <Link href="/" className="text-blue-600 hover:text-blue-800">sixfighires.com</Link></p>
+              <p className="text-gray-700 mb-2"><strong>Email:</strong> legal@SixFigJob.com</p>
+              <p className="text-gray-700 mb-2"><strong>Address:</strong> SixFigJob, Alexandria, Virginia, United States</p>
+              <p className="text-gray-700"><strong>Website:</strong> <Link href="/" className="text-blue-600 hover:text-blue-800">SixFigJob.com</Link></p>
             </div>
           </section>
 
@@ -258,7 +258,7 @@ export default function TermsOfServicePage() {
               </Link>
             </div>
             <p className="text-gray-500 text-sm">
-              Last updated: {new Date().toLocaleDateString()}
+              Last updated: 8/19/2025
             </p>
           </div>
         </div>

@@ -55,6 +55,75 @@ export default async function JobDetailPage({ params }: PageProps) {
     (j.company_id === job.company_id || j.JobType === job.JobType)
   ).slice(0, 3);
 
+  // Function to format job descriptions - add this above your component or in a utils file
+  const formatJobDescription = (description: string): string => {
+    if (!description) return '';
+
+    // Check if the description already has HTML tags
+    const hasHTML = /<[a-z][\s\S]*>/i.test(description);
+
+    if (hasHTML) {
+      // Already has HTML formatting, just clean it up
+      return description
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^\* (.+)$/gm, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>\s*)+/gs, '<ul>$&</ul>')
+        .replace(/<p><\/p>/g, '')
+        .replace(/<p>(<ul>.*<\/ul>)<\/p>/gs, '$1');
+    }
+
+    // Plain text - needs formatting
+    return description
+      // First, escape any existing HTML entities
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+
+      // Handle section headers (lines that end with a colon and are followed by content)
+      .replace(/^([A-Z][^:\n]*:)$/gm, '<h3 class="text-lg font-semibold text-gray-900 mt-6 mb-3">$1</h3>')
+
+      // Handle bulleted lists (lines starting with bullet points or dashes)
+      .replace(/^[•\-\*]\s*(.+)$/gm, '<li>$1</li>')
+
+      // Handle numbered lists
+      .replace(/^\d+\.\s*(.+)$/gm, '<li>$1</li>')
+
+      // Wrap consecutive list items in ul tags
+      .replace(/(<li>.*?<\/li>\s*)+/gs, '<ul class="list-disc pl-6 mb-4 space-y-1">$&</ul>')
+
+      // Handle bold text (words in all caps that aren't common words)
+      .replace(/\b([A-Z]{2,}(?:\s+[A-Z]{2,})*)\b/g, (match) => {
+        // Don't make common words like "AND", "OR", "THE" bold
+        const commonWords = ['AND', 'OR', 'THE', 'FOR', 'WITH', 'FROM', 'TO', 'IN', 'ON', 'AT', 'BY', 'AS', 'IS', 'ARE', 'WAS', 'WERE', 'BE', 'BEEN', 'HAVE', 'HAS', 'HAD', 'DO', 'DOES', 'DID', 'WILL', 'WOULD', 'COULD', 'SHOULD', 'MAY', 'MIGHT', 'CAN', 'SHALL'];
+        if (commonWords.includes(match.trim())) {
+          return match.toLowerCase();
+        }
+        return `<strong>${match}</strong>`;
+      })
+
+      // Split into paragraphs based on double line breaks or logical breaks
+      .split(/\n\s*\n|\. (?=[A-Z][^.]*(?:Responsibilities|Qualifications|Requirements|Experience|Skills|About|What|Who|Why|How):)/)
+      .map(paragraph => paragraph.trim())
+      .filter(paragraph => paragraph.length > 0)
+      .map(paragraph => {
+        // Don't wrap headers in p tags
+        if (paragraph.includes('<h3>') || paragraph.includes('<ul>')) {
+          return paragraph;
+        }
+        return `<p class="mb-4 leading-relaxed">${paragraph}</p>`;
+      })
+      .join('')
+
+      // Clean up any double spaces or extra whitespace
+      .replace(/\s+/g, ' ')
+      .replace(/\s*<\/li>\s*/g, '</li>')
+      .replace(/\s*<li>\s*/g, '<li>')
+
+      // Ensure proper spacing around headers
+      .replace(/<\/h3>\s*<p>/g, '</h3><p>')
+      .replace(/<\/p>\s*<h3>/g, '</p><h3>');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -79,67 +148,63 @@ export default async function JobDetailPage({ params }: PageProps) {
               <div className="mb-6">
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex-1">
-                    {/* Helper function to properly capitalize job titles */}
-                    <h1 className="text-3xl font-bold text-gray-900 mb-3">
-                      {job.JobTitle.replace(/\b\w+/g, (word) => {
-                        // Keep certain abbreviations uppercase
-                        const upperWords = ['UX', 'UI', 'IT', 'AI', 'ML', 'API', 'CEO', 'CTO', 'CFO', 'VP', 'HR', 'QA', 'DevOps', 'AWS', 'SaaS', 'B2B', 'B2C'];
-                        if (upperWords.includes(word.toUpperCase())) {
-                          return word.toUpperCase();
-                        }
-                        // Otherwise use proper case
-                        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-                      })}
-                    </h1>
-
-                    {/* Company with logo */}
-                    <div className="flex items-center space-x-4 text-lg mb-2">
-                      {company ? (
-                        company.slug && company.slug !== '' && !/[\[\](){}]/.test(company.slug) ? (
-                          <Link
-                            href={`/companies/${company.slug}`}
-                            className="text-blue-600 hover:text-blue-800 font-semibold flex items-center"
-                          >
-                            {/* SHOW COMPANY LOGO IF AVAILABLE */}
-                            {company.company_logo && (
-                              <img
-                                src={company.company_logo}
-                                alt={`${company.name} logo`}
-                                className="w-8 h-8 object-contain mr-2 border border-gray-200 rounded"
-                              />
-                            )}
-                            {company.name}
-                          </Link>
-                        ) : (
-                          <div className="text-gray-700 font-semibold flex items-center">
-                            {/* SHOW COMPANY LOGO IF AVAILABLE */}
-                            {company.company_logo && (
-                              <img
-                                src={company.company_logo}
-                                alt={`${company.name} logo`}
-                                className="w-8 h-8 object-contain mr-2 border border-gray-200 rounded"
-                              />
-                            )}
-                            {company.name}
-                          </div>
-                        )
+                    {/* Company Logo and Name Row */}
+                    <div className="flex items-center mb-3">
+                      {/* Company Logo */}
+                      {company?.company_logo ? (
+                        <img
+                          src={company.company_logo}
+                          alt={`${company.name} logo`}
+                          className="w-24 h-24 object-contain border border-gray-200 rounded-lg p-2 bg-white mr-4 flex-shrink-0"
+                        />
                       ) : (
-                        <span className="text-gray-700 font-semibold">{job.Company}</span>
+                        <div className="w-20 h-20 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                          <Building className="w-10 h-10 text-gray-400" />
+                        </div>
                       )}
-                      {job.is_remote && (
-                        <>
-                          <span className="text-gray-500">•</span>
-                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                            Remote
-                          </span>
-                        </>
-                      )}
-                    </div>
 
-                    {/* Location below company */}
-                    <div className="flex items-center text-gray-600 text-base">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      {job.Location}
+                      <div className="flex-1">
+                        {/* Company name and Job Title */}
+                        <div className="mb-2">
+                          {company ? (
+                            company.slug && company.slug !== '' && !/[\[\](){}]/.test(company.slug) ? (
+                              <Link
+                                href={`/companies/${company.slug}`}
+                                className="text-lg text-blue-600 font-semibold hover:text-blue-800 transition-colors"
+                              >
+                                {job.Company}
+                              </Link>
+                            ) : (
+                              <span className="text-lg text-blue-600 font-semibold">
+                                {job.Company}
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-lg text-blue-600 font-semibold">
+                              {job.Company}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Job Title */}
+                        <h1 className="text-3xl font-bold text-gray-900 mb-3">
+                          {job.JobTitle.replace(/\b\w+/g, (word) => {
+                            // Keep certain abbreviations uppercase
+                            const upperWords = ['UX', 'UI', 'IT', 'AI', 'ML', 'API', 'CEO', 'CTO', 'CFO', 'VP', 'HR', 'QA', 'DevOps', 'AWS', 'SaaS', 'B2B', 'B2C', 'EA'];
+                            if (upperWords.includes(word.toUpperCase())) {
+                              return word.toUpperCase();
+                            }
+                            // Otherwise use proper case
+                            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+                          })}
+                        </h1>
+
+                        {/* Location below job title */}
+                        <div className="flex items-center text-gray-600 text-base">
+                          <MapPin className="h-4 w-4 mr-1" />
+                          {job.Location}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -196,25 +261,33 @@ export default async function JobDetailPage({ params }: PageProps) {
                     <div className="font-bold text-gray-900">{formatDate(job.PostedDate)}</div>
                   </div>
                 </div>
-
-                {/* No Apply Button here anymore - moved to upper right */}
               </div>
             </div>
 
             {/* Job Description */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Job Description</h2>
-              <div
-                className="prose max-w-none text-gray-700"
-                dangerouslySetInnerHTML={{ __html: job.LongDescription }}
-              />
+              <div className="prose max-w-none">
+                {job.ShortDescription && (
+                  <div className="text-gray-700 mb-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                    <h3 className="font-semibold text-blue-900 mb-2">Summary</h3>
+                    <p className="leading-relaxed">{job.ShortDescription}</p>
+                  </div>
+                )}
+                <div
+                  className="text-gray-700"
+                  dangerouslySetInnerHTML={{
+                    __html: formatJobDescription(job.LongDescription)
+                  }}
+                />
+              </div>
             </div>
 
             {/* Similar Jobs - 1x3 Grid (keeping your version) */}
             {similarJobs.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Similar Jobs</h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {similarJobs.map((similarJob) => (
                     <div key={similarJob.JobID} className="bg-gray-50 border border-gray-200 rounded-lg p-6 hover:border-blue-300 hover:shadow-md transition-all">
@@ -298,29 +371,11 @@ export default async function JobDetailPage({ params }: PageProps) {
                         ) : (
                           <span className="text-gray-700 font-semibold">{company.name}</span>
                         )}
-                        <p className="text-sm text-gray-600">{company.industry}</p>
                       </div>
                     </div>
 
                     {/* Company Stats and Rating */}
                     <div className="space-y-3 text-sm">
-                      {company.overall_rating && (
-                        <div>
-                          <div className="flex items-center space-x-2 mb-1">
-                            <div className="flex items-center">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={`h-4 w-4 ${i < Math.floor(company.overall_rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
-                                />
-                              ))}
-                            </div>
-                            <span className="font-medium">{company.overall_rating}</span>
-                          </div>
-                          <div className="text-xs text-gray-500">Glassdoor overall rating</div>
-                        </div>
-                      )}
-
                       {company.size && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Company Size:</span>
@@ -339,6 +394,22 @@ export default async function JobDetailPage({ params }: PageProps) {
                           <span className="font-medium">{company.headquarters}</span>
                         </div>
                       )}
+                      {company.overall_rating && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Glassdoor Rating:</span>
+                          <div className="flex items-center space-x-2 mb-1">
+                            <div className="flex items-center">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-4 w-4 ${i < Math.floor(company.overall_rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                                />
+                              ))}
+                            </div>
+                            <span className="font-medium">{company.overall_rating}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Company Description */}
@@ -351,7 +422,7 @@ export default async function JobDetailPage({ params }: PageProps) {
 
                     {/* View Company Profile Button */}
                     {company.slug && company.slug !== '' && !/[\[\](){}]/.test(company.slug) ? (
-                      <Link 
+                      <Link
                         href={`/companies/${company.slug}`}
                         className="block w-full text-center bg-blue-50 text-blue-600 py-2 px-4 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
                       >
@@ -374,7 +445,11 @@ export default async function JobDetailPage({ params }: PageProps) {
                   <ShareJobButton jobTitle={job.JobTitle} companyName={job.Company} />
 
                   {/* Report Button */}
-                  <ReportJobButton jobTitle={job.JobTitle} companyName={job.Company} />
+                  <ReportJobButton
+                    jobId={job.JobID}
+                    jobTitle={job.JobTitle}
+                    companyName={job.Company}
+                  />
                 </div>
               </div>
 

@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, MapPin, DollarSign, ChevronLeft, ChevronRight, Clock, Heart, Building2, TrendingUp, Filter, X, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
+import SaveJobButton from '@/components/SaveJobButton'
 import { Job, Company } from '@/types';
 
 interface JobsListProps {
@@ -22,14 +23,14 @@ const JOBS_PER_PAGE = 12;
 
 export default function JobsList({ initialJobs, initialSearchParams }: JobsListProps) {
   const router = useRouter();
-  
+
   // State management
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalJobs, setTotalJobs] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   // Filter states
   const [searchQuery, setSearchQuery] = useState(initialSearchParams.q || '');
   const [locationFilter, setLocationFilter] = useState(initialSearchParams.location || '');
@@ -68,7 +69,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
         console.error('Error loading companies:', error);
       }
     };
-    
+
     loadCompanies();
   }, []);
 
@@ -83,7 +84,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
   // Load jobs from API
   const loadJobs = async (page = 1) => {
     setLoading(true);
-    
+
     try {
       const params = new URLSearchParams();
       if (searchQuery) params.set('q', searchQuery);
@@ -120,9 +121,9 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
     if (jobTypeFilter) params.set('jobType', jobTypeFilter);
     if (workTypeFilter) params.set('workType', workTypeFilter);
     if (page > 1) params.set('page', page.toString());
-    
+
     router.push(`/jobs${params.toString() ? `?${params.toString()}` : ''}`, { scroll: false });
-    
+
     // Load filtered jobs
     await loadJobs(page);
   };
@@ -192,15 +193,21 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
     });
   };
 
-  const getJobTypeColor = (jobType: string) => {
-    const colors = {
-      'full_time': 'bg-blue-100 text-blue-700 border-blue-200',
-      'part_time': 'bg-green-100 text-green-700 border-green-200',
-      'contract': 'bg-purple-100 text-purple-700 border-purple-200',
-      'temporary': 'bg-orange-100 text-orange-700 border-orange-200',
-      'internship': 'bg-pink-100 text-pink-700 border-pink-200',
-    };
-    return colors[jobType as keyof typeof colors] || 'bg-gray-100 text-gray-700 border-gray-200';
+  const getJobTypeColor = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'full_time':
+      case 'full-time':
+        return 'bg-blue-100 text-blue-800';
+      case 'part_time':
+      case 'part-time':
+        return 'bg-purple-100 text-purple-800';
+      case 'contract':
+        return 'bg-orange-100 text-orange-800';
+      case 'freelance':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
   return (
@@ -324,7 +331,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-4">Six-Figure Jobs</h1>
-            
+
             {/* Active Filters */}
             {(locationFilter || jobTypeFilter || workTypeFilter) && (
               <div className="mb-6">
@@ -378,101 +385,112 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
               </div>
             )}
 
-            {/* Jobs List - UPDATED WITH COMPANY LOGOS */}
+{/* Jobs List - UPDATED TO TWO COLUMNS */}
             {!loading && jobs.length > 0 ? (
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {jobs.map((job) => {
                   const company = getCompanyForJob(job);
-                  
+
                   return (
-                    <div key={job.JobID} className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 hover:shadow-lg transition-all group">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-start space-x-4 flex-1">
-                          {/* COMPANY LOGO */}
-                          {company?.company_logo ? (
-                            <img
-                              src={company.company_logo}
-                              alt={`${company.name} logo`}
-                              className="w-16 h-16 object-contain border border-gray-200 rounded-lg p-2 bg-white"
-                            />
-                          ) : (
-                            <div className="w-16 h-16 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center">
-                              <Building2 className="w-8 h-8 text-gray-400" />
-                            </div>
-                          )}
-                          
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <Link href={`/jobs/${job.slug}`} className="block">
-                                  <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-                                    {job.JobTitle}
-                                  </h3>
-                                </Link>
-                                
-                                <Link 
-                                  href={company ? `/companies/${company.slug}` : '#'}
-                                  className="text-blue-600 font-semibold hover:text-blue-800 transition-colors mb-3 block"
-                                >
-                                  {job.Company}
-                                </Link>
+                    <div key={job.JobID} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow relative">
+                      {/* Save Button - Upper Right Float */}
+                      <div className="absolute top-4 right-4">
+                        <SaveJobButton
+                          jobId={job.JobID}
+                          variant="heart"
+                          size="md"
+                        />
+                      </div>
 
-                                <div className="flex items-center space-x-6 text-gray-600 mb-3">
-                                  <div className="flex items-center">
-                                    <MapPin className="w-4 h-4 mr-2" />
-                                    <span>{job.Location}</span>
-                                  </div>
-                                  <div className="flex items-center">
-                                    <Clock className="w-4 h-4 mr-2" />
-                                    <span>Posted {formatDate(job.PostedDate)}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
+                      {/* Company Logo, Company Name, and Job Title Row */}
+                      <div className="flex items-start mb-4 pr-16">
+                        {/* Company Logo */}
+                        {company?.company_logo ? (
+                          <img
+                            src={company.company_logo}
+                            alt={`${company.name} logo`}
+                            className="w-20 h-20 object-contain border border-gray-200 rounded-lg p-2 bg-white mr-4 flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-20 h-20 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                            <Building2 className="w-10 h-10 text-gray-400" />
                           </div>
-                        </div>
+                        )}
 
-                        <div className="text-right">
-                          <div className="flex items-center text-green-600 font-bold text-lg mb-2">
-                            <DollarSign className="w-5 h-5" />
-                            {job.formatted_salary || 'Competitive'}
-                          </div>
-                          
-                          <div className="flex gap-2">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getJobTypeColor(job.JobType)}`}>
-                              {job.JobType}
-                            </span>
-                            {job.is_remote && (
-                              <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
-                                Remote
-                              </span>
-                            )}
-                          </div>
+                        {/* Company Name and Job Title Column */}
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm text-gray-600 font-medium block mb-1">
+                            {job.Company}
+                          </span>
+                          <Link
+                            href={`/jobs/${job.slug}`}
+                            className="text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors block"
+                          >
+                            {job.JobTitle.replace(/\b\w+/g, (word) => {
+                              // Keep certain tech abbreviations uppercase
+                              const upperWords = ['IT', 'AI', 'ML', 'API', 'CEO', 'CTO', 'CFO', 'VP', 'HR', 'QA', 'DevOps', 'AWS', 'SaaS', 'B2B', 'B2C', 'UI', 'UX', 'SQL', 'PHP', 'CSS', 'HTML', 'JS', 'HTTP', 'HTTPS', 'REST', 'JSON', 'XML', 'CRM', 'ERP', 'SEO', 'SEM', 'PPC', 'ROI', 'KPI', 'LOB', 'SME', 'QC', 'R&D', 'P&L', 'M&A', 'IPO', 'B2G', 'G2B', 'G2C', 'C2C', 'P2P', 'IoT', 'AR', 'VR', 'EA'];
+                              if (upperWords.includes(word.toUpperCase())) {
+                                return word.toUpperCase();
+                              }
+                              // Otherwise use proper case
+                              return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+                            })}
+                          </Link>
                         </div>
                       </div>
 
-                      <p className="text-gray-600 leading-relaxed mb-4">{job.ShortDescription}</p>
+                      {/* Location pin and Posted date with clock */}
+                      <div className="flex items-center space-x-4 mb-3 text-sm text-gray-600">
+                        <div className="flex items-center">
+                          <MapPin className="h-4 w-4 mr-1 text-gray-400" />
+                          <span>{job.Location}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Clock className="h-4 w-4 mr-1 text-gray-400" />
+                          <span>Posted {formatDate(job.PostedDate)}</span>
+                        </div>
+                      </div>
 
+                      {/* Badges with line underneath */}
+                      <div className="flex items-center space-x-2 mb-4 pb-4 border-b border-gray-200">
+                        {job.is_remote && (
+                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                            Remote
+                          </span>
+                        )}
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getJobTypeColor(job.JobType)}`}>
+                          {job.JobType.replace('_', ' ')}
+                        </span>
+                      </div>
+
+                      {/* Salary and Apply Button */}
                       <div className="flex items-center justify-between">
-                        <Link href={`/jobs/${job.slug}`} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                          View Details
+                        <div className="flex items-center">
+                          <DollarSign className="h-4 w-4 mr-2 text-gray-400" />
+                          <span className="font-medium text-green-600">{job.formatted_salary}</span>
+                        </div>
+
+                        <Link
+                          href={`/jobs/${job.slug}`}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                        >
+                          Details →
                         </Link>
-                        <button className="p-2 text-gray-400 hover:text-red-500 transition-colors">
-                          <Heart className="w-5 h-5" />
-                        </button>
                       </div>
                     </div>
                   );
                 })}
               </div>
-            ) : !loading && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-16 text-center">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No jobs found</h3>
-                <p className="text-gray-600 mb-6">Try adjusting your search criteria or filters.</p>
-                <button onClick={clearAllFilters} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                  Show All Jobs
-                </button>
-              </div>
+            ) : (
+              !loading && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+                  <div className="text-gray-500 mb-4">
+                    <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-medium mb-2">No jobs found</h3>
+                    <p>Try adjusting your search criteria or clearing some filters.</p>
+                  </div>
+                </div>
+              )
             )}
 
             {/* Pagination */}
@@ -495,14 +513,13 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                       {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                         const pageNum = Math.max(1, currentPage - 2) + i;
                         if (pageNum > totalPages) return null;
-                        
+
                         return (
                           <button
                             key={pageNum}
                             onClick={() => handlePageChange(pageNum)}
-                            className={`w-10 h-10 flex items-center justify-center text-sm font-medium rounded-lg transition-colors ${
-                              pageNum === currentPage ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-                            }`}
+                            className={`w-10 h-10 flex items-center justify-center text-sm font-medium rounded-lg transition-colors ${pageNum === currentPage ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+                              }`}
                           >
                             {pageNum}
                           </button>
