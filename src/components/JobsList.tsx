@@ -385,7 +385,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
               </div>
             )}
 
-{/* Jobs List - UPDATED TO TWO COLUMNS */}
+            {/* Jobs List - UPDATED TO TWO COLUMNS */}
             {!loading && jobs.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {jobs.map((job) => {
@@ -393,8 +393,8 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
 
                   return (
                     <div key={job.JobID} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow relative">
-                      {/* Save Button - Upper Right Float */}
-                      <div className="absolute top-4 right-4">
+                      {/* Save Button - Upper Right Float - Hidden on mobile, shown on larger screens */}
+                      <div className="hidden sm:block absolute top-4 right-4">
                         <SaveJobButton
                           jobId={job.JobID}
                           variant="heart"
@@ -403,7 +403,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                       </div>
 
                       {/* Company Logo, Company Name, and Job Title Row */}
-                      <div className="flex items-start mb-4 pr-16">
+                      <div className="flex items-start mb-4 sm:pr-16">
                         {/* Company Logo */}
                         {company?.company_logo ? (
                           <img
@@ -463,19 +463,31 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                         </span>
                       </div>
 
-                      {/* Salary and Apply Button */}
+                      {/* Salary and Buttons Row */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <DollarSign className="h-4 w-4 mr-2 text-gray-400" />
                           <span className="font-medium text-green-600">{job.formatted_salary}</span>
                         </div>
 
-                        <Link
-                          href={`/jobs/${job.slug}`}
-                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                        >
-                          Details →
-                        </Link>
+                        {/* Mobile: Both buttons side by side, Desktop: Just Apply button */}
+                        <div className="flex items-center space-x-2">
+                          {/* Save button - Only shown on mobile */}
+                          <div className="sm:hidden">
+                            <SaveJobButton
+                              jobId={job.JobID}
+                              variant="heart"
+                              size="sm"
+                            />
+                          </div>
+
+                          <Link
+                            href={`/jobs/${job.slug}`}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                          >
+                            Apply
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   );
