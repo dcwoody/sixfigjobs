@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, MapPin, DollarSign, Clock, Building2, TrendingUp, Filter, X, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
+import Footer from '@/components/Footer'
 import SaveJobButton from './SaveJobButton';
 import { Job, Company } from '@/types';
 
@@ -23,14 +24,14 @@ const JOBS_PER_PAGE = 12;
 
 export default function JobsList({ initialJobs, initialSearchParams }: JobsListProps) {
   const router = useRouter();
-  
+
   // State management
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalJobs, setTotalJobs] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   // Filter states
   const [searchQuery, setSearchQuery] = useState(initialSearchParams.q || '');
   const [locationFilter, setLocationFilter] = useState(initialSearchParams.location || '');
@@ -64,7 +65,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
         console.error('Error loading companies:', error);
       }
     };
-    
+
     loadCompanies();
   }, []);
 
@@ -79,7 +80,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
   // Load jobs from API
   const loadJobs = async (page = 1) => {
     setLoading(true);
-    
+
     try {
       const params = new URLSearchParams();
       if (searchQuery) params.set('q', searchQuery);
@@ -115,7 +116,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
     if (jobTypeFilter) params.set('jobType', jobTypeFilter);
     if (workTypeFilter) params.set('workType', workTypeFilter);
     if (page > 1) params.set('page', page.toString());
-    
+
     router.push(`/jobs${params.toString() ? `?${params.toString()}` : ''}`, { scroll: false });
     await loadJobs(page);
   };
@@ -197,11 +198,11 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         {/* Mobile Header and Filters - Only show on mobile */}
         <div className="lg:hidden">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Six-Figure Jobs</h1>
-          
+
           {/* Search Bar - Mobile */}
           <div className="mb-6">
             <form onSubmit={handleSearch}>
@@ -384,7 +385,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
           {/* Main Content - Desktop */}
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold text-gray-900 mb-6">Find your next SixFigJob below:</h1>
-            
+
             {/* Active Filters Display */}
             {(locationFilter || jobTypeFilter || workTypeFilter) && (
               <div className="mb-6">
@@ -443,7 +444,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
                 {jobs.map((job) => {
                   const company = getCompanyForJob(job);
-                  
+
                   return (
                     <div key={job.JobID} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow flex flex-col h-full relative">
                       {/* Save Button - Upper Right */}
@@ -523,7 +524,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                           <DollarSign className="h-4 w-4 mr-2 text-gray-400" />
                           <span className="font-medium text-green-600">{job.formatted_salary}</span>
                         </div>
-                        
+
                         <Link
                           href={`/jobs/${job.slug}`}
                           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
@@ -562,7 +563,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                 >
                   Previous
                 </button>
-                
+
                 <div className="flex space-x-1">
                   {[...Array(Math.min(totalPages, 5))].map((_, i) => {
                     const page = i + 1;
@@ -570,11 +571,10 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                       <button
                         key={page}
                         onClick={() => handlePageChange(page)}
-                        className={`px-4 py-2 rounded-lg ${
-                          currentPage === page
+                        className={`px-4 py-2 rounded-lg ${currentPage === page
                             ? 'bg-blue-600 text-white'
                             : 'border border-gray-300 hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         {page}
                       </button>
@@ -654,7 +654,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
             <div className="space-y-6 mb-8">
               {jobs.map((job) => {
                 const company = getCompanyForJob(job);
-                
+
                 return (
                   <div key={job.JobID} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                     {/* Company Name and Job Title - Mobile (no logo) */}
@@ -716,7 +716,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                           variant="heart"
                           size="sm"
                         />
-                        
+
                         <Link
                           href={`/jobs/${job.slug}`}
                           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
@@ -756,7 +756,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
               >
                 Previous
               </button>
-              
+
               <div className="flex space-x-1">
                 {[...Array(Math.min(totalPages, 5))].map((_, i) => {
                   const page = i + 1;
@@ -764,11 +764,10 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                     <button
                       key={page}
                       onClick={() => handlePageChange(page)}
-                      className={`px-4 py-2 rounded-lg ${
-                        currentPage === page
+                      className={`px-4 py-2 rounded-lg ${currentPage === page
                           ? 'bg-blue-600 text-white'
                           : 'border border-gray-300 hover:bg-gray-50'
-                      }`}
+                        }`}
                     >
                       {page}
                     </button>
@@ -787,6 +786,8 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
           )}
         </div>
       </div>
-    </div>
+
+      <Footer />
+    </div >
   );
 }
