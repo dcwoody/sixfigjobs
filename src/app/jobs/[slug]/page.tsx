@@ -9,7 +9,7 @@ import Link from 'next/link';
 import Footer from "@/components/Footer"
 
 import { notFound } from 'next/navigation';
-import { MapPin, DollarSign, Briefcase, Calendar, Star, ExternalLink, Share2, Flag, Building } from 'lucide-react';
+import { MapPin, Banknote, Briefcase, Calendar, Star, ExternalLink, Share2, Flag, Building } from 'lucide-react';
 import { loadJobData, loadCompanyData, formatDate } from '@/lib/data';
 
 interface PageProps {
@@ -165,7 +165,7 @@ export default async function JobDetailPage({ params }: PageProps) {
 
                       <div className="flex-1">
                         {/* Company name and Job Title */}
-                        <div className="mb-2">
+                        <div className="">
                           {company ? (
                             company.slug && company.slug !== '' && !/[\[\](){}]/.test(company.slug) ? (
                               <Link
@@ -208,19 +208,9 @@ export default async function JobDetailPage({ params }: PageProps) {
                     </div>
                   </div>
 
-                  {/* Save Button & Apply Button - Upper Right */}
-                  <div className="ml-6 flex items-center space-x-3">
-                    <div className="scale-125 pr-4">
-                      <SaveJobButton jobId={job.JobID} />
-                    </div>
-                    <a
-                      href={job.job_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center"
-                    >
-                      Apply Now <ExternalLink className="h-5 w-5 ml-2" />
-                    </a>
+                  {/* Save Button - Upper Right */}
+                  <div className="ml-6">
+                    <SaveJobButton jobId={job.JobID} variant="heart" size="lg" />
                   </div>
                 </div>
 
@@ -230,7 +220,7 @@ export default async function JobDetailPage({ params }: PageProps) {
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div className="flex items-center space-x-2 mb-2">
                       <div className="bg-green-100 p-2 rounded-lg">
-                        <DollarSign className="h-5 w-5 text-green-600" />
+                        <Banknote className="h-5 w-5 text-green-600" />
                       </div>
                       <div className="text-sm text-green-600 font-medium">Salary</div>
                     </div>
@@ -261,6 +251,7 @@ export default async function JobDetailPage({ params }: PageProps) {
                     <div className="font-bold text-gray-900">{formatDate(job.PostedDate)}</div>
                   </div>
                 </div>
+
               </div>
             </div>
 
@@ -281,6 +272,22 @@ export default async function JobDetailPage({ params }: PageProps) {
                   }}
                 />
               </div>
+
+              <div>
+
+                <hr className="h-px my-4 border-1 border-gray-300"></hr>
+
+              </div>
+
+              <a
+                href={job.job_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center"
+              >
+                Apply Now <ExternalLink className="h-5 w-5 ml-2" />
+              </a>
+
             </div>
 
             {/* Similar Jobs - 1x3 Grid (keeping your version) */}
@@ -311,7 +318,7 @@ export default async function JobDetailPage({ params }: PageProps) {
 
                         {similarJob.formatted_salary && (
                           <div className="flex items-center text-sm text-green-600 font-medium">
-                            <DollarSign className="h-4 w-4 mr-1" />
+                            <Banknote className="h-4 w-4 mr-1" />
                             {similarJob.formatted_salary}
                           </div>
                         )}
@@ -441,6 +448,17 @@ export default async function JobDetailPage({ params }: PageProps) {
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Actions</h3>
                 <div className="space-y-3">
+
+                  {/* Apply Button - Full Width */}
+                  <a
+                    href={job.job_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center"
+                  >
+                    Apply Now <ExternalLink className="h-5 w-5 ml-2" />
+                  </a>
+
                   {/* Share Button */}
                   <ShareJobButton jobTitle={job.JobTitle} companyName={job.Company} />
 

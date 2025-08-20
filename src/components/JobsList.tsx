@@ -1,11 +1,11 @@
-// src/components/JobsList.tsx - UPDATED WITH COMPANY LOGOS
+// src/components/JobsList.tsx - SINGLE LAYOUT WITH RESPONSIVE FILTERS
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, DollarSign, ChevronLeft, ChevronRight, Clock, Heart, Building2, TrendingUp, Filter, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, MapPin, DollarSign, Clock, Building2, TrendingUp, Filter, X, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
-import SaveJobButton from '@/components/SaveJobButton'
+import SaveJobButton from './SaveJobButton';
 import { Job, Company } from '@/types';
 
 interface JobsListProps {
@@ -23,14 +23,14 @@ const JOBS_PER_PAGE = 12;
 
 export default function JobsList({ initialJobs, initialSearchParams }: JobsListProps) {
   const router = useRouter();
-
+  
   // State management
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalJobs, setTotalJobs] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-
+  
   // Filter states
   const [searchQuery, setSearchQuery] = useState(initialSearchParams.q || '');
   const [locationFilter, setLocationFilter] = useState(initialSearchParams.location || '');
@@ -38,13 +38,8 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
   const [workTypeFilter, setWorkTypeFilter] = useState(initialSearchParams.workType || '');
   const [currentPage, setCurrentPage] = useState(parseInt(initialSearchParams.page || '1', 10));
 
-  // Sidebar state
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [expandedFilters, setExpandedFilters] = useState({
-    location: true,
-    jobType: true,
-    workType: true
-  });
+  // Mobile filter state
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   // Filter options
   const locationOptions = [
@@ -69,7 +64,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
         console.error('Error loading companies:', error);
       }
     };
-
+    
     loadCompanies();
   }, []);
 
@@ -84,7 +79,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
   // Load jobs from API
   const loadJobs = async (page = 1) => {
     setLoading(true);
-
+    
     try {
       const params = new URLSearchParams();
       if (searchQuery) params.set('q', searchQuery);
@@ -114,17 +109,14 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
 
   // Update URL and load jobs
   const updateFiltersAndLoad = async (page = 1) => {
-    // Update URL
     const params = new URLSearchParams();
     if (searchQuery) params.set('q', searchQuery);
     if (locationFilter) params.set('location', locationFilter);
     if (jobTypeFilter) params.set('jobType', jobTypeFilter);
     if (workTypeFilter) params.set('workType', workTypeFilter);
     if (page > 1) params.set('page', page.toString());
-
+    
     router.push(`/jobs${params.toString() ? `?${params.toString()}` : ''}`, { scroll: false });
-
-    // Load filtered jobs
     await loadJobs(page);
   };
 
@@ -169,14 +161,6 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Toggle filter sections
-  const toggleFilterSection = (section: string) => {
-    setExpandedFilters(prev => ({
-      ...prev,
-      [section]: !prev[section as keyof typeof prev]
-    }));
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return '—';
@@ -211,22 +195,109 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex gap-8">
-        {/* Sidebar Filters */}
-        <div className={`transition-all duration-300 ${sidebarOpen ? 'w-80' : 'w-12'} flex-shrink-0`}>
-          <div className="sticky top-8">
-            {/* Toggle Sidebar */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="mb-4 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
-              title={sidebarOpen ? 'Collapse filters' : 'Expand filters'}
-            >
-              <Filter className="w-5 h-5 text-gray-600" />
-            </button>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Mobile Header and Filters - Only show on mobile */}
+        <div className="lg:hidden">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Six-Figure Jobs</h1>
+          
+          {/* Search Bar - Mobile */}
+          <div className="mb-6">
+            <form onSubmit={handleSearch}>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search job title, company..."
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </form>
+          </div>
 
-            {sidebarOpen && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          {/* Filter Toggle Button - Mobile */}
+          <button
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className="flex items-center justify-center w-full px-4 py-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors mb-6"
+          >
+            <Filter className="w-5 h-5 mr-2 text-gray-600" />
+            <span className="font-medium text-gray-900">Filters</span>
+            {(locationFilter || jobTypeFilter || workTypeFilter) && (
+              <span className="ml-2 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                Active
+              </span>
+            )}
+            <ChevronDown className={`w-5 h-5 ml-auto transition-transform ${showMobileFilters ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* Mobile Filter Panel */}
+          {showMobileFilters && (
+            <div className="mb-6 bg-white rounded-lg border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+                {(locationFilter || jobTypeFilter || workTypeFilter) && (
+                  <button onClick={clearAllFilters} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                    Clear All
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                  <select
+                    value={locationFilter}
+                    onChange={(e) => handleLocationChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">All Locations</option>
+                    {locationOptions.map((location) => (
+                      <option key={location} value={location}>{location}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Job Type</label>
+                  <select
+                    value={jobTypeFilter}
+                    onChange={(e) => handleJobTypeChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">All Types</option>
+                    {jobTypeOptions.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Work Type</label>
+                  <select
+                    value={workTypeFilter}
+                    onChange={(e) => handleWorkTypeChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">All Work Types</option>
+                    {workTypeOptions.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Layout - Sidebar + Content */}
+        <div className="hidden lg:flex gap-8">
+          {/* Sidebar Filters - Desktop/iPad Only */}
+          <div className="w-80 flex-shrink-0">
+            <div className="sticky top-8">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
                   {(locationFilter || jobTypeFilter || workTypeFilter || searchQuery) && (
@@ -236,7 +307,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                   )}
                 </div>
 
-                {/* Search Filter */}
+                {/* Search Filter - Desktop */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
                   <form onSubmit={handleSearch}>
@@ -253,86 +324,68 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                   </form>
                 </div>
 
-                {/* Location Filter */}
+                {/* Location Filter - Desktop */}
                 <div className="mb-6">
-                  <button onClick={() => toggleFilterSection('location')} className="flex items-center justify-between w-full text-sm font-medium text-gray-700 mb-3">
-                    <span>Location</span>
-                    {expandedFilters.location ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </button>
-                  {expandedFilters.location && (
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {locationOptions.map((location) => (
-                        <label key={location} className="flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={locationFilter === location}
-                            onChange={() => handleLocationChange(location)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                          <span className="ml-3 text-sm text-gray-700">{location}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Location</label>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {locationOptions.map((location) => (
+                      <label key={location} className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={locationFilter === location}
+                          onChange={() => handleLocationChange(location)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <span className="ml-3 text-sm text-gray-700">{location}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Job Type Filter */}
+                {/* Job Type Filter - Desktop */}
                 <div className="mb-6">
-                  <button onClick={() => toggleFilterSection('jobType')} className="flex items-center justify-between w-full text-sm font-medium text-gray-700 mb-3">
-                    <span>Job Type</span>
-                    {expandedFilters.jobType ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </button>
-                  {expandedFilters.jobType && (
-                    <div className="space-y-2">
-                      {jobTypeOptions.map((jobType) => (
-                        <label key={jobType} className="flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={jobTypeFilter === jobType}
-                            onChange={() => handleJobTypeChange(jobType)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                          <span className="ml-3 text-sm text-gray-700">{jobType}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Job Type</label>
+                  <div className="space-y-2">
+                    {jobTypeOptions.map((type) => (
+                      <label key={type} className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={jobTypeFilter === type}
+                          onChange={() => handleJobTypeChange(type)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <span className="ml-3 text-sm text-gray-700">{type}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Work Type Filter */}
-                <div>
-                  <button onClick={() => toggleFilterSection('workType')} className="flex items-center justify-between w-full text-sm font-medium text-gray-700 mb-3">
-                    <span>Work Type</span>
-                    {expandedFilters.workType ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </button>
-                  {expandedFilters.workType && (
-                    <div className="space-y-2">
-                      {workTypeOptions.map((workType) => (
-                        <label key={workType} className="flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={workTypeFilter === workType}
-                            onChange={() => handleWorkTypeChange(workType)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                          <span className="ml-3 text-sm text-gray-700">{workType}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
+                {/* Work Type Filter - Desktop */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Work Type</label>
+                  <div className="space-y-2">
+                    {workTypeOptions.map((type) => (
+                      <label key={type} className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={workTypeFilter === type}
+                          onChange={() => handleWorkTypeChange(type)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <span className="ml-3 text-sm text-gray-700">{type}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
-        </div>
 
-        {/* Main Content */}
-        <div className="flex-1 min-w-0">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Six-Figure Jobs</h1>
-
-            {/* Active Filters */}
+          {/* Main Content - Desktop */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl font-bold text-gray-900 mb-6">Find your next SixFigJob below:</h1>
+            
+            {/* Active Filters Display */}
             {(locationFilter || jobTypeFilter || workTypeFilter) && (
               <div className="mb-6">
                 <div className="flex items-center flex-wrap gap-2">
@@ -379,22 +432,22 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
 
             {/* Loading State */}
             {loading && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center mb-6">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center mb-6">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p className="text-gray-600">Loading jobs...</p>
               </div>
             )}
 
-{/* Jobs List - UPDATED TO TWO COLUMNS */}
+            {/* Jobs Grid */}
             {!loading && jobs.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
                 {jobs.map((job) => {
                   const company = getCompanyForJob(job);
-
+                  
                   return (
-                    <div key={job.JobID} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow relative">
-                      {/* Save Button - Upper Right Float - Hidden on mobile, shown on larger screens */}
-                      <div className="hidden sm:block absolute top-4 right-4">
+                    <div key={job.JobID} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow flex flex-col h-full relative">
+                      {/* Save Button - Upper Right */}
+                      <div className="absolute top-4 right-4">
                         <SaveJobButton
                           jobId={job.JobID}
                           variant="heart"
@@ -402,47 +455,43 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                         />
                       </div>
 
-                      {/* Company Logo, Company Name, and Job Title Row */}
-                      <div className="flex items-start mb-4 sm:pr-16">
-                        {/* Company Logo - Hidden on mobile, shown on desktop */}
-                        <div className="hidden sm:block">
-                          {company?.company_logo ? (
-                            <img
-                              src={company.company_logo}
-                              alt={`${company.name} logo`}
-                              className="w-20 h-20 object-contain border border-gray-200 rounded-lg p-2 bg-white mr-4 flex-shrink-0"
-                            />
-                          ) : (
-                            <div className="w-20 h-20 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-                              <Building2 className="w-10 h-10 text-gray-400" />
-                            </div>
-                          )}
-                        </div>
+                      {/* Company Logo, Name, and Job Title */}
+                      <div className="flex items-start mb-4 pr-16">
+                        {/* Company Logo */}
+                        {company?.company_logo ? (
+                          <img
+                            src={company.company_logo}
+                            alt={`${company.name} logo`}
+                            className="w-16 h-16 object-contain border border-gray-200 rounded-lg p-2 bg-white mr-4 flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                            <Building2 className="w-8 h-8 text-gray-400" />
+                          </div>
+                        )}
 
-                        {/* Company Name and Job Title Column */}
+                        {/* Company Name and Job Title */}
                         <div className="flex-1 min-w-0">
-                          <span className="text-sm text-gray-600 font-medium block mb-1">
+                          <span className="text-sm text-gray-600 font-medium block mb-2">
                             {job.Company}
                           </span>
                           <Link
                             href={`/jobs/${job.slug}`}
-                            className="text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors block"
+                            className="text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors block leading-tight"
                           >
                             {job.JobTitle.replace(/\b\w+/g, (word) => {
-                              // Keep certain tech abbreviations uppercase
                               const upperWords = ['IT', 'AI', 'ML', 'API', 'CEO', 'CTO', 'CFO', 'VP', 'HR', 'QA', 'DevOps', 'AWS', 'SaaS', 'B2B', 'B2C', 'UI', 'UX', 'SQL', 'PHP', 'CSS', 'HTML', 'JS', 'HTTP', 'HTTPS', 'REST', 'JSON', 'XML', 'CRM', 'ERP', 'SEO', 'SEM', 'PPC', 'ROI', 'KPI', 'LOB', 'SME', 'QC', 'R&D', 'P&L', 'M&A', 'IPO', 'B2G', 'G2B', 'G2C', 'C2C', 'P2P', 'IoT', 'AR', 'VR', 'EA'];
                               if (upperWords.includes(word.toUpperCase())) {
                                 return word.toUpperCase();
                               }
-                              // Otherwise use proper case
                               return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
                             })}
                           </Link>
                         </div>
                       </div>
 
-                      {/* Location pin and Posted date with clock */}
-                      <div className="flex items-center space-x-4 mb-3 text-sm text-gray-600">
+                      {/* Location and Posted Date */}
+                      <div className="flex items-center space-x-4 mb-4 text-sm text-gray-600">
                         <div className="flex items-center">
                           <MapPin className="h-4 w-4 mr-1 text-gray-400" />
                           <span>{job.Location}</span>
@@ -453,8 +502,8 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                         </div>
                       </div>
 
-                      {/* Badges with line underneath */}
-                      <div className="flex items-center space-x-2 mb-4 pb-4 border-b border-gray-200">
+                      {/* Badges */}
+                      <div className="flex items-center space-x-2 mb-4">
                         {job.is_remote && (
                           <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
                             Remote
@@ -465,31 +514,22 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                         </span>
                       </div>
 
-                      {/* Salary and Buttons Row */}
-                      <div className="flex items-center justify-between">
+                      {/* Divider Line */}
+                      <div className="border-b border-gray-200 mb-4"></div>
+
+                      {/* Bottom Section - Salary and Apply Button */}
+                      <div className="flex items-center justify-between mt-auto">
                         <div className="flex items-center">
                           <DollarSign className="h-4 w-4 mr-2 text-gray-400" />
                           <span className="font-medium text-green-600">{job.formatted_salary}</span>
                         </div>
-
-                        {/* Mobile: Both buttons side by side, Desktop: Just Apply button */}
-                        <div className="flex items-center space-x-2">
-                          {/* Save button - Only shown on mobile */}
-                          <div className="sm:hidden">
-                            <SaveJobButton
-                              jobId={job.JobID}
-                              variant="heart"
-                              size="sm"
-                            />
-                          </div>
-                          
-                          <Link
-                            href={`/jobs/${job.slug}`}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                          >
-                            Apply
-                          </Link>
-                        </div>
+                        
+                        <Link
+                          href={`/jobs/${job.slug}`}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                        >
+                          Apply
+                        </Link>
                       </div>
                     </div>
                   );
@@ -497,60 +537,254 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
               </div>
             ) : (
               !loading && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
                   <div className="text-gray-500 mb-4">
                     <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <h3 className="text-lg font-medium mb-2">No jobs found</h3>
                     <p>Try adjusting your search criteria or clearing some filters.</p>
                   </div>
+                  {(locationFilter || jobTypeFilter || workTypeFilter || searchQuery) && (
+                    <button onClick={clearAllFilters} className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                      Clear All Filters
+                    </button>
+                  )}
                 </div>
               )
             )}
 
             {/* Pagination */}
-            {totalPages > 1 && !loading && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-8">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
-                    Showing {((currentPage - 1) * JOBS_PER_PAGE) + 1}-{Math.min(currentPage * JOBS_PER_PAGE, totalJobs)} of {totalJobs.toLocaleString()} jobs
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {currentPage > 1 && (
-                      <button onClick={() => handlePageChange(currentPage - 1)} className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                        <ChevronLeft className="w-4 h-4 mr-1" />
-                        Previous
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center space-x-2 mt-8">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                
+                <div className="flex space-x-1">
+                  {[...Array(Math.min(totalPages, 5))].map((_, i) => {
+                    const page = i + 1;
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`px-4 py-2 rounded-lg ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white'
+                            : 'border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
                       </button>
-                    )}
-
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                        const pageNum = Math.max(1, currentPage - 2) + i;
-                        if (pageNum > totalPages) return null;
-
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => handlePageChange(pageNum)}
-                            className={`w-10 h-10 flex items-center justify-center text-sm font-medium rounded-lg transition-colors ${pageNum === currentPage ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-                              }`}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {currentPage < totalPages && (
-                      <button onClick={() => handlePageChange(currentPage + 1)} className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                        Next <ChevronRight className="w-4 h-4 ml-1" />
-                      </button>
-                    )}
-                  </div>
+                    );
+                  })}
                 </div>
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
               </div>
             )}
           </div>
+        </div>
+
+        {/* Mobile Jobs Content */}
+        <div className="lg:hidden">
+          {/* Active Filters Display - Mobile */}
+          {(locationFilter || jobTypeFilter || workTypeFilter) && (
+            <div className="mb-6">
+              <div className="flex items-center flex-wrap gap-2">
+                <span className="text-sm text-gray-600">Active filters:</span>
+                {locationFilter && (
+                  <span className="inline-flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                    📍 {locationFilter}
+                    <button onClick={() => setLocationFilter('')} className="ml-2 hover:bg-blue-200 rounded-full p-0.5 transition-colors">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {jobTypeFilter && (
+                  <span className="inline-flex items-center bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
+                    💼 {jobTypeFilter}
+                    <button onClick={() => setJobTypeFilter('')} className="ml-2 hover:bg-purple-200 rounded-full p-0.5 transition-colors">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {workTypeFilter && (
+                  <span className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                    🏠 {workTypeFilter}
+                    <button onClick={() => setWorkTypeFilter('')} className="ml-2 hover:bg-green-200 rounded-full p-0.5 transition-colors">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Jobs Count - Mobile */}
+          <div className="mb-6">
+            <div className="flex items-center">
+              <TrendingUp className="w-5 h-5 text-blue-600 mr-2" />
+              <p className="text-gray-700">
+                <span className="font-bold text-gray-900 text-xl">{totalJobs.toLocaleString()}</span>
+                <span className="ml-1">jobs found</span>
+                {searchQuery && <span className="text-blue-600 font-medium"> for "{searchQuery}"</span>}
+              </p>
+            </div>
+          </div>
+
+          {/* Loading State - Mobile */}
+          {loading && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center mb-6">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading jobs...</p>
+            </div>
+          )}
+
+          {/* Jobs Grid - Mobile */}
+          {!loading && jobs.length > 0 ? (
+            <div className="space-y-6 mb-8">
+              {jobs.map((job) => {
+                const company = getCompanyForJob(job);
+                
+                return (
+                  <div key={job.JobID} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                    {/* Company Name and Job Title - Mobile (no logo) */}
+                    <div className="mb-4">
+                      <span className="text-sm text-gray-600 font-medium block mb-2">
+                        {job.Company}
+                      </span>
+                      <Link
+                        href={`/jobs/${job.slug}`}
+                        className="text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors block leading-tight"
+                      >
+                        {job.JobTitle.replace(/\b\w+/g, (word) => {
+                          const upperWords = ['IT', 'AI', 'ML', 'API', 'CEO', 'CTO', 'CFO', 'VP', 'HR', 'QA', 'DevOps', 'AWS', 'SaaS', 'B2B', 'B2C', 'UI', 'UX', 'SQL', 'PHP', 'CSS', 'HTML', 'JS', 'HTTP', 'HTTPS', 'REST', 'JSON', 'XML', 'CRM', 'ERP', 'SEO', 'SEM', 'PPC', 'ROI', 'KPI', 'LOB', 'SME', 'QC', 'R&D', 'P&L', 'M&A', 'IPO', 'B2G', 'G2B', 'G2C', 'C2C', 'P2P', 'IoT', 'AR', 'VR', 'EA'];
+                          if (upperWords.includes(word.toUpperCase())) {
+                            return word.toUpperCase();
+                          }
+                          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+                        })}
+                      </Link>
+                    </div>
+
+                    {/* Location and Posted Date - Mobile */}
+                    <div className="flex items-center space-x-4 mb-4 text-sm text-gray-600">
+                      <div className="flex items-center">
+                        <MapPin className="h-4 w-4 mr-1 text-gray-400" />
+                        <span>{job.Location}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Clock className="h-4 w-4 mr-1 text-gray-400" />
+                        <span>Posted {formatDate(job.PostedDate)}</span>
+                      </div>
+                    </div>
+
+                    {/* Badges - Mobile */}
+                    <div className="flex items-center space-x-2 mb-4">
+                      {job.is_remote && (
+                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                          Remote
+                        </span>
+                      )}
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getJobTypeColor(job.JobType)}`}>
+                        {job.JobType.replace('_', ' ')}
+                      </span>
+                    </div>
+
+                    {/* Divider Line - Mobile */}
+                    <div className="border-b border-gray-200 mb-4"></div>
+
+                    {/* Bottom Section - Salary and Buttons - Mobile */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <DollarSign className="h-4 w-4 mr-2 text-gray-400" />
+                        <span className="font-medium text-green-600">{job.formatted_salary}</span>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <SaveJobButton
+                          jobId={job.JobID}
+                          variant="heart"
+                          size="sm"
+                        />
+                        
+                        <Link
+                          href={`/jobs/${job.slug}`}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                        >
+                          Apply
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            !loading && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+                <div className="text-gray-500 mb-4">
+                  <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">No jobs found</h3>
+                  <p>Try adjusting your search criteria or clearing some filters.</p>
+                </div>
+                {(locationFilter || jobTypeFilter || workTypeFilter || searchQuery) && (
+                  <button onClick={clearAllFilters} className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Clear All Filters
+                  </button>
+                )}
+              </div>
+            )
+          )}
+
+          {/* Pagination - Mobile */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center space-x-2 mt-8">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              
+              <div className="flex space-x-1">
+                {[...Array(Math.min(totalPages, 5))].map((_, i) => {
+                  const page = i + 1;
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`px-4 py-2 rounded-lg ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white'
+                          : 'border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
