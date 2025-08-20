@@ -385,7 +385,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
               </div>
             )}
 
-            {/* Jobs List - UPDATED TO TWO COLUMNS */}
+{/* Jobs List - UPDATED TO TWO COLUMNS */}
             {!loading && jobs.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {jobs.map((job) => {
@@ -404,18 +404,20 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
 
                       {/* Company Logo, Company Name, and Job Title Row */}
                       <div className="flex items-start mb-4 sm:pr-16">
-                        {/* Company Logo */}
-                        {company?.company_logo ? (
-                          <img
-                            src={company.company_logo}
-                            alt={`${company.name} logo`}
-                            className="w-20 h-20 object-contain border border-gray-200 rounded-lg p-2 bg-white mr-4 flex-shrink-0"
-                          />
-                        ) : (
-                          <div className="w-20 h-20 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-                            <Building2 className="w-10 h-10 text-gray-400" />
-                          </div>
-                        )}
+                        {/* Company Logo - Hidden on mobile, shown on desktop */}
+                        <div className="hidden sm:block">
+                          {company?.company_logo ? (
+                            <img
+                              src={company.company_logo}
+                              alt={`${company.name} logo`}
+                              className="w-20 h-20 object-contain border border-gray-200 rounded-lg p-2 bg-white mr-4 flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-20 h-20 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                              <Building2 className="w-10 h-10 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
 
                         {/* Company Name and Job Title Column */}
                         <div className="flex-1 min-w-0">
@@ -480,7 +482,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                               size="sm"
                             />
                           </div>
-
+                          
                           <Link
                             href={`/jobs/${job.slug}`}
                             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
