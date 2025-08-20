@@ -1,4 +1,4 @@
-// src/app/api/jobs/route.ts - Optimized Version
+// src/app/api/jobs/route.ts - FIXED VERSION
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -66,16 +66,31 @@ export async function GET(request: NextRequest) {
       dataQuery = dataQuery.eq('JobType', jobType);
     }
 
+    // 🔥 FIXED: Work Type filtering
     if (workType) {
-      if (workType === 'remote') {
+      console.log('🔍 Filtering by workType:', workType);
+      
+      if (workType === 'Remote') {
         countQuery = countQuery.eq('is_remote', true);
         dataQuery = dataQuery.eq('is_remote', true);
-      } else if (workType === 'onsite') {
+      } else if (workType === 'On-site') {
         countQuery = countQuery.eq('is_remote', false);
         dataQuery = dataQuery.eq('is_remote', false);
+      } else if (workType === 'Hybrid') {
+      countQuery = countQuery.ilike('ShortDescription', '%hybrid%');
+      dataQuery = dataQuery.ilike('ShortDescription', '%hybrid%');
       }
-      // Note: Add hybrid logic if you have a hybrid field
     }
+
+    // Add debugging
+    console.log('🔍 Filter Debug:', {
+      workType,
+      location,
+      jobType,
+      searchQuery: q,
+      page,
+      limit
+    });
 
     // Execute queries in parallel for better performance
     const [countResult, dataResult] = await Promise.all([
@@ -99,22 +114,39 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const response = NextResponse.json({
+    // 🔥 FIXED: Use the correct variable names from the query results
+    const jobs = dataResult.data || [];
+    const totalCount = countResult.count || 0;
+
+    // Add results debugging
+    console.log('🔍 Results Debug:', {
+      totalResults: totalCount,
+      filteredJobs: jobs.length,
+      sampleJob: jobs[0] ? {
+        title: jobs[0].JobTitle,
+        company: jobs[0].Company,
+        isRemote: jobs[0].is_remote,
+        location: jobs[0].Location
+      } : null
+    });
+
+    // 🔥 FIXED: Create response with correct structure
+    const responseData = NextResponse.json({
       success: true,
-      data: dataResult.data || [],
-      total: countResult.count || 0,
-      page,
-      limit,
-      totalPages: Math.ceil((countResult.count || 0) / limit)
+      data: jobs,
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      page: page,
+      limit: limit
     });
 
     // Add caching headers
-    response.headers.set(
+    responseData.headers.set(
       'Cache-Control',
       'public, s-maxage=300, stale-while-revalidate=600'
     );
 
-    return response;
+    return responseData;
 
   } catch (error) {
     console.error('API Error:', error);
