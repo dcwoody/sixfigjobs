@@ -283,7 +283,8 @@ export default async function JobDetailPage({ params }: PageProps) {
                 href={job.job_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center"
+                className="w-full bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center"
+                aria-label={`Apply for ${job.JobTitle} at ${job.Company} (opens in new tab)`}
               >
                 Apply Now <ExternalLink className="h-5 w-5 ml-2" />
               </a>

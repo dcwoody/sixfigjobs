@@ -1,6 +1,10 @@
-// src/app/api/jobs/route.ts - UPDATED VERSION
+// src/app/api/jobs/route.ts - Optimized Version
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server'; // Use server client
+import { createClient } from '@/lib/supabase/server';
+
+// Enable caching for this route
+export const runtime = 'nodejs';
+export const revalidate = 300; // 5 minutes
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -9,52 +13,38 @@ export async function GET(request: NextRequest) {
   const jobType = searchParams.get('jobType');
   const workType = searchParams.get('workType');
   const page = parseInt(searchParams.get('page') || '1');
-  const limit = parseInt(searchParams.get('limit') || '12');
+  const limit = Math.min(parseInt(searchParams.get('limit') || '12'), 50); // Cap at 50
   const offset = (page - 1) * limit;
 
   try {
-    const supabase = await createClient(); // Await the server client
+    const supabase = await createClient();
 
-    // Build base query for count
+    // Build optimized query - only select needed fields
+    const selectFields = `
+      JobID,
+      JobTitle,
+      ShortDescription,
+      Company,
+      Location,
+      formatted_salary,
+      slug,
+      PostedDate,
+      is_remote,
+      JobType,
+      company_id
+    `;
+
+    // Build base queries
     let countQuery = supabase
       .from('job_listings_db')
-      .select('*', { count: 'exact', head: true });
+      .select('JobID', { count: 'exact', head: true });
 
-    // Build base query for data - EXPLICITLY INCLUDE company_id
     let dataQuery = supabase
       .from('job_listings_db')
-      .select(`
-        JobID,
-        JobTitle,
-        LongDescription,
-        ShortDescription,
-        Company,
-        Location,
-        Industry,
-        JobType,
-        SubmissionDate,
-        ExpirationDate,
-        CompanyLogo,
-        "Related Submissions",
-        PostedDate,
-        is_remote,
-        Interval,
-        min_amount,
-        max_amount,
-        currency,
-        source,
-        formatted_salary,
-        job_url,
-        job_url_direct,
-        CreatedTime,
-        is_duplicate,
-        slug,
-        company_id
-      `)
-      .order('PostedDate', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .select(selectFields)
+      .order('PostedDate', { ascending: false });
 
-    // Apply filters to both queries
+    // Apply search filters
     if (q) {
       const searchFilter = `JobTitle.ilike.%${q}%,ShortDescription.ilike.%${q}%,Company.ilike.%${q}%`;
       countQuery = countQuery.or(searchFilter);
@@ -72,49 +62,65 @@ export async function GET(request: NextRequest) {
     }
 
     if (jobType) {
-      countQuery = countQuery.ilike('JobType', `%${jobType}%`);
-      dataQuery = dataQuery.ilike('JobType', `%${jobType}%`);
+      countQuery = countQuery.eq('JobType', jobType);
+      dataQuery = dataQuery.eq('JobType', jobType);
     }
 
-    if (workType === 'Remote') {
-      countQuery = countQuery.eq('is_remote', true);
-      dataQuery = dataQuery.eq('is_remote', true);
-    } else if (workType === 'On-site') {
-      countQuery = countQuery.eq('is_remote', false);
-      dataQuery = dataQuery.eq('is_remote', false);
+    if (workType) {
+      if (workType === 'remote') {
+        countQuery = countQuery.eq('is_remote', true);
+        dataQuery = dataQuery.eq('is_remote', true);
+      } else if (workType === 'onsite') {
+        countQuery = countQuery.eq('is_remote', false);
+        dataQuery = dataQuery.eq('is_remote', false);
+      }
+      // Note: Add hybrid logic if you have a hybrid field
     }
 
-    // Execute both queries
-    const [{ count }, { data, error }] = await Promise.all([
+    // Execute queries in parallel for better performance
+    const [countResult, dataResult] = await Promise.all([
       countQuery,
-      dataQuery
+      dataQuery.range(offset, offset + limit - 1)
     ]);
 
-    if (error) {
-      console.error('Jobs API error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (countResult.error) {
+      console.error('Count query error:', countResult.error);
+      return NextResponse.json(
+        { success: false, error: 'Failed to count jobs' },
+        { status: 500 }
+      );
     }
 
-    // Debug: Log a sample to verify company_id is included
-    if (data && data.length > 0) {
-      console.log('Sample job data:', {
-        JobTitle: data[0].JobTitle,
-        Company: data[0].Company,
-        company_id: data[0].company_id,
-        hasCompanyId: !!data[0].company_id
-      });
+    if (dataResult.error) {
+      console.error('Data query error:', dataResult.error);
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch jobs' },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({
-      jobs: data || [],
-      totalJobs: count || 0,
-      totalPages: Math.ceil((count || 0) / limit),
-      currentPage: page,
-      hasMore: (count || 0) > offset + limit
+    const response = NextResponse.json({
+      success: true,
+      data: dataResult.data || [],
+      total: countResult.count || 0,
+      page,
+      limit,
+      totalPages: Math.ceil((countResult.count || 0) / limit)
     });
 
+    // Add caching headers
+    response.headers.set(
+      'Cache-Control',
+      'public, s-maxage=300, stale-while-revalidate=600'
+    );
+
+    return response;
+
   } catch (error) {
-    console.error('Jobs API Error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('API Error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

@@ -1,4 +1,4 @@
-// src/components/JobsList.tsx - SINGLE LAYOUT WITH RESPONSIVE FILTERS
+// src/components/JobsList.tsx - WITH DEBOUNCED SEARCH OPTIMIZATION
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -20,16 +20,38 @@ interface JobsListProps {
   };
 }
 
+interface JobTypeOption {
+  value: string;
+  label: string;
+}
+
+// 🔥 ADD: Debounce hook for search optimization
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
 const JOBS_PER_PAGE = 12;
 
 export default function JobsList({ initialJobs, initialSearchParams }: JobsListProps) {
   const router = useRouter();
 
-  // State management
+  // State management - FIX: Initialize totalJobs with initialJobs length
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
-  const [totalJobs, setTotalJobs] = useState(0);
+  const [totalJobs, setTotalJobs] = useState(initialJobs?.length || 0);
   const [totalPages, setTotalPages] = useState(1);
 
   // Filter states
@@ -39,18 +61,32 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
   const [workTypeFilter, setWorkTypeFilter] = useState(initialSearchParams.workType || '');
   const [currentPage, setCurrentPage] = useState(parseInt(initialSearchParams.page || '1', 10));
 
+  // 🔥 ADD: Debounced search query (waits 500ms after user stops typing)
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
   // Mobile filter state
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Filter options
+  // Filter options - FIXED: Match database format
   const locationOptions = [
     'Washington, DC', 'Arlington, VA', 'Alexandria, VA', 'Bethesda, MD',
     'Silver Spring, MD', 'Rockville, MD', 'Fairfax, VA', 'Tysons, VA',
     'Reston, VA', 'Remote'
   ];
 
-  const jobTypeOptions = ['Full-Time', 'Part-Time', 'Contract', 'Temporary', 'Internship'];
+  const jobTypeOptions: JobTypeOption[] = [
+    { value: 'full_time', label: 'Full-Time' },
+    { value: 'part_time', label: 'Part-Time' },
+    { value: 'contract', label: 'Contract' },
+  ];
+
   const workTypeOptions = ['Remote', 'Hybrid', 'On-site'];
+
+  // Helper function to get job type label
+  const getJobTypeLabel = (value: string): string => {
+    const jobType = jobTypeOptions.find(option => option.value === value);
+    return jobType ? jobType.label : value;
+  };
 
   // Load companies data
   useEffect(() => {
@@ -77,13 +113,13 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
     return companies.find(c => c.name === job.Company);
   };
 
-  // Load jobs from API
+  // Load jobs from API - UPDATED: Use debouncedSearchQuery for API calls
   const loadJobs = async (page = 1) => {
     setLoading(true);
 
     try {
       const params = new URLSearchParams();
-      if (searchQuery) params.set('q', searchQuery);
+      if (debouncedSearchQuery) params.set('q', debouncedSearchQuery); // 🔥 CHANGED: Use debounced value
       if (locationFilter) params.set('location', locationFilter);
       if (jobTypeFilter) params.set('jobType', jobTypeFilter);
       if (workTypeFilter) params.set('workType', workTypeFilter);
@@ -93,25 +129,27 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
       const response = await fetch(`/api/jobs?${params.toString()}`);
       const data = await response.json();
 
-      if (response.ok) {
-        setJobs(data.jobs);
-        setTotalJobs(data.totalJobs);
-        setTotalPages(data.totalPages);
-        setCurrentPage(data.currentPage);
+      if (response.ok && data.success) {
+        setJobs(data.data || []);
+        setTotalJobs(data.total || 0);
+        setTotalPages(data.totalPages || 1);
+        setCurrentPage(data.page || page);
       } else {
         console.error('API Error:', data.error);
+        setTotalJobs(jobs.length);
       }
     } catch (error) {
       console.error('Error loading jobs:', error);
+      setTotalJobs(jobs.length);
     } finally {
       setLoading(false);
     }
   };
 
-  // Update URL and load jobs
+  // Update URL and load jobs - UPDATED: Use debouncedSearchQuery for URL updates
   const updateFiltersAndLoad = async (page = 1) => {
     const params = new URLSearchParams();
-    if (searchQuery) params.set('q', searchQuery);
+    if (debouncedSearchQuery) params.set('q', debouncedSearchQuery); // 🔥 CHANGED: Use debounced value
     if (locationFilter) params.set('location', locationFilter);
     if (jobTypeFilter) params.set('jobType', jobTypeFilter);
     if (workTypeFilter) params.set('workType', workTypeFilter);
@@ -121,10 +159,10 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
     await loadJobs(page);
   };
 
-  // Auto-apply filters when they change
+  // Auto-apply filters when they change - UPDATED: Include debouncedSearchQuery
   useEffect(() => {
     updateFiltersAndLoad(1);
-  }, [locationFilter, jobTypeFilter, workTypeFilter]);
+  }, [debouncedSearchQuery, locationFilter, jobTypeFilter, workTypeFilter]); // 🔥 CHANGED: Added debouncedSearchQuery
 
   // Handle search
   const handleSearch = async (e: React.FormEvent) => {
@@ -150,7 +188,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
     setLocationFilter('');
     setJobTypeFilter('');
     setWorkTypeFilter('');
-    setSearchQuery('');
+    setSearchQuery(''); // Keep this as searchQuery for immediate UI update
     router.push('/jobs');
     loadJobs(1);
   };
@@ -206,6 +244,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
           {/* Search Bar - Mobile */}
           <div className="mb-6">
             <form onSubmit={handleSearch}>
+              <button type="submit" className="sr-only" aria-label="Search jobs">Submit</button>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
@@ -223,6 +262,9 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
           <button
             onClick={() => setShowMobileFilters(!showMobileFilters)}
             className="flex items-center justify-center w-full px-4 py-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors mb-6"
+            aria-label={showMobileFilters ? 'Hide filters' : 'Show filters'}
+            aria-expanded={showMobileFilters}
+
           >
             <Filter className="w-5 h-5 mr-2 text-gray-600" />
             <span className="font-medium text-gray-900">Filters</span>
@@ -240,7 +282,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
                 {(locationFilter || jobTypeFilter || workTypeFilter) && (
-                  <button onClick={clearAllFilters} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                  <button onClick={clearAllFilters} className="text-sm text-blue-600 hover:text-blue-800 font-medium" aria-label="Clear all active filters">
                     Clear All
                   </button>
                 )}
@@ -270,7 +312,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                   >
                     <option value="">All Types</option>
                     {jobTypeOptions.map((type) => (
-                      <option key={type} value={type}>{type}</option>
+                      <option key={type.value} value={type.value}>{type.label}</option>
                     ))}
                   </select>
                 </div>
@@ -312,6 +354,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
                   <form onSubmit={handleSearch}>
+                    <button type="submit" className="sr-only" aria-label="Search jobs">Submit</button>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
@@ -343,19 +386,19 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                   </div>
                 </div>
 
-                {/* Job Type Filter - Desktop */}
+                {/* Job Type Filter - Desktop - FIXED */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-3">Job Type</label>
                   <div className="space-y-2">
                     {jobTypeOptions.map((type) => (
-                      <label key={type} className="flex items-center cursor-pointer">
+                      <label key={type.value} className="flex items-center cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={jobTypeFilter === type}
-                          onChange={() => handleJobTypeChange(type)}
+                          checked={jobTypeFilter === type.value}
+                          onChange={() => handleJobTypeChange(type.value)}
                           className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                         />
-                        <span className="ml-3 text-sm text-gray-700">{type}</span>
+                        <span className="ml-3 text-sm text-gray-700">{type.label}</span>
                       </label>
                     ))}
                   </div>
@@ -386,7 +429,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold text-gray-900 mb-6">Find your next SixFigJob below:</h1>
 
-            {/* Active Filters Display */}
+            {/* Active Filters Display - FIXED */}
             {(locationFilter || jobTypeFilter || workTypeFilter) && (
               <div className="mb-6">
                 <div className="flex items-center flex-wrap gap-2">
@@ -394,15 +437,15 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                   {locationFilter && (
                     <span className="inline-flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
                       📍 {locationFilter}
-                      <button onClick={() => setLocationFilter('')} className="ml-2 hover:bg-blue-200 rounded-full p-0.5 transition-colors">
+                      <button onClick={() => setLocationFilter('')} className="ml-2 hover:bg-blue-200 rounded-full p-0.5 transition-colors" aria-label={`Remove ${locationFilter} location filter`}>
                         <X className="w-3 h-3" />
                       </button>
                     </span>
                   )}
                   {jobTypeFilter && (
                     <span className="inline-flex items-center bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
-                      💼 {jobTypeFilter}
-                      <button onClick={() => setJobTypeFilter('')} className="ml-2 hover:bg-purple-200 rounded-full p-0.5 transition-colors">
+                      💼 {getJobTypeLabel(jobTypeFilter)}
+                      <button onClick={() => setJobTypeFilter('')} className="ml-2 hover:bg-purple-200 rounded-full p-0.5 transition-colors" aria-label={`Remove ${getJobTypeLabel(jobTypeFilter)} job type filter`}>
                         <X className="w-3 h-3" />
                       </button>
                     </span>
@@ -419,14 +462,14 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
               </div>
             )}
 
-            {/* Jobs Count */}
+            {/* Jobs Count - UPDATED: Use debouncedSearchQuery for display */}
             <div className="mb-6">
               <div className="flex items-center">
                 <TrendingUp className="w-5 h-5 text-blue-600 mr-2" />
                 <p className="text-gray-700">
-                  <span className="font-bold text-gray-900 text-xl">{totalJobs.toLocaleString()}</span>
+                  <span className="font-bold text-gray-900 text-xl">{(totalJobs || 0).toLocaleString()}</span>
                   <span className="ml-1">jobs found</span>
-                  {searchQuery && <span className="text-blue-600 font-medium"> for "{searchQuery}"</span>}
+                  {debouncedSearchQuery && <span className="text-blue-600 font-medium"> for "{debouncedSearchQuery}"</span>}
                 </p>
               </div>
             </div>
@@ -560,6 +603,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Go to previous page"
                 >
                   Previous
                 </button>
@@ -571,10 +615,9 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                       <button
                         key={page}
                         onClick={() => handlePageChange(page)}
-                        className={`px-4 py-2 rounded-lg ${currentPage === page
-                            ? 'bg-blue-600 text-white'
-                            : 'border border-gray-300 hover:bg-gray-50'
-                          }`}
+                        className={`px-4 py-2 rounded-lg ${currentPage === page ? 'bg-blue-600 text-white' : 'border border-gray-300 hover:bg-gray-50'}`}
+                        aria-label={`Go to page ${page}`}
+                        aria-current={currentPage === page ? 'page' : undefined}
                       >
                         {page}
                       </button>
@@ -586,6 +629,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Go to next page"
                 >
                   Next
                 </button>
@@ -596,7 +640,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
 
         {/* Mobile Jobs Content */}
         <div className="lg:hidden">
-          {/* Active Filters Display - Mobile */}
+          {/* Active Filters Display - Mobile - FIXED */}
           {(locationFilter || jobTypeFilter || workTypeFilter) && (
             <div className="mb-6">
               <div className="flex items-center flex-wrap gap-2">
@@ -611,7 +655,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                 )}
                 {jobTypeFilter && (
                   <span className="inline-flex items-center bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
-                    💼 {jobTypeFilter}
+                    💼 {getJobTypeLabel(jobTypeFilter)}
                     <button onClick={() => setJobTypeFilter('')} className="ml-2 hover:bg-purple-200 rounded-full p-0.5 transition-colors">
                       <X className="w-3 h-3" />
                     </button>
@@ -620,7 +664,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                 {workTypeFilter && (
                   <span className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
                     🏠 {workTypeFilter}
-                    <button onClick={() => setWorkTypeFilter('')} className="ml-2 hover:bg-green-200 rounded-full p-0.5 transition-colors">
+                    <button onClick={() => setWorkTypeFilter('')} className="ml-2 hover:bg-green-200 rounded-full p-0.5 transition-colors" aria-label={`Remove ${workTypeFilter} work type filter`}>
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -629,14 +673,14 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
             </div>
           )}
 
-          {/* Jobs Count - Mobile */}
+          {/* Jobs Count - Mobile - UPDATED: Use debouncedSearchQuery */}
           <div className="mb-6">
             <div className="flex items-center">
               <TrendingUp className="w-5 h-5 text-blue-600 mr-2" />
               <p className="text-gray-700">
-                <span className="font-bold text-gray-900 text-xl">{totalJobs.toLocaleString()}</span>
+                <span className="font-bold text-gray-900 text-xl">{(totalJobs || 0).toLocaleString()}</span>
                 <span className="ml-1">jobs found</span>
-                {searchQuery && <span className="text-blue-600 font-medium"> for "{searchQuery}"</span>}
+                {debouncedSearchQuery && <span className="text-blue-600 font-medium"> for "{debouncedSearchQuery}"</span>}
               </p>
             </div>
           </div>
@@ -765,8 +809,8 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                       key={page}
                       onClick={() => handlePageChange(page)}
                       className={`px-4 py-2 rounded-lg ${currentPage === page
-                          ? 'bg-blue-600 text-white'
-                          : 'border border-gray-300 hover:bg-gray-50'
+                        ? 'bg-blue-600 text-white'
+                        : 'border border-gray-300 hover:bg-gray-50'
                         }`}
                     >
                       {page}
@@ -788,6 +832,6 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
       </div>
 
       <Footer />
-    </div >
+    </div>
   );
 }

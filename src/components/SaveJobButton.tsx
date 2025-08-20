@@ -153,6 +153,8 @@ export default function SaveJobButton({
         ${className}
       `}
       title={isSaved ? 'Remove from saved jobs' : 'Save job'}
+      aria-label={isSaved ? 'Remove from saved jobs' : 'Save job'}
+
     >
       <Icon 
         className={`
