@@ -220,7 +220,7 @@ export default async function HomePage() {
       {/* Left */}
       <div className="md:col-span-6 lg:col-span-7 order-2 md:order-1 mt-10 md:mt-0">
         <div className="lg:me-8">
-          <h1 className="text-4xl lg:text-5xl font-bold leading-tight mb-5 text-white/90">
+          <h1 className="text-4xl lg:text-5xl font-bold leading-tight mb-5 text-white">
             Find your {' '}
             <span className="relative inline-block">
               <span className="absolute inset-0 -skew-y-6 bg-blue-600 rounded-sm" aria-hidden />
@@ -235,7 +235,7 @@ export default async function HomePage() {
           </p>
 
           {/* Search card */}
-          <div className="mt-6 bg-white/95 dark:bg-slate-900 border-0 shadow-sm rounded-xl p-4">
+          <div className="mt-6 bg-white dark:bg-slate-900 border-0 shadow-sm rounded-xl p-4">
             <form action="/jobs" method="GET" className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -378,104 +378,103 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+{/* Featured Jobs Section */}
+{featuredJobs && featuredJobs.length > 0 && (
+  <section id="featured-jobs" className="py-24 bg-white">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="text-center mb-16">
+        <div className="inline-flex items-center bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 rounded-full px-6 py-2 mb-6">
+          <Star className="w-5 h-5 text-blue-600 mr-2" />
+          <span className="text-blue-600 font-medium">Hand-picked for you</span>
+        </div>
+        <h2 className="text-4xl font-bold text-gray-900 mb-6">Featured Opportunities</h2>
+        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          Premium positions from our top partner companies with competitive salaries and great benefits.
+        </p>
+      </div>
 
-      {/* Featured Jobs Section */}
-      {featuredJobs && featuredJobs.length > 0 && (
-        <section id="featured-jobs" className="py-24 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <div className="inline-flex items-center bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 rounded-full px-6 py-2 mb-6">
-                <Star className="w-5 h-5 text-blue-600 mr-2" />
-                <span className="text-blue-600 font-medium">Hand-picked for you</span>
-              </div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-6">Featured Opportunities</h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Premium positions from our top partner companies with competitive salaries and great benefits.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-              {featuredJobs.map((job: any) => (
-                <div key={job.JobID} className="group bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 overflow-hidden hover:border-blue-200">
-                  <div className="p-6">
-                    {/* Company and Remote Badge */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center">
-                        <Building2 className="w-4 h-4 text-gray-400 mr-2" />
-                        <span className="text-sm font-medium text-gray-900 truncate">{job.Company}</span>
-                      </div>
-                      {job.is_remote && (
-                        <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full font-medium">
-                          Remote
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Job Title */}
-                    <Link href={`/jobs/${job.slug}`} className="block mb-3">
-                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-tight">
-                        {job.JobTitle}
-                      </h3>
-                    </Link>
-
-                    {/* Location and Salary */}
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-600">
-                        <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
-                        <span className="text-sm truncate">{job.Location}</span>
-                      </div>
-                      {job.formatted_salary && (
-                        <div className="flex items-center text-green-600">
-                          <DollarSign className="w-4 h-4 mr-2 flex-shrink-0" />
-                          <span className="text-sm font-medium">{job.formatted_salary}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Description */}
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed">
-                      {job.ShortDescription}
-                    </p>
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <div className="flex items-center text-gray-500">
-                        <Clock className="w-4 h-4 mr-1" />
-                        <span className="text-xs">{formatPostedDate(job.PostedDate)}</span>
-                      </div>
-                      <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded font-medium">
-                        {job.JobType}
-                      </span>
-                    </div>
-
-                    {/* View Details Button */}
-                    <div className="mt-4">
-                      <Link
-                        href={`/jobs/${job.slug}`}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 text-sm font-medium flex items-center justify-center group"
-                      >
-                        View Details
-                        <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                      </Link>
-                    </div>
-                  </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        {featuredJobs.map((job: any) => (
+          <div key={job.JobID} className="group bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 overflow-hidden hover:border-blue-200 flex flex-col h-full">
+            <div className="p-6 flex flex-col h-full">
+              {/* Company and Remote Badge */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <Building2 className="w-4 h-4 text-gray-400 mr-2" />
+                  <span className="text-sm font-medium text-gray-900 truncate">{job.Company}</span>
                 </div>
-              ))}
-            </div>
+                {job.is_remote && (
+                  <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full font-medium">
+                    Remote
+                  </span>
+                )}
+              </div>
 
-            <div className="text-center">
-              <Link
-                href="/jobs"
-                className="inline-flex items-center px-8 py-4 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors transform hover:scale-105 shadow-lg"
-              >
-                <Briefcase className="w-5 h-5 mr-2" />
-                View All {totalJobs.toLocaleString()} Jobs
-                <ArrowRight className="w-5 h-5 ml-2" />
+              {/* Job Title */}
+              <Link href={`/jobs/${job.slug}`} className="block mb-3">
+                <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-tight">
+                  {job.JobTitle}
+                </h3>
               </Link>
+
+              {/* Location and Salary */}
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center text-gray-600">
+                  <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
+                  <span className="text-sm truncate">{job.Location}</span>
+                </div>
+                {job.formatted_salary && (
+                  <div className="flex items-center text-green-600">
+                    <DollarSign className="w-4 h-4 mr-2 flex-shrink-0" />
+                    <span className="text-sm font-medium">{job.formatted_salary}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Description - this will grow to fill available space */}
+              <div className="flex-grow mb-4">
+                <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
+                  {job.ShortDescription}
+                </p>
+              </div>
+
+              {/* Footer - this will stick to the bottom */}
+              <div className="mt-auto space-y-4">
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                  <div className="flex items-center text-gray-500">
+                    <Clock className="w-4 h-4 mr-1" />
+                    <span className="text-xs">{formatPostedDate(job.PostedDate)}</span>
+                  </div>
+                  <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded font-medium">
+                    {job.JobType}
+                  </span>
+                </div>
+
+                {/* View Details Button */}
+                <Link
+                  href={`/jobs/${job.slug}`}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 text-sm font-medium flex items-center justify-center group">
+                  View Details
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
             </div>
           </div>
-        </section>
-      )}
+        ))}
+      </div>
+
+      <div className="text-center">
+        <Link
+          href="/jobs"
+          className="inline-flex items-center px-8 py-4 bg-blue-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors transform hover:scale-105 shadow-lg"
+        >
+          View More Jobs
+          <ArrowRight className="w-5 h-5 ml-2" />
+        </Link>
+      </div>
+    </div>
+  </section>
+)}
 
       {/* Newsletter Signup */}
       <NewsletterSignup />

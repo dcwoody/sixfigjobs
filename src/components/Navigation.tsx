@@ -156,6 +156,7 @@ export default function Navigation({ session }: NavigationProps) {
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+              aria-label="Open main menu"
             >
               {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -175,6 +176,7 @@ export default function Navigation({ session }: NavigationProps) {
                     key={link.href}
                     href={link.href}
                     onClick={() => setIsOpen(false)}
+                    aria-label="Open main menu"
                     className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-base font-medium transition-colors ${
                       isActive(link.href)
                         ? 'bg-blue-100 text-blue-700'
@@ -194,6 +196,7 @@ export default function Navigation({ session }: NavigationProps) {
                     <Link
                       href="/profile"
                       onClick={() => setIsOpen(false)}
+                      aria-label="Profile"
                       className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-base font-medium transition-colors ${
                         isActive('/profile')
                           ? 'bg-blue-100 text-blue-700'

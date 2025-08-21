@@ -26,6 +26,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <head>
         <link rel="icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.json" />
         <meta property="og:title" content="SixFigJob.com - Find Six-Figure Careers" />
         <meta property="og:description" content="Search and apply for six-figure jobs at top companies. Save your favorites and grow your career with SixFigJob.com." />
         <meta property="og:url" content="https://sixfigjob.com/" />
