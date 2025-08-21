@@ -135,9 +135,9 @@ export default async function HomePage() {
               </div>
               
               <h1 className="text-5xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-                Find Your Next
+                Find Six-Figure Job Opportunities
                 <span className="block bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  Six-Figure Career
+                   at Leading Companies
                 </span>
               </h1>
               

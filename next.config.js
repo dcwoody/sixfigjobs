@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Add any custom configuration here
+    poweredByHeader: false, // disables X-Powered-By
 }
 
 module.exports = nextConfig
