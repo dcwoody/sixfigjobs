@@ -2,8 +2,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { 
-  Search, MapPin, TrendingUp, Clock, Building2, DollarSign, 
+import {
+  Search, MapPin, TrendingUp, Clock, Building2, DollarSign,
   Star, ArrowRight, CheckCircle, Sparkles, Globe, Briefcase,
   Users, Award, Zap
 } from 'lucide-react';
@@ -22,11 +22,11 @@ export default async function HomePage() {
     supabase
       .from('job_listings_db')
       .select('formatted_salary, is_remote', { count: 'exact' }),
-    
+
     supabase
       .from('full_company_db') // Updated to match your CSV file
       .select('*', { count: 'exact' }),
-    
+
     // Get featured jobs - fetch more to filter from
     supabase
       .from('job_listings_db')
@@ -115,12 +115,13 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
+
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
         {/* Background Effects */}
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20"></div>
-        
+
         {/* Animated Background Elements */}
         <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -133,72 +134,72 @@ export default async function HomePage() {
                 <Sparkles className="w-5 h-5 text-yellow-400 mr-2" />
                 <span className="text-white font-medium">Premium Job Board</span>
               </div>
-              
+
               <h1 className="text-5xl lg:text-7xl font-bold text-white mb-6 leading-tight">
                 Find Six-Figure Job Opportunities
                 <span className="block bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                   at Leading Companies
+                  at Leading Companies
                 </span>
               </h1>
-              
+
               <p className="text-xl lg:text-2xl text-blue-100 max-w-3xl mx-auto mb-8 leading-relaxed">
-                Discover exclusive opportunities at top companies. Join thousands of professionals 
+                Discover exclusive opportunities at top companies. Join thousands of professionals
                 who've found their dream careers with salaries starting at $100K+.
               </p>
             </div>
-</div>
+          </div>
 
-{/* Search Bar and CTA Buttons */}
-            <div className="max-w-4xl mx-auto mb-8">
-              {/* Search Form */}
-              <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 mb-6">
-                <form action="/jobs" method="GET" className="flex flex-col lg:flex-row gap-4">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      name="q"
-                      placeholder="Job title, company, or keyword..."
-                      className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
-                    />
-                  </div>
-                  
-                  <div className="relative lg:w-64">
-                    <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      name="location"
-                      placeholder="Location or 'Remote'"
-                      className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
-                    />
-                  </div>
-                  
-                  <button
-                    type="submit"
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:scale-105 flex items-center justify-center lg:w-auto"
-                  >
-                    <Search className="w-6 h-6 mr-2" />
-                    Search Jobs
-                  </button>
-                </form>
-
-                {/* Quick Search Suggestions */}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="text-white/80 text-sm">Popular searches:</span>
-                  <Link href="/jobs?q=software engineer" className="bg-white/10 text-white text-sm px-3 py-1 rounded-full hover:bg-white/20 transition-colors">
-                    Software Engineer
-                  </Link>
-                  <Link href="/jobs?q=product manager" className="bg-white/10 text-white text-sm px-3 py-1 rounded-full hover:bg-white/20 transition-colors">
-                    Product Manager
-                  </Link>
-                  <Link href="/jobs?q=data scientist" className="bg-white/10 text-white text-sm px-3 py-1 rounded-full hover:bg-white/20 transition-colors">
-                    Data Scientist
-                  </Link>
-                  <Link href="/jobs?location=remote" className="bg-white/10 text-white text-sm px-3 py-1 rounded-full hover:bg-white/20 transition-colors">
-                    Remote Jobs
-                  </Link>
+          {/* Search Bar and CTA Buttons */}
+          <div className="max-w-4xl mx-auto mb-8">
+            {/* Search Form */}
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 mb-6">
+              <form action="/jobs" method="GET" className="flex flex-col lg:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    name="q"
+                    placeholder="Job title, company, or keyword..."
+                    className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                  />
                 </div>
+
+                <div className="relative lg:w-64">
+                  <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    name="location"
+                    placeholder="Location or 'Remote'"
+                    className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:scale-105 flex items-center justify-center lg:w-auto"
+                >
+                  <Search className="w-6 h-6 mr-2" />
+                  Search Jobs
+                </button>
+              </form>
+
+              {/* Quick Search Suggestions */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="text-white/80 text-sm">Popular searches:</span>
+                <Link href="/jobs?q=software engineer" className="bg-white/10 text-white text-sm px-3 py-1 rounded-full hover:bg-white/20 transition-colors">
+                  Software Engineer
+                </Link>
+                <Link href="/jobs?q=product manager" className="bg-white/10 text-white text-sm px-3 py-1 rounded-full hover:bg-white/20 transition-colors">
+                  Product Manager
+                </Link>
+                <Link href="/jobs?q=data scientist" className="bg-white/10 text-white text-sm px-3 py-1 rounded-full hover:bg-white/20 transition-colors">
+                  Data Scientist
+                </Link>
+                <Link href="/jobs?location=remote" className="bg-white/10 text-white text-sm px-3 py-1 rounded-full hover:bg-white/20 transition-colors">
+                  Remote Jobs
+                </Link>
               </div>
+            </div>
 
           </div>
         </div>
