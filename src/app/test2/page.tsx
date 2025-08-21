@@ -27,17 +27,18 @@ function HeroJobs() {
           <div className="md:col-span-6 lg:col-span-7 order-2 md:order-1 mt-10 md:mt-0">
             <div className="lg:me-8">
               <h1 className="text-4xl lg:text-5xl font-bold leading-tight mb-5 text-white/90">
-                Find the{' '}
+                Find your {' '}
                 <span className="relative inline-block">
                   <span className="absolute inset-0 -skew-y-6 bg-emerald-600 rounded-sm" aria-hidden />
-                  <span className="relative px-2 text-white">Best Job</span>
+                  <span className="relative px-2 text-white">$100k Job</span>
                 </span>
-                <br /> offer for you.
+                <br /> at Leading Companies.
               </h1>
 
               <p className="text-slate-300 text-lg max-w-xl">
-                Find Jobs, Employment & Career Opportunities. Some of the companies we&apos;ve helped recruit
-                excellent applicants over the years.
+                Discover exclusive opportunities at top companies. Join thousands of professionals 
+                who've found their dream careers with salaries starting at $100K+.
+
               </p>
 
               {/* Search card */}
@@ -94,8 +95,8 @@ function HeroJobs() {
               <div className="relative flex justify-end">
                 <div className="rounded-xl shadow-sm shadow-gray-200 dark:shadow-gray-700 overflow-hidden lg:w-[400px] w-[280px]">
                   <Image
-                    src="https://images.unsplash.com/photo-1568992687947-868a62a9f521?q=80&w=1200&auto=format&fit=crop"
-                    alt="Modern office"
+                    src="https://i.imgur.com/MJvnrOJ.jpeg"
+                    alt="Modern interview"
                     width={800}
                     height={600}
                     className="h-auto w-full object-cover"
@@ -105,7 +106,7 @@ function HeroJobs() {
 
                 {/* Floating avatar card */}
                 <div className="absolute lg:bottom-20 -bottom-24 xl:-right-20 lg:-right-10 right-2 p-4 rounded-lg shadow-md dark:shadow-gray-800 bg-white dark:bg-slate-900 w-60 z-10">
-                  <h5 className="text-lg font-semibold mb-3">5k+ candidates get job</h5>
+                  <h5 className="text-lg font-semibold text-white mb-3">5k+ candidates get job</h5>
                   <ul className="relative flex items-center">
                     {[
                       'https://i.pravatar.cc/80?img=1',
@@ -134,8 +135,8 @@ function HeroJobs() {
               <div className="absolute -bottom-16 left-0 md:-left-5">
                 <div className="rounded-xl border-8 border-white dark:border-slate-900 overflow-hidden lg:w-[280px] w-[200px] shadow-sm">
                   <Image
-                    src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=1000&auto=format&fit=crop"
-                    alt="Coworkers"
+                    src="https://i.imgur.com/wmutphp.jpeg"
+                    alt="Interview"
                     width={560}
                     height={400}
                     className="h-auto w-full object-cover"
@@ -144,7 +145,7 @@ function HeroJobs() {
 
                 <div className="absolute -top-6 left-2 md:-left-10 bg-white dark:bg-slate-900 rounded-lg shadow-md dark:shadow-gray-800 px-4 py-3 flex items-center w-max">
                   <Bell className="text-amber-500 size-6" />
-                  <p className="text-base font-semibold ml-2">Job Alert Subscribe</p>
+                  <p className="text-base font-semibold text-white ml-2">Job Alert!</p>
                 </div>
               </div>
 
