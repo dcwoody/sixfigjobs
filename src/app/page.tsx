@@ -209,8 +209,12 @@ export default async function HomePage() {
 {/* hero section 2 */}
 <section
   id="home"
-  className="relative overflow-hidden flex items-center py-24 md:py-36 min-h-[70vh] md:min-h-[85vh] bg-slate-900"
+  className="relative overflow-hidden flex items-center py-24 md:py-36 min-h-[70vh] md:min-h-[85vh] bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900"
 >
+  {/* Additional gradient overlays for depth */}
+  <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/10 to-slate-900/50" />
+  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/20 via-transparent to-blue-400/20" />
+  
   <div className="container mx-auto px-4">
     <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-8 lg:gap-10">
       {/* Left */}
@@ -323,16 +327,10 @@ export default async function HomePage() {
               <p className="text-base font-semibold text-gray-900 dark:text-white ml-2">Job Alert!</p>
             </div>
           </div>
-
-          {/* Blue gradient blob */}
-{/* Blue gradient blob */}
-          <div className="pointer-events-none absolute -z-10 top-1/4 right-1/4 h-[600px] w-[600px] md:h-[700px] md:w-[700px] rounded-full bg-gradient-to-br from-blue-500/30 via-purple-500/20 to-transparent blur-2xl opacity-80" />
-          <div className="pointer-events-none absolute -z-10 bottom-1/3 left-1/3 h-[400px] w-[400px] md:h-[500px] md:w-[500px] rounded-full bg-gradient-to-tr from-blue-600/40 via-blue-400/30 to-transparent blur-xl opacity-60" />        </div>
+        </div>
       </div>
     </div>
   </div>
-
-  {/* background for contrast - REMOVED as we added bg-slate-900 to section */}
 </section>
 
 
