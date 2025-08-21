@@ -90,12 +90,12 @@ function HeroJobs() {
           </div>
 
           {/* Right visuals */}
-          <div className="md:col-span-6 lg:col-span-5 order-1 md:order-2">
+          <div className="hidden md:block md:col-span-6 lg:col-span-5 order-1 md:order-2">
             <div className="relative">
               <div className="relative flex justify-end">
                 <div className="rounded-xl shadow-sm shadow-gray-200 dark:shadow-gray-700 overflow-hidden lg:w-[400px] w-[280px]">
                   <Image
-                    src="https://i.imgur.com/MJvnrOJ.jpeg"
+                    src="https://sixfigjob.com/img/2.jpg"
                     alt="Modern interview"
                     width={800}
                     height={600}
@@ -135,7 +135,7 @@ function HeroJobs() {
               <div className="absolute -bottom-16 left-0 md:-left-5">
                 <div className="rounded-xl border-8 border-white dark:border-slate-900 overflow-hidden lg:w-[280px] w-[200px] shadow-sm">
                   <Image
-                    src="https://i.imgur.com/wmutphp.jpeg"
+                    src="https://sixfigjob.com/img/1.jpg"
                     alt="Interview"
                     width={560}
                     height={400}
@@ -150,7 +150,7 @@ function HeroJobs() {
               </div>
 
               {/* Emerald gradient blob */}
-              <div className="pointer-events-none absolute -z-10 bottom-1/2 left-1/2 h-[400px] w-[400px] md:h-[500px] md:w-[500px] -translate-x-1/2 translate-y-1/2 rounded-full bg-gradient-to-tl from-emerald-600 via-emerald-600/50 to-emerald-600/5 blur-3xl opacity-70" />
+              <div className="pointer-events-none absolute -z-10 bottom-1/2 left-1/2 h-[400px] w-[400px] md:h-[500px] md:w-[500px] -translate-x-1/2 translate-y-1/2 rounded-full bg-gradient-to-tl from-blue-600 via-blue-600/50 to-blue-600/5 blur-3xl opacity-70" />
             </div>
           </div>
         </div>
