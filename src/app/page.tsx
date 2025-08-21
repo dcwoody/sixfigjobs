@@ -276,7 +276,7 @@ export default async function HomePage() {
           <div className="relative flex justify-end">
             <div className="rounded-xl shadow-sm shadow-gray-200 dark:shadow-gray-700 overflow-hidden lg:w-[400px] w-[280px]">
               <img
-                src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1926&q=80"
+                src="https://www.sixfigjob.com/img/2.jpg"
                 alt="Modern interview"
                 className="h-auto w-full object-cover"
               />
@@ -312,7 +312,7 @@ export default async function HomePage() {
           <div className="absolute -bottom-16 left-0 md:-left-5">
             <div className="rounded-xl border-8 border-white dark:border-slate-900 overflow-hidden lg:w-[280px] w-[200px] shadow-sm">
               <img
-                src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2084&q=80"
+                src="https://www.sixfigjob.com/img/1.jpg"
                 alt="Interview"
                 className="h-auto w-full object-cover"
               />
@@ -325,8 +325,9 @@ export default async function HomePage() {
           </div>
 
           {/* Blue gradient blob */}
-          <div className="pointer-events-none absolute -z-10 bottom-1/2 left-1/2 h-[400px] w-[400px] md:h-[500px] md:w-[500px] -translate-x-1/2 translate-y-1/2 rounded-full bg-gradient-to-tl from-blue-600 via-blue-600/50 to-blue-600/5 blur-3xl opacity-70" />
-        </div>
+{/* Blue gradient blob */}
+          <div className="pointer-events-none absolute -z-10 top-1/4 right-1/4 h-[600px] w-[600px] md:h-[700px] md:w-[700px] rounded-full bg-gradient-to-br from-blue-500/30 via-purple-500/20 to-transparent blur-2xl opacity-80" />
+          <div className="pointer-events-none absolute -z-10 bottom-1/3 left-1/3 h-[400px] w-[400px] md:h-[500px] md:w-[500px] rounded-full bg-gradient-to-tr from-blue-600/40 via-blue-400/30 to-transparent blur-xl opacity-60" />        </div>
       </div>
     </div>
   </div>
