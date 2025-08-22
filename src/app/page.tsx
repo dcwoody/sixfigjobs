@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
 import {
-  Search, MapPin, TrendingUp, Clock, Building2, DollarSign,
+  Search, MapPin, TrendingUp, Building2, DollarSign,
   Star, ArrowRight, CheckCircle, Sparkles, Globe, Briefcase,
   Users, Award, Zap, Plus, Bell
 } from 'lucide-react';
