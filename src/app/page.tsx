@@ -201,7 +201,7 @@ export default function HomePage() {
                   <br /> at Leading Companies.
                 </h1>
 
-                <p className="text-xl lg:text-2xl text-blue-100 max-w-3xl mx-auto mb-8 leading-relaxed text-white">
+                <p className="text-xl lg:text-2xl text-slate max-w-3xl mx-auto mb-8 leading-relaxed text-white">
                   Discover exclusive opportunities at top companies. Join thousands of professionals
                   who've found their dream careers with salaries starting at $100K+.
                 </p>
@@ -330,25 +330,31 @@ export default function HomePage() {
                       return (
                         <div
                           key={job.JobID}
-                          className="bg-white border border-gray-200 rounded-xl p-5 md:p-6 hover:shadow-lg transition-all duration-300 hover:border-blue-200"
+                          className="relative bg-white border border-gray-200 rounded-xl p-5 md:p-6 hover:shadow-lg transition-all duration-300 hover:border-blue-200"
                         >
+                          {/* Badge - fixed to top-right */}
+                          {badge && (
+                            <span
+                              className={`absolute top-3 right-3 px-2 py-0.5 text-[10px] md:text-xs font-bold text-white rounded ${badge.color}`}
+                            >
+                              {badge.text}
+                            </span>
+                          )}
+
                           <div className="flex items-start gap-4">
                             {/* Company Logo */}
                             <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
                               {job.company_db?.company_logo ? (
-                                <>
-                                  <img
-                                    src={job.company_db.company_logo}
-                                    alt={`${job.Company} logo`}
-                                    className="w-full h-full object-contain"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none'
-                                      const nextEl = e.currentTarget.nextElementSibling as HTMLElement
-                                      if (nextEl) nextEl.style.display = 'flex'
-                                    }}
-                                  />
-                                  <span className="hidden" />
-                                </>
+                                <img
+                                  src={job.company_db.company_logo}
+                                  alt={`${job.Company} logo`}
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none'
+                                    const nextEl = e.currentTarget.nextElementSibling as HTMLElement
+                                    if (nextEl) nextEl.style.display = 'flex'
+                                  }}
+                                />
                               ) : null}
                               <Building2
                                 className="w-6 h-6 text-gray-400"
@@ -356,31 +362,18 @@ export default function HomePage() {
                               />
                             </div>
 
-                            {/* Details */}
+                            {/* Job Details */}
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className="text-base md:text-lg font-bold text-gray-900 line-clamp-2">
-                                  {job.JobTitle}
-                                </h3>
-                                {badge && (
-                                  <span className={`px-2 py-0.5 text-[10px] md:text-xs font-bold text-white rounded ${badge.color}`}>
-                                    {badge.text}
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* Company */}
-                              <div className="text-gray-500 text-sm mb-2">
-                                {job.Company}
-                              </div>
-
-                              {/* Location */}
+                              <h3 className="text-base md:text-lg font-bold text-gray-900 line-clamp-2">
+                                {job.JobTitle}
+                              </h3>
+                              <div className="text-gray-500 text-sm mb-2">{job.Company}</div>
                               <div className="flex items-center text-gray-600 mb-3">
                                 <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
                                 <span className="text-sm truncate">{job.Location}</span>
                               </div>
 
-                              {/* Footer Row */}
+                              {/* Salary + CTA */}
                               <div className="flex items-center justify-between gap-3">
                                 {job.formatted_salary && (
                                   <div className="flex items-center text-green-600">
@@ -388,7 +381,6 @@ export default function HomePage() {
                                     <span className="text-sm font-medium">{job.formatted_salary}</span>
                                   </div>
                                 )}
-
                                 <Link
                                   href={`/jobs/${job.slug}`}
                                   className="ml-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium inline-flex items-center"
