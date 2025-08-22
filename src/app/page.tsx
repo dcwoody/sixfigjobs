@@ -305,21 +305,19 @@ export default function HomePage() {
       </section>
 
 
-
       {/* Featured Jobs Section — Responsive (Template-based) */}
       {featuredJobs && featuredJobs.length > 0 && (
         <section className="bg-white">
           <div className="max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24 mx-auto">
             <div className="relative p-6 md:p-16">
               {/* Grid */}
-              <div className="relative z-10 lg:grid lg:grid-cols-12 lg:gap-16 lg:items-center">
-
+              <div className="relative z-10 lg:grid lg:grid-cols-12 lg:gap-10 lg:items-center">
                 {/* Jobs Column (right on desktop, first on mobile) */}
-                <div className="mb-10 lg:mb-0 lg:col-span-6 lg:col-start-8 lg:order-2">
+                <div className="mb-10 lg:mb-0 lg:col-span-6 lg:col-start-7 lg:order-2">
                   <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-3">
                     Featured Jobs
                   </h2>
-                  <p className="text-xl lg:text-2xl text-blue-100 max-w-3xl mx-auto mb-8 leading-relaxed">
+                  <p className="text-xl lg:text-2xl text-slade max-w-3xl mx-auto mb-8 leading-relaxed">
                     Premium jobs, hand picked for you!
                   </p>
 
@@ -330,7 +328,7 @@ export default function HomePage() {
                       return (
                         <div
                           key={job.JobID}
-                          className="relative bg-white border border-gray-200 rounded-xl p-5 md:p-6 hover:shadow-lg transition-all duration-300 hover:border-blue-200"
+                          className="relative bg-white border border-gray-200 rounded-xl p-5 md:p-6 pr-24 md:pr-28 hover:shadow-lg transition-all duration-300 hover:border-blue-200"
                         >
                           {/* Badge - fixed to top-right */}
                           {badge && (
@@ -364,7 +362,7 @@ export default function HomePage() {
 
                             {/* Job Details */}
                             <div className="min-w-0 flex-1">
-                              <h3 className="text-base md:text-lg font-bold text-gray-900 line-clamp-2">
+                              <h3 className="text-base md:text-lg font-bold text-gray-900 line-clamp-2 pr-10 md:pr-14">
                                 {job.JobTitle}
                               </h3>
                               <div className="text-gray-500 text-sm mb-2">{job.Company}</div>
@@ -429,7 +427,6 @@ export default function HomePage() {
           </div>
         </section>
       )}
-
 
       {/* Newsletter Signup */}
       <NewsletterSignup />
