@@ -21,7 +21,7 @@ const getJobBadge = (job: any) => {
   
   if (company.includes('government') || company.includes('federal') || 
       title.includes('government') || title.includes('federal')) {
-    return { text: 'GOVT', color: 'bg-blue-600' };
+    return { text: 'GOVT', color: 'bg-gray-600' };
   }
   if (job.is_remote) {
     return { text: 'REMOTE', color: 'bg-green-600' };
@@ -45,18 +45,30 @@ const formatPostedDate = (dateString: string) => {
 async function getFeaturedJobs() {
   const supabase = await createClient();
   
-  // Get 1 government job
+  // Get 1 government job with company data
   const { data: govJobs } = await supabase
     .from('job_listings_db')
-    .select('*')
+    .select(`
+      *,
+      company_db!inner(
+        company_logo,
+        name
+      )
+    `)
     .or('Company.ilike.%government%,Company.ilike.%federal%,Company.ilike.%state%,JobTitle.ilike.%government%,JobTitle.ilike.%federal%')
     .order('PostedDate', { ascending: false })
     .limit(1);
 
-  // Get 1 remote job (exclude government jobs)
+  // Get 1 remote job (exclude government jobs) with company data
   const { data: remoteJobs } = await supabase
     .from('job_listings_db')
-    .select('*')
+    .select(`
+      *,
+      company_db!inner(
+        company_logo,
+        name
+      )
+    `)
     .eq('is_remote', true)
     .not('Company', 'ilike', '%government%')
     .not('Company', 'ilike', '%federal%')
@@ -64,10 +76,16 @@ async function getFeaturedJobs() {
     .order('PostedDate', { ascending: false })
     .limit(1);
 
-  // Get 1 regular job (not remote, not government)
+  // Get 1 regular job (not remote, not government) with company data
   const { data: regularJobs } = await supabase
     .from('job_listings_db')
-    .select('*')
+    .select(`
+      *,
+      company_db!inner(
+        company_logo,
+        name
+      )
+    `)
     .eq('is_remote', false)
     .not('Company', 'ilike', '%government%')
     .not('Company', 'ilike', '%federal%')
@@ -96,7 +114,7 @@ export default async function HomePage() {
       .select('formatted_salary, is_remote', { count: 'exact' }),
 
     supabase
-      .from('full_company_db') // Updated to match your CSV file
+      .from('company_db') // Fixed table name
       .select('*', { count: 'exact' })
   ]);
 
@@ -403,8 +421,14 @@ export default async function HomePage() {
 
      {/* Featured Jobs Section */}
       {featuredJobs && featuredJobs.length > 0 && (
-        <section className="py-24 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section className="py-24 bg-white relative">
+          {/* Background Color */}
+          <div className="absolute inset-0 grid grid-cols-12 size-full">
+            <div className="col-span-full lg:col-span-7 lg:col-start-6 bg-gray-100 w-full h-5/6 rounded-xl sm:h-3/4 lg:h-full dark:bg-neutral-800"></div>
+          </div>
+          {/* End Background Color */}
+          
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="flex flex-col lg:flex-row gap-12 items-center">
               
               {/* Left side - Image */}
@@ -423,10 +447,10 @@ export default async function HomePage() {
               <div className="lg:w-1/2">
                 <div className="mb-8">
                   <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                    Featured Jobs
+                    FEATURED JOBS
                   </h2>
                   <p className="text-lg text-gray-600">
-                    Premium positions handpicked for you!
+                    PREMIUM POSITIONS FROM OUR TOP PARTNER COMPANIES
                   </p>
                 </div>
 
@@ -439,9 +463,23 @@ export default async function HomePage() {
                       <div key={job.JobID} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:border-blue-200">
                         <div className="flex items-start space-x-4">
                           
-                          {/* Company Logo Placeholder */}
-                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Building2 className="w-6 h-6 text-gray-400" />
+                          {/* Company Logo */}
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {job.company_db?.company_logo ? (
+                              <img
+                                src={job.company_db.company_logo}
+                                alt={`${job.Company} logo`}
+                                className="w-full h-full object-contain"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                                  if (nextElement) {
+                                    nextElement.style.display = 'flex';
+                                  }
+                                }}
+                              />
+                            ) : null}
+                            <Building2 className="w-6 h-6 text-gray-400" style={{ display: job.company_db?.company_logo ? 'none' : 'block' }} />
                           </div>
 
                           {/* Job Details */}
