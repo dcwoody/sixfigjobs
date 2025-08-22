@@ -396,152 +396,136 @@ export default function HomePage() {
 
 
       {/* Featured Jobs Section — Responsive (Template-based) */}
-{featuredJobs && featuredJobs.length > 0 && (
-  <section className="bg-white">
-    <div className="max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24 mx-auto">
-      <div className="relative p-6 md:p-16">
-        {/* Grid */}
-        <div className="relative z-10 lg:grid lg:grid-cols-12 lg:gap-16 lg:items-center">
-          
-          {/* Jobs Column (right on desktop, first on mobile) */}
-          <div className="mb-10 lg:mb-0 lg:col-span-6 lg:col-start-8 lg:order-2">
-            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-3">
-              Featured Jobs
-            </h2>
-            <p className="text-gray-600 mb-8">
-              Premium jobs, hand picked for you!
-            </p>
+      {featuredJobs && featuredJobs.length > 0 && (
+        <section className="bg-white">
+          <div className="max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24 mx-auto">
+            <div className="relative p-6 md:p-16">
+              {/* Grid */}
+              <div className="relative z-10 lg:grid lg:grid-cols-12 lg:gap-16 lg:items-center">
 
-            {/* Job Cards */}
-            <div className="grid gap-5">
-              {featuredJobs.map((job: any) => {
-                const badge = getJobBadge(job)
-                return (
-                  <div
-                    key={job.JobID}
-                    className="bg-white border border-gray-200 rounded-xl p-5 md:p-6 hover:shadow-lg transition-all duration-300 hover:border-blue-200"
-                  >
-                    <div className="flex items-start gap-4">
-                      {/* Company Logo */}
-                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-                        {job.company_db?.company_logo ? (
-                          <>
-                            <img
-                              src={job.company_db.company_logo}
-                              alt={`${job.Company} logo`}
-                              className="w-full h-full object-contain"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none'
-                                const nextEl = e.currentTarget.nextElementSibling as HTMLElement
-                                if (nextEl) nextEl.style.display = 'flex'
-                              }}
-                            />
-                            <span className="hidden" />
-                          </>
-                        ) : null}
-                        <Building2
-                          className="w-6 h-6 text-gray-400"
-                          style={{ display: job.company_db?.company_logo ? 'none' : 'block' }}
-                        />
-                      </div>
+                {/* Jobs Column (right on desktop, first on mobile) */}
+                <div className="mb-10 lg:mb-0 lg:col-span-6 lg:col-start-8 lg:order-2">
+                  <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-3">
+                    Featured Jobs
+                  </h2>
+                  <p className="text-gray-600 mb-8">
+                    Premium jobs, hand picked for you!
+                  </p>
 
-                      {/* Details */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-base md:text-lg font-bold text-gray-900 truncate">
-                            {job.JobTitle}
-                          </h3>
-                          {badge && (
-                            <span className={`px-2 py-0.5 text-[10px] md:text-xs font-bold text-white rounded ${badge.color}`}>
-                              {badge.text}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Company */}
-                        <div className="text-gray-500 text-sm mb-2">
-                          {job.Company}
-                        </div>
-
-                        {/* Location */}
-                        <div className="flex items-center text-gray-600 mb-3">
-                          <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-                          <span className="text-sm truncate">{job.Location}</span>
-                        </div>
-
-                        {/* Footer Row */}
-                        <div className="flex items-center justify-between gap-3">
-                          {job.formatted_salary && (
-                            <div className="flex items-center text-green-600">
-                              <DollarSign className="w-4 h-4 mr-1 flex-shrink-0" />
-                              <span className="text-sm font-medium">{job.formatted_salary}</span>
+                  {/* Job Cards */}
+                  <div className="grid gap-5">
+                    {featuredJobs.map((job: any) => {
+                      const badge = getJobBadge(job)
+                      return (
+                        <div
+                          key={job.JobID}
+                          className="bg-white border border-gray-200 rounded-xl p-5 md:p-6 hover:shadow-lg transition-all duration-300 hover:border-blue-200"
+                        >
+                          <div className="flex items-start gap-4">
+                            {/* Company Logo */}
+                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                              {job.company_db?.company_logo ? (
+                                <>
+                                  <img
+                                    src={job.company_db.company_logo}
+                                    alt={`${job.Company} logo`}
+                                    className="w-full h-full object-contain"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none'
+                                      const nextEl = e.currentTarget.nextElementSibling as HTMLElement
+                                      if (nextEl) nextEl.style.display = 'flex'
+                                    }}
+                                  />
+                                  <span className="hidden" />
+                                </>
+                              ) : null}
+                              <Building2
+                                className="w-6 h-6 text-gray-400"
+                                style={{ display: job.company_db?.company_logo ? 'none' : 'block' }}
+                              />
                             </div>
-                          )}
 
-                          <Link
-                            href={`/jobs/${job.slug}`}
-                            className="ml-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium inline-flex items-center"
-                          >
-                            View Details
-                            <ArrowRight className="w-4 h-4 ml-1" />
-                          </Link>
+                            {/* Details */}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="text-base md:text-lg font-bold text-gray-900 line-clamp-2">
+                                  {job.JobTitle}
+                                </h3>
+                                {badge && (
+                                  <span className={`px-2 py-0.5 text-[10px] md:text-xs font-bold text-white rounded ${badge.color}`}>
+                                    {badge.text}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Company */}
+                              <div className="text-gray-500 text-sm mb-2">
+                                {job.Company}
+                              </div>
+
+                              {/* Location */}
+                              <div className="flex items-center text-gray-600 mb-3">
+                                <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                                <span className="text-sm truncate">{job.Location}</span>
+                              </div>
+
+                              {/* Footer Row */}
+                              <div className="flex items-center justify-between gap-3">
+                                {job.formatted_salary && (
+                                  <div className="flex items-center text-green-600">
+                                    <DollarSign className="w-4 h-4 mr-1 flex-shrink-0" />
+                                    <span className="text-sm font-medium">{job.formatted_salary}</span>
+                                  </div>
+                                )}
+
+                                <Link
+                                  href={`/jobs/${job.slug}`}
+                                  className="ml-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium inline-flex items-center"
+                                >
+                                  View Details
+                                  <ArrowRight className="w-4 h-4 ml-1" />
+                                </Link>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      )
+                    })}
                   </div>
-                )
-              })}
-            </div>
 
-            {/* View More */}
-            <div className="mt-8">
-              <Link
-                href="/jobs"
-                className="inline-flex items-center px-6 py-3 md:px-8 md:py-4 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors transform hover:scale-[1.02] shadow-lg"
-              >
-                View More Jobs
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Link>
-            </div>
-          </div>
+                  {/* View More */}
+                  <div className="mt-8">
+                    <Link
+                      href="/jobs"
+                      className="inline-flex items-center px-6 py-3 md:px-8 md:py-4 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors transform hover:scale-[1.02] shadow-lg"
+                    >
+                      View More Jobs
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </Link>
+                  </div>
+                </div>
 
-          {/* Featured Image Column (left on desktop) */}
-          <div className="lg:col-span-6">
-            <div className="relative">
-              <img
-                className="shadow-xl shadow-gray-200 rounded-2xl object-cover w-full h-[360px] sm:h-[480px] lg:h-[640px] dark:shadow-gray-900/20"
-                src="/img/featured-image.jpg"
-                alt="Professional workspace"
-              />
+                {/* Featured Image Column (left on desktop) */}
+                <div className="lg:col-span-6">
+                  <div className="relative">
+                    <Image
+                      className="shadow-xl shadow-gray-200 rounded-2xl object-cover w-full h-[360px] sm:h-[480px] lg:h-[640px] dark:shadow-gray-900/20"
+                      src="/img/featured-image.jpg"
+                      alt="Professional workspace"
+                    />
+                  </div>
+                </div>
+              </div>
+              {/* End Grid */}
 
-              {/* Decorative SVG (optional, matches template) */}
-              <div className="hidden absolute top-0 end-0 translate-x-20 md:block lg:translate-x-20">
-                <svg
-                  className="w-16 h-auto text-orange-500"
-                  width="121"
-                  height="135"
-                  viewBox="0 0 121 135"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M5 16.4754C11.7688 27.4499 21.2452 57.3224 5 89.0164" stroke="currentColor" strokeWidth="10" strokeLinecap="round"/>
-                  <path d="M33.6761 112.104C44.6984 98.1239 74.2618 57.6776 83.4821 5" stroke="currentColor" strokeWidth="10" strokeLinecap="round"/>
-                  <path d="M50.5525 130C68.2064 127.495 110.731 117.541 116 78.0874" stroke="currentColor" strokeWidth="10" strokeLinecap="round"/>
-                </svg>
+              {/* Background color block from template for layered look */}
+              <div className="absolute inset-0 grid grid-cols-12 size-full pointer-events-none">
+                <div className="col-span-full lg:col-span-7 lg:col-start-6 bg-gray-100 w-full h-5/6 rounded-xl sm:h-3/4 lg:h-full" />
               </div>
             </div>
           </div>
-        </div>
-        {/* End Grid */}
-
-        {/* Background color block from template for layered look */}
-        <div className="absolute inset-0 grid grid-cols-12 size-full pointer-events-none">
-          <div className="col-span-full lg:col-span-7 lg:col-start-6 bg-gray-100 w-full h-5/6 rounded-xl sm:h-3/4 lg:h-full" />
-        </div>
-      </div>
-    </div>
-  </section>
-)}
+        </section>
+      )}
 
 
       {/* Newsletter Signup */}
