@@ -10,42 +10,94 @@ import {
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 import NewsletterSignup from '@/components/NewsletterSignup';
-import JobDirectory from '@/components/JobDirectory';
 
 // Enable ISR with revalidation
 export const revalidate = 300; // 5 minutes
 
+// Utility functions moved outside component
+const getJobBadge = (job: any) => {
+  const company = job.Company?.toLowerCase() || '';
+  const title = job.JobTitle?.toLowerCase() || '';
+  
+  if (company.includes('government') || company.includes('federal') || 
+      title.includes('government') || title.includes('federal')) {
+    return { text: 'GOVT', color: 'bg-blue-600' };
+  }
+  if (job.is_remote) {
+    return { text: 'REMOTE', color: 'bg-green-600' };
+  }
+  return null;
+};
+
+const formatPostedDate = (dateString: string) => {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return 'Recently';
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 1) return 'Today';
+  if (diffDays === 1) return '1 day ago';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return `${Math.floor(diffDays / 7)} weeks ago`;
+};
+
+async function getFeaturedJobs() {
+  const supabase = await createClient();
+  
+  // Get 1 government job
+  const { data: govJobs } = await supabase
+    .from('job_listings_db')
+    .select('*')
+    .or('Company.ilike.%government%,Company.ilike.%federal%,Company.ilike.%state%,JobTitle.ilike.%government%,JobTitle.ilike.%federal%')
+    .order('PostedDate', { ascending: false })
+    .limit(1);
+
+  // Get 1 remote job (exclude government jobs)
+  const { data: remoteJobs } = await supabase
+    .from('job_listings_db')
+    .select('*')
+    .eq('is_remote', true)
+    .not('Company', 'ilike', '%government%')
+    .not('Company', 'ilike', '%federal%')
+    .not('JobTitle', 'ilike', '%government%')
+    .order('PostedDate', { ascending: false })
+    .limit(1);
+
+  // Get 1 regular job (not remote, not government)
+  const { data: regularJobs } = await supabase
+    .from('job_listings_db')
+    .select('*')
+    .eq('is_remote', false)
+    .not('Company', 'ilike', '%government%')
+    .not('Company', 'ilike', '%federal%')
+    .not('JobTitle', 'ilike', '%government%')
+    .order('PostedDate', { ascending: false })
+    .limit(1);
+
+  // Combine the jobs
+  const featuredJobs = [
+    ...(regularJobs || []),
+    ...(remoteJobs || []), 
+    ...(govJobs || [])
+  ].slice(0, 3);
+
+  return featuredJobs;
+}
+
 export default async function HomePage() {
   const supabase = await createClient();
-
+  const featuredJobs = await getFeaturedJobs();
+  
   // Get real stats from your database in parallel
-  const [jobsResult, companiesResult, featuredJobsResult] = await Promise.all([
+  const [jobsResult, companiesResult] = await Promise.all([
     supabase
       .from('job_listings_db')
       .select('formatted_salary, is_remote', { count: 'exact' }),
 
     supabase
       .from('full_company_db') // Updated to match your CSV file
-      .select('*', { count: 'exact' }),
-
-    // Get featured jobs - fetch more to filter from
-    supabase
-      .from('job_listings_db')
-      .select(`
-        JobID,
-        JobTitle,
-        Company,
-        Location,
-        formatted_salary,
-        slug,
-        ShortDescription,
-        PostedDate,
-        is_remote,
-        JobType,
-        company_id
-      `)
-      .order('PostedDate', { ascending: false })
-      .limit(12) // Get more to filter from
+      .select('*', { count: 'exact' })
   ]);
 
   const totalJobs = jobsResult.count || 0;
@@ -66,20 +118,6 @@ export default async function HomePage() {
   const remoteJobs = jobsResult.data?.filter((job: any) => job.is_remote).length || 0;
   const remotePercentage = totalJobs > 0 ? Math.round((remoteJobs / totalJobs) * 100) : 0;
 
-  // Create featured jobs selection (ensure we have at least one remote job)
-  const allFeaturedJobs = featuredJobsResult.data || [];
-  const remoteJobsForFeatured = allFeaturedJobs.filter((job: any) => job.is_remote);
-  const nonRemoteJobsForFeatured = allFeaturedJobs.filter((job: any) => !job.is_remote);
-
-  let featuredJobs: any[] = [];
-  if (remoteJobsForFeatured.length > 0) {
-    featuredJobs.push(remoteJobsForFeatured[0]);
-    const remainingJobs = [...remoteJobsForFeatured.slice(1), ...nonRemoteJobsForFeatured];
-    featuredJobs.push(...remainingJobs.slice(0, 3));
-  } else {
-    featuredJobs = allFeaturedJobs.slice(0, 4);
-  }
-
   // Get initial jobs for JobDirectory component
   const { data: initialJobs } = await supabase
     .from('job_listings_db')
@@ -98,21 +136,6 @@ export default async function HomePage() {
     `)
     .order('PostedDate', { ascending: false })
     .limit(24);
-
-  // Format posted date helper
-  const formatPostedDate = (dateString: string) => {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Recently';
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
-
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays === 1) return '1d ago';
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return `${Math.floor(diffDays / 7)}w ago`;
-  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -288,10 +311,9 @@ export default async function HomePage() {
 
             {/* Floating avatar card */}
             <div className="absolute lg:bottom-20 -bottom-24 xl:-right-20 lg:-right-10 right-2 p-4 rounded-lg shadow-md dark:shadow-gray-800 bg-white dark:bg-slate-900 w-60 z-10">
-              <h5 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">5k+ candidates get job</h5>
+              <h5 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">More $100k jobs!</h5>
               <ul className="relative flex items-center">
                 {[
-                  'https://images.unsplash.com/photo-1494790108755-2616b612b830?ixlib=rb-4.0.3&w=150&q=80',
                   'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&w=150&q=80',
                   'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&w=150&q=80',
                   'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&w=150&q=80',
@@ -378,103 +400,107 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-{/* Featured Jobs Section */}
-{featuredJobs && featuredJobs.length > 0 && (
-  <section id="featured-jobs" className="py-24 bg-white">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="text-center mb-16">
-        <div className="inline-flex items-center bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 rounded-full px-6 py-2 mb-6">
-          <Star className="w-5 h-5 text-blue-600 mr-2" />
-          <span className="text-blue-600 font-medium">Hand-picked for you</span>
-        </div>
-        <h2 className="text-4xl font-bold text-gray-900 mb-6">Featured Opportunities</h2>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          Premium positions from our top partner companies with competitive salaries and great benefits.
-        </p>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-        {featuredJobs.map((job: any) => (
-          <div key={job.JobID} className="group bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 overflow-hidden hover:border-blue-200 flex flex-col h-full">
-            <div className="p-6 flex flex-col h-full">
-              {/* Company and Remote Badge */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <Building2 className="w-4 h-4 text-gray-400 mr-2" />
-                  <span className="text-sm font-medium text-gray-900 truncate">{job.Company}</span>
+     {/* Featured Jobs Section */}
+      {featuredJobs && featuredJobs.length > 0 && (
+        <section className="py-24 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col lg:flex-row gap-12 items-center">
+              
+              {/* Left side - Image */}
+              <div className="lg:w-1/2">
+                <div className="relative">
+                  <img
+                    src="https://images.unsplash.com/photo-1605629921711-2f6b00c6bbf4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=560&h=720&q=80"
+                    alt="Professional workspace"
+                    className="rounded-2xl shadow-2xl object-cover w-full h-[600px]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl"></div>
                 </div>
-                {job.is_remote && (
-                  <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full font-medium">
-                    Remote
-                  </span>
-                )}
               </div>
 
-              {/* Job Title */}
-              <Link href={`/jobs/${job.slug}`} className="block mb-3">
-                <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-tight">
-                  {job.JobTitle}
-                </h3>
-              </Link>
-
-              {/* Location and Salary */}
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center text-gray-600">
-                  <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
-                  <span className="text-sm truncate">{job.Location}</span>
-                </div>
-                {job.formatted_salary && (
-                  <div className="flex items-center text-green-600">
-                    <DollarSign className="w-4 h-4 mr-2 flex-shrink-0" />
-                    <span className="text-sm font-medium">{job.formatted_salary}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Description - this will grow to fill available space */}
-              <div className="flex-grow mb-4">
-                <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
-                  {job.ShortDescription}
-                </p>
-              </div>
-
-              {/* Footer - this will stick to the bottom */}
-              <div className="mt-auto space-y-4">
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  <div className="flex items-center text-gray-500">
-                    <Clock className="w-4 h-4 mr-1" />
-                    <span className="text-xs">{formatPostedDate(job.PostedDate)}</span>
-                  </div>
-                  <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded font-medium">
-                    {job.JobType}
-                  </span>
+              {/* Right side - Jobs */}
+              <div className="lg:w-1/2">
+                <div className="mb-8">
+                  <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                    FEATURED JOBS
+                  </h2>
+                  <p className="text-lg text-gray-600">
+                    PREMIUM POSITIONS FROM OUR TOP PARTNER COMPANIES
+                  </p>
                 </div>
 
-                {/* View Details Button */}
-                <Link
-                  href={`/jobs/${job.slug}`}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 text-sm font-medium flex items-center justify-center group">
-                  View Details
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Link>
+                {/* Job Listings */}
+                <div className="space-y-6">
+                  {featuredJobs.map((job: any, index: number) => {
+                    const badge = getJobBadge(job);
+                    
+                    return (
+                      <div key={job.JobID} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:border-blue-200">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-4 flex-1">
+                            
+                            {/* Company Logo Placeholder */}
+                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Building2 className="w-6 h-6 text-gray-400" />
+                            </div>
+
+                            {/* Job Details */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h3 className="text-lg font-bold text-gray-900 truncate">
+                                  {job.JobTitle}
+                                </h3>
+                                {badge && (
+                                  <span className={`px-2 py-1 text-xs font-bold text-white rounded ${badge.color}`}>
+                                    {badge.text}
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center text-gray-600 mb-2">
+                                <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                                <span className="text-sm truncate">{job.Location}</span>
+                              </div>
+                              
+                              {job.formatted_salary && (
+                                <div className="flex items-center text-green-600 mb-3">
+                                  <DollarSign className="w-4 h-4 mr-1 flex-shrink-0" />
+                                  <span className="text-sm font-medium">{job.formatted_salary}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* View Details Button */}
+                          <Link
+                            href={`/jobs/${job.slug}`}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center ml-4 flex-shrink-0"
+                          >
+                            View Details
+                            <ArrowRight className="w-4 h-4 ml-1" />
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* View More Jobs Button */}
+                <div className="mt-8">
+                  <Link
+                    href="/jobs"
+                    className="inline-flex items-center px-8 py-4 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors transform hover:scale-105 shadow-lg"
+                  >
+                    View More Jobs
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
-        ))}
-      </div>
-
-      <div className="text-center">
-        <Link
-          href="/jobs"
-          className="inline-flex items-center px-8 py-4 bg-blue-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors transform hover:scale-105 shadow-lg"
-        >
-          View More Jobs
-          <ArrowRight className="w-5 h-5 ml-2" />
-        </Link>
-      </div>
-    </div>
-  </section>
-)}
+        </section>
+      )}
 
       {/* Newsletter Signup */}
       <NewsletterSignup />
