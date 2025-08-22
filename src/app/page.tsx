@@ -246,31 +246,43 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right visuals */}
+            {/* Right visuals - OPTIMIZED */}
             <div className="hidden md:block md:col-span-6 lg:col-span-5 order-1 md:order-2">
               <div className="relative">
                 <div className="relative flex justify-end">
                   <div className="rounded-xl shadow-sm shadow-gray-200 dark:shadow-gray-700 overflow-hidden lg:w-[400px] w-[280px]">
-                    <img
-                      src="https://www.sixfigjob.com/img/2.jpg"
+                    <Image
+                      src="/img/2.jpg" // Move to your public folder
                       alt="Modern interview"
+                      width={400}
+                      height={300}
                       className="h-auto w-full object-cover"
+                      priority={true} // This is above the fold
+                      placeholder="blur"
+                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyBYWV3Yah7x2xy05pCrsZpTSHmEQB4/9k="
                     />
                   </div>
 
-                  {/* Floating avatar card */}
+                  {/* Floating avatar card - OPTIMIZED */}
                   <div className="absolute lg:bottom-20 -bottom-24 xl:-right-20 lg:-right-10 right-2 p-4 rounded-lg shadow-md dark:shadow-gray-800 bg-white dark:bg-slate-900 w-60 z-10">
                     <h5 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">More $100k jobs!</h5>
                     <ul className="relative flex items-center">
                       {[
-                        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&w=150&q=80',
-                        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&w=150&q=80',
-                        'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&w=150&q=80',
-                        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&w=150&q=80',
-                      ].map((src, idx) => (
+                        { src: '/img/avatar-1.jpg', alt: 'Professional 1' },
+                        { src: '/img/avatar-2.jpg', alt: 'Professional 2' },
+                        { src: '/img/avatar-3.jpg', alt: 'Professional 3' },
+                        { src: '/img/avatar-4.jpg', alt: 'Professional 4' },
+                      ].map((avatar, idx) => (
                         <li key={idx} className="-ml-3 first:ml-0">
                           <span className="inline-block size-10 rounded-full overflow-hidden border-4 border-white dark:border-slate-900 shadow-md shadow-gray-200 dark:shadow-gray-700 transition-transform hover:scale-105">
-                            <img src={src} alt="avatar" className="h-full w-full object-cover" />
+                            <Image
+                              src={avatar.src}
+                              alt={avatar.alt}
+                              width={40}
+                              height={40}
+                              className="h-full w-full object-cover"
+                              loading="lazy" // These are below the fold
+                            />
                           </span>
                         </li>
                       ))}
@@ -283,13 +295,18 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Lower-left image + bell chip */}
+                {/* Lower-left image + bell chip - OPTIMIZED */}
                 <div className="absolute -bottom-16 left-0 md:-left-5">
                   <div className="rounded-xl border-8 border-white dark:border-slate-900 overflow-hidden lg:w-[280px] w-[200px] shadow-sm">
-                    <img
-                      src="https://www.sixfigjob.com/img/1.jpg"
+                    <Image
+                      src="/img/1.jpg" // Move to your public folder
                       alt="Interview"
+                      width={280}
+                      height={200}
                       className="h-auto w-full object-cover"
+                      loading="lazy" // This is below the fold
+                      placeholder="blur"
+                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyBYWV3Yah7x2xy05pCrsZpTSHmEQB4/9k="
                     />
                   </div>
 
@@ -406,13 +423,18 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Featured Image Column (hidden on mobile, visible lg+) */}
+                {/* Featured Image Column - OPTIMIZED */}
                 <div className="hidden lg:col-span-6 lg:block">
                   <div className="relative">
                     <Image
                       className="shadow-xl shadow-gray-200 rounded-2xl object-cover w-full h-[360px] sm:h-[480px] lg:h-[640px] dark:shadow-gray-900/20"
                       src="/img/featured-image.jpg"
                       alt="Professional workspace"
+                      width={600}
+                      height={640}
+                      loading="lazy" // This is below the fold
+                      placeholder="blur"
+                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyBYWV3Yah7x2xy05pCrsZpTSHmEQB4/9k="
                     />
                   </div>
                 </div>
