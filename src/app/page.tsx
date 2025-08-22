@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
 import {
-  Search, MapPin, TrendingUp, Building2, DollarSign,
+  Search, MapPin, TrendingUp, Clock, Building2, DollarSign,
   Star, ArrowRight, CheckCircle, Sparkles, Globe, Briefcase,
   Users, Award, Zap, Plus, Bell
 } from 'lucide-react';
@@ -441,10 +441,10 @@ export default async function HomePage() {
               <div className="lg:w-1/2">
                 <div className="mb-8">
                   <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                    Featured Jobs
+                    FEATURED JOBS
                   </h2>
                   <p className="text-lg text-gray-600">
-                    Premium positions hand picked for you!
+                    PREMIUM POSITIONS FROM OUR TOP PARTNER COMPANIES
                   </p>
                 </div>
 
