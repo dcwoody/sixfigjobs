@@ -2,7 +2,6 @@
 const nextConfig = {
   // Performance optimizations
   experimental: {
-    optimizeCss: true,
     optimizePackageImports: ['lucide-react'],
   },
   
@@ -73,12 +72,6 @@ const nextConfig = {
             reuseExistingChunk: true,
           },
         },
-      }
-
-      // Tree shake Lucide icons more aggressively
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'lucide-react': 'lucide-react/dist/esm/icons',
       }
     }
     return config

@@ -1,75 +1,63 @@
-// src/app/page.tsx - Complete Server Component with Navigation, Featured Jobs, and Footer
-'use client';
-import React from 'react';
+// src/app/page.tsx — Server Component (PSI-optimized, cookies() async-safe)
 import Link from 'next/link';
 import Image from 'next/image';
-import { createClient } from '@/lib/supabase/client';
-import {
-  Search, MapPin, TrendingUp, Clock, Building2, DollarSign,
-  Star, ArrowRight, CheckCircle, Sparkles, Globe, Briefcase,
-  Users, Award, Zap, Plus, Bell
-} from 'lucide-react';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
+import { MapPin, DollarSign, ArrowRight, Plus, Bell, Building2, Search } from 'lucide-react';
 import Footer from '@/components/Footer';
 import NewsletterSignup from '@/components/NewsletterSignup';
-import { useEffect, useState } from 'react';
 
-// Enable ISR with revalidation - REMOVED since this is now a client component
+// --- Supabase server client (fixed cookie types) ---
+async function getServerSupabase() {
+  const cookieStore = await cookies();
 
-// Utility functions moved outside component
-const getJobBadge = (job: any) => {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
+        },
+      },
+    }
+  );
+}
+
+function getJobBadge(job: any) {
   const company = job.Company?.toLowerCase() || '';
   const title = job.JobTitle?.toLowerCase() || '';
-
-  if (company.includes('government') || company.includes('federal') ||
-    title.includes('government') || title.includes('federal')) {
+  if (company.includes('government') || company.includes('federal') || title.includes('government') || title.includes('federal')) {
     return { text: 'GOVT', color: 'bg-gray-600' };
   }
-  if (job.is_remote) {
-    return { text: 'REMOTE', color: 'bg-green-600' };
-  }
+  if (job.is_remote) return { text: 'REMOTE', color: 'bg-green-600' };
   return null;
-};
-
-const formatPostedDate = (dateString: string) => {
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return 'Recently';
-  const now = new Date();
-  const diffTime = Math.abs(now.getTime() - date.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays < 1) return 'Today';
-  if (diffDays === 1) return '1 day ago';
-  if (diffDays < 7) return `${diffDays} days ago`;
-  return `${Math.floor(diffDays / 7)} weeks ago`;
-};
+}
 
 async function getFeaturedJobs() {
-  const supabase = createClient();
+  const supabase = await getServerSupabase(); // <-- FIX: await the client
 
-  // Get 1 government job with company data
   const { data: govJobs } = await supabase
     .from('job_listings_db')
-    .select(`
-      *,
-      company_db!inner(
-        company_logo,
-        name
-      )
-    `)
+    .select(`*, company_db!inner(company_logo, name)`)
     .or('Company.ilike.%government%,Company.ilike.%federal%,Company.ilike.%state%,JobTitle.ilike.%government%,JobTitle.ilike.%federal%')
     .order('PostedDate', { ascending: false })
     .limit(1);
 
-  // Get 1 remote job (exclude government jobs) with company data
   const { data: remoteJobs } = await supabase
     .from('job_listings_db')
-    .select(`
-      *,
-      company_db!inner(
-        company_logo,
-        name
-      )
-    `)
+    .select(`*, company_db!inner(company_logo, name)`)
     .eq('is_remote', true)
     .not('Company', 'ilike', '%government%')
     .not('Company', 'ilike', '%federal%')
@@ -77,16 +65,9 @@ async function getFeaturedJobs() {
     .order('PostedDate', { ascending: false })
     .limit(1);
 
-  // Get 1 regular job (not remote, not government) with company data
   const { data: regularJobs } = await supabase
     .from('job_listings_db')
-    .select(`
-      *,
-      company_db!inner(
-        company_logo,
-        name
-      )
-    `)
+    .select(`*, company_db!inner(company_logo, name)`)
     .eq('is_remote', false)
     .not('Company', 'ilike', '%government%')
     .not('Company', 'ilike', '%federal%')
@@ -94,96 +75,19 @@ async function getFeaturedJobs() {
     .order('PostedDate', { ascending: false })
     .limit(1);
 
-  // Combine the jobs
-  const featuredJobs = [
-    ...(regularJobs || []),
-    ...(remoteJobs || []),
-    ...(govJobs || [])
-  ].slice(0, 3);
-
-  return featuredJobs;
+  return ([...(regularJobs || []), ...(remoteJobs || []), ...(govJobs || [])] as any[]).slice(0, 3);
 }
 
-export default function HomePage() {
-  const [featuredJobs, setFeaturedJobs] = useState<any[]>([]);
-  const [totalJobs, setTotalJobs] = useState(0);
-  const [totalCompanies, setTotalCompanies] = useState(0);
-  const [avgSalary, setAvgSalary] = useState(150000);
-  const [remotePercentage, setRemotePercentage] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadData() {
-      const supabase = createClient();
-
-      try {
-        // Get featured jobs
-        const jobs = await getFeaturedJobs();
-        setFeaturedJobs(jobs);
-
-        // Get real stats from your database in parallel
-        const [jobsResult, companiesResult] = await Promise.all([
-          supabase
-            .from('job_listings_db')
-            .select('formatted_salary, is_remote', { count: 'exact' }),
-
-          supabase
-            .from('company_db')
-            .select('*', { count: 'exact' })
-        ]);
-
-        const jobCount = jobsResult.count || 0;
-        const companyCount = companiesResult.count || 0;
-
-        // Calculate average salary from real data
-        const salaries = jobsResult.data?.filter((job: any) => job.formatted_salary)
-          .map((job: any) => {
-            const salary = job.formatted_salary.replace(/[^\d]/g, '');
-            return parseInt(salary);
-          })
-          .filter((salary: number) => salary > 50000) || [];
-
-        const calculatedAvgSalary = salaries.length > 0
-          ? Math.round(salaries.reduce((a: number, b: number) => a + b, 0) / salaries.length)
-          : 150000;
-
-        const remoteJobs = jobsResult.data?.filter((job: any) => job.is_remote).length || 0;
-        const calculatedRemotePercentage = jobCount > 0 ? Math.round((remoteJobs / jobCount) * 100) : 0;
-
-        setTotalJobs(jobCount);
-        setTotalCompanies(companyCount);
-        setAvgSalary(calculatedAvgSalary);
-        setRemotePercentage(calculatedRemotePercentage);
-      } catch (error) {
-        console.error('Error loading data:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadData();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+export default async function HomePage() {
+  const featuredJobs = await getFeaturedJobs();
 
   return (
     <div className="min-h-screen bg-white">
-
-      {/* hero section 2 */}
+      {/* HERO */}
       <section
         id="home"
         className="relative overflow-hidden flex items-center py-24 md:py-36 min-h-[70vh] md:min-h-[85vh] bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900"
       >
-        {/* Additional gradient overlays for depth */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/10 to-slate-900/50" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/20 via-transparent to-blue-400/20" />
 
@@ -193,7 +97,7 @@ export default function HomePage() {
             <div className="md:col-span-6 lg:col-span-7 order-2 md:order-1 mt-10 md:mt-0">
               <div className="lg:me-8">
                 <h1 className="text-5xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-                  Find Your {' '}
+                  Find Your{' '}
                   <span className="relative inline-block">
                     <span className="absolute inset-0 -skew-y-6 bg-blue-600 rounded-sm" aria-hidden />
                     <span className="relative px-2 text-white">$100k Job</span>
@@ -201,16 +105,15 @@ export default function HomePage() {
                   <br /> at Leading Companies.
                 </h1>
 
-                <p className="text-xl lg:text-2xl text-slate max-w-3xl mx-auto mb-8 leading-relaxed text-white">
-                  Discover exclusive opportunities at top companies. Join thousands of professionals
-                  who've found their dream careers with salaries starting at $100K+.
+                <p className="text-xl lg:text-2xl text-white/90 max-w-3xl mx-auto mb-8 leading-relaxed">
+                  Discover exclusive opportunities at top companies. Join thousands of professionals who've found their dream careers with salaries starting at $100K+.
                 </p>
 
-                {/* Search card */}
-                <div className="mt-6 bg-white dark:bg-slate-900 border-0 shadow-sm rounded-xl p-4">
+                {/* Search card (pure form, no client JS) */}
+                <div className="mt-6 bg-white border-0 shadow-sm rounded-xl p-4">
                   <form action="/jobs" method="GET" className="flex flex-col lg:flex-row gap-4">
                     <div className="flex-1 relative">
-                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                       <input
                         type="text"
                         name="q"
@@ -220,7 +123,7 @@ export default function HomePage() {
                     </div>
 
                     <div className="relative lg:w-64">
-                      <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                       <input
                         type="text"
                         name="location"
@@ -239,55 +142,48 @@ export default function HomePage() {
                   </form>
                 </div>
 
-                <p className="mt-3 text-slate-400">
-                  <span className="text-white font-medium">Popular Searches :</span>{' '}
-                  Designer, Developer, Web, IOS, PHP Senior Engineer
+                <p className="mt-3 text-slate-300">
+                  <span className="text-white font-medium">Popular Searches:</span> Designer, Developer, Web, iOS, PHP Senior Engineer
                 </p>
               </div>
             </div>
 
-            {/* Right visuals - OPTIMIZED */}
-            <div className="hidden md:block md:col-span-6 lg:col-span-5 order-1 md:order-2">
+            {/* Right visuals (hidden on mobile) */}
+            <div className="hidden md:block md:col-span-6 lg:col-span-5 order-1 md:order-2 [content-visibility:auto]">
               <div className="relative">
                 <div className="relative flex justify-end">
-                  <div className="rounded-xl shadow-sm shadow-gray-200 dark:shadow-gray-700 overflow-hidden lg:w-[400px] w-[280px]">
+                  <div className="rounded-xl shadow-sm overflow-hidden lg:w-[400px] w-[280px]">
                     <Image
-                      src="/img/2.jpg" // Move to your public folder
+                      src="/img/2.jpg"
                       alt="Modern interview"
-                      width={400}
-                      height={300}
+                      width={800}
+                      height={1000}
                       className="h-auto w-full object-cover"
-                      priority={true} // This is above the fold
+                      priority
                       placeholder="blur"
                       blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyBYWV3Yah7x2xy05pCrsZpTSHmEQB4/9k="
+                      sizes="(max-width: 1024px) 280px, 400px"
                     />
                   </div>
 
-                  {/* Floating avatar card - OPTIMIZED */}
-                  <div className="absolute lg:bottom-20 -bottom-24 xl:-right-20 lg:-right-10 right-2 p-4 rounded-lg shadow-md dark:shadow-gray-800 bg-white dark:bg-slate-900 w-60 z-10">
-                    <h5 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">More $100k jobs!</h5>
+                  {/* Floating avatar card */}
+                  <div className="absolute lg:bottom-20 -bottom-24 xl:-right-20 lg:-right-10 right-2 p-4 rounded-lg shadow-md bg-white w-60 z-10">
+                    <h5 className="text-lg font-semibold text-gray-900 mb-3">More $100k jobs!</h5>
                     <ul className="relative flex items-center">
-                      {[
-                        { src: '/img/avatar-1.jpg', alt: 'Professional 1' },
-                        { src: '/img/avatar-2.jpg', alt: 'Professional 2' },
-                        { src: '/img/avatar-3.jpg', alt: 'Professional 3' },
-                        { src: '/img/avatar-4.jpg', alt: 'Professional 4' },
-                      ].map((avatar, idx) => (
+                      {Array.from({ length: 4 }).map((_, idx) => (
                         <li key={idx} className="-ml-3 first:ml-0">
-                          <span className="inline-block size-10 rounded-full overflow-hidden border-4 border-white dark:border-slate-900 shadow-md shadow-gray-200 dark:shadow-gray-700 transition-transform hover:scale-105">
-                            <Image
-                              src={avatar.src}
-                              alt={avatar.alt}
-                              width={40}
-                              height={40}
-                              className="h-full w-full object-cover"
-                              loading="lazy" // These are below the fold
-                            />
+                          {/* Lightweight SVG avatars (no network hit) */}
+                          <span className="inline-block size-10 rounded-full overflow-hidden border-4 border-white shadow-md">
+                            <svg viewBox="0 0 40 40" className="h-full w-full">
+                              <circle cx="20" cy="20" r="20" fill="currentColor" className="text-gray-200" />
+                              <circle cx="20" cy="15" r="6" fill="#bbb" />
+                              <rect x="6" y="23" width="28" height="12" rx="6" fill="#ccc" />
+                            </svg>
                           </span>
                         </li>
                       ))}
                       <li className="-ml-3">
-                        <span className="inline-flex size-9 items-center justify-center rounded-full bg-blue-600 text-white border-4 border-white dark:border-slate-900 shadow-md shadow-gray-200 dark:shadow-gray-700 transition-transform hover:scale-105">
+                        <span className="inline-flex size-9 items-center justify-center rounded-full bg-blue-600 text-white border-4 border-white shadow-md">
                           <Plus className="size-4" />
                         </span>
                       </li>
@@ -295,24 +191,25 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Lower-left image + bell chip - OPTIMIZED */}
+                {/* Lower-left image + bell chip */}
                 <div className="absolute -bottom-16 left-0 md:-left-5">
-                  <div className="rounded-xl border-8 border-white dark:border-slate-900 overflow-hidden lg:w-[280px] w-[200px] shadow-sm">
+                  <div className="rounded-xl border-8 border-white overflow-hidden lg:w-[280px] w-[200px] shadow-sm">
                     <Image
-                      src="/img/1.jpg" // Move to your public folder
+                      src="/img/1.jpg"
                       alt="Interview"
-                      width={280}
-                      height={200}
+                      width={560}
+                      height={700}
                       className="h-auto w-full object-cover"
-                      loading="lazy" // This is below the fold
+                      loading="lazy"
                       placeholder="blur"
                       blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyBYWV3Yah7x2xy05pCrsZpTSHmEQB4/9k="
+                      sizes="(max-width: 1024px) 200px, 280px"
                     />
                   </div>
 
-                  <div className="absolute -top-6 left-2 md:-left-10 bg-white dark:bg-slate-900 rounded-lg shadow-md dark:shadow-gray-800 px-4 py-3 flex items-center w-max">
+                  <div className="absolute -top-6 left-2 md:-left-10 bg-white rounded-lg shadow-md px-4 py-3 flex items-center w-max">
                     <Bell className="text-amber-500 size-6" />
-                    <p className="text-base font-semibold text-gray-900 dark:text-white ml-2">Job Alert!</p>
+                    <p className="text-base font-semibold text-gray-900 ml-2">Job Alert!</p>
                   </div>
                 </div>
               </div>
@@ -321,60 +218,49 @@ export default function HomePage() {
         </div>
       </section>
 
-
-      {/* Featured Jobs Section — Responsive (Template-based) */}
-      {featuredJobs && featuredJobs.length > 0 && (
-        <section className="bg-white">
+      {/* Featured Jobs */}
+      {featuredJobs?.length ? (
+        <section className="bg-white [content-visibility:auto]">
           <div className="max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24 mx-auto">
             <div className="relative p-6 md:p-16">
-              {/* Grid */}
               <div className="relative z-10 lg:grid lg:grid-cols-12 lg:gap-10 lg:items-center">
-                {/* Jobs Column (right on desktop, first on mobile) */}
+                {/* Jobs Column */}
                 <div className="mb-10 lg:mb-0 lg:col-span-6 lg:col-start-7 lg:order-2">
-                  <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-3">
-                    Featured Jobs
-                  </h2>
-                  <p className="text-xl lg:text-2xl text-slade max-w-3xl mx-auto mb-8 leading-relaxed">
+                  <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-3">Featured Jobs</h2>
+                  <p className="text-xl lg:text-2xl text-slate-600 max-w-3xl mx-auto mb-8 leading-relaxed">
                     Premium jobs, hand picked for you!
                   </p>
 
-                  {/* Job Cards */}
                   <div className="grid gap-5">
                     {featuredJobs.map((job: any) => {
-                      const badge = getJobBadge(job)
+                      const badge = getJobBadge(job);
+                      const logo = job.company_db?.company_logo || null;
                       return (
                         <div
                           key={job.JobID}
                           className="relative bg-white border border-gray-200 rounded-xl p-5 md:p-6 pr-24 md:pr-28 hover:shadow-lg transition-all duration-300 hover:border-blue-200"
                         >
-                          {/* Badge - fixed to top-right */}
                           {badge && (
-                            <span
-                              className={`absolute top-3 right-3 px-2 py-0.5 text-[10px] md:text-xs font-bold text-white rounded ${badge.color}`}
-                            >
+                            <span className={`absolute top-3 right-3 px-2 py-0.5 text-[10px] md:text-xs font-bold text-white rounded ${badge.color}`}>
                               {badge.text}
                             </span>
                           )}
 
                           <div className="flex items-start gap-4">
                             {/* Company Logo */}
-                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-                              {job.company_db?.company_logo ? (
-                                <img
-                                  src={job.company_db.company_logo}
+                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                              {logo ? (
+                                <Image
+                                  src={logo}
                                   alt={`${job.Company} logo`}
-                                  className="w-full h-full object-contain"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none'
-                                    const nextEl = e.currentTarget.nextElementSibling as HTMLElement
-                                    if (nextEl) nextEl.style.display = 'flex'
-                                  }}
+                                  width={48}
+                                  height={48}
+                                  className="object-contain"
+                                  loading="lazy"
                                 />
-                              ) : null}
-                              <Building2
-                                className="w-6 h-6 text-gray-400"
-                                style={{ display: job.company_db?.company_logo ? 'none' : 'block' }}
-                              />
+                              ) : (
+                                <Building2 className="w-6 h-6 text-gray-400" />
+                              )}
                             </div>
 
                             {/* Job Details */}
@@ -388,7 +274,6 @@ export default function HomePage() {
                                 <span className="text-sm truncate">{job.Location}</span>
                               </div>
 
-                              {/* Salary + CTA */}
                               <div className="flex items-center justify-between gap-3">
                                 {job.formatted_salary && (
                                   <div className="flex items-center text-green-600">
@@ -407,11 +292,10 @@ export default function HomePage() {
                             </div>
                           </div>
                         </div>
-                      )
+                      );
                     })}
                   </div>
 
-                  {/* View More */}
                   <div className="mt-8">
                     <Link
                       href="/jobs"
@@ -423,37 +307,33 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Featured Image Column - OPTIMIZED */}
+                {/* Featured Image Column (hidden on mobile, visible lg+) */}
                 <div className="hidden lg:col-span-6 lg:block">
                   <div className="relative">
                     <Image
-                      className="shadow-xl shadow-gray-200 rounded-2xl object-cover w-full h-[360px] sm:h-[480px] lg:h-[640px] dark:shadow-gray-900/20"
+                      className="shadow-xl rounded-2xl object-cover w-full h-[360px] sm:h-[480px] lg:h-[640px]"
                       src="/img/featured-image.jpg"
                       alt="Professional workspace"
-                      width={600}
-                      height={640}
-                      loading="lazy" // This is below the fold
+                      width={1280}
+                      height={960}
+                      loading="lazy"
                       placeholder="blur"
                       blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyBYWV3Yah7x2xy05pCrsZpTSHmEQB4/9k="
+                      sizes="(max-width: 1024px) 100vw, 50vw"
                     />
                   </div>
                 </div>
               </div>
-              {/* End Grid */}
 
-              {/* Background color block from template for layered look */}
               <div className="absolute inset-0 grid grid-cols-12 size-full pointer-events-none">
                 <div className="col-span-full lg:col-span-7 lg:col-start-6 bg-gray-100 w-full h-5/6 rounded-xl sm:h-3/4 lg:h-full" />
               </div>
             </div>
           </div>
         </section>
-      )}
+      ) : null}
 
-      {/* Newsletter Signup */}
       <NewsletterSignup />
-
-      {/* Footer */}
       <Footer />
     </div>
   );
