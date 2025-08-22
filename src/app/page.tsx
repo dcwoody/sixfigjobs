@@ -423,10 +423,10 @@ export default async function HomePage() {
               <div className="lg:w-1/2">
                 <div className="mb-8">
                   <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                    FEATURED JOBS
+                    Featured Jobs
                   </h2>
                   <p className="text-lg text-gray-600">
-                    PREMIUM POSITIONS FROM OUR TOP PARTNER COMPANIES
+                    Premium positions handpicked for you!
                   </p>
                 </div>
 
@@ -437,49 +437,54 @@ export default async function HomePage() {
                     
                     return (
                       <div key={job.JobID} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:border-blue-200">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start space-x-4 flex-1">
-                            
-                            {/* Company Logo Placeholder */}
-                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <Building2 className="w-6 h-6 text-gray-400" />
-                            </div>
+                        <div className="flex items-start space-x-4">
+                          
+                          {/* Company Logo Placeholder */}
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Building2 className="w-6 h-6 text-gray-400" />
+                          </div>
 
-                            {/* Job Details */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h3 className="text-lg font-bold text-gray-900 truncate">
-                                  {job.JobTitle}
-                                </h3>
-                                {badge && (
-                                  <span className={`px-2 py-1 text-xs font-bold text-white rounded ${badge.color}`}>
-                                    {badge.text}
-                                  </span>
-                                )}
-                              </div>
-                              
-                              <div className="flex items-center text-gray-600 mb-2">
-                                <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-                                <span className="text-sm truncate">{job.Location}</span>
-                              </div>
-                              
+                          {/* Job Details */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="text-lg font-bold text-gray-900 truncate">
+                                {job.JobTitle}
+                              </h3>
+                              {badge && (
+                                <span className={`px-2 py-1 text-xs font-bold text-white rounded ${badge.color}`}>
+                                  {badge.text}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Company Name */}
+                            <div className="text-gray-500 text-sm mb-2">
+                              {job.Company}
+                            </div>
+                            
+                            <div className="flex items-center text-gray-600 mb-2">
+                              <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                              <span className="text-sm truncate">{job.Location}</span>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
                               {job.formatted_salary && (
-                                <div className="flex items-center text-green-600 mb-3">
+                                <div className="flex items-center text-green-600">
                                   <DollarSign className="w-4 h-4 mr-1 flex-shrink-0" />
                                   <span className="text-sm font-medium">{job.formatted_salary}</span>
                                 </div>
                               )}
+                              
+                              {/* View Details Button - Bottom Right */}
+                              <Link
+                                href={`/jobs/${job.slug}`}
+                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center"
+                              >
+                                View Details
+                                <ArrowRight className="w-4 h-4 ml-1" />
+                              </Link>
                             </div>
                           </div>
-
-                          {/* View Details Button */}
-                          <Link
-                            href={`/jobs/${job.slug}`}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center ml-4 flex-shrink-0"
-                          >
-                            View Details
-                            <ArrowRight className="w-4 h-4 ml-1" />
-                          </Link>
                         </div>
                       </div>
                     );
