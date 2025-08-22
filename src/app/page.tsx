@@ -1,8 +1,9 @@
 // src/app/page.tsx - Complete Server Component with Navigation, Featured Jobs, and Footer
+'use client';
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/client';
 import {
   Search, MapPin, TrendingUp, Clock, Building2, DollarSign,
   Star, ArrowRight, CheckCircle, Sparkles, Globe, Briefcase,
@@ -10,9 +11,9 @@ import {
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 import NewsletterSignup from '@/components/NewsletterSignup';
+import { useEffect, useState } from 'react';
 
-// Enable ISR with revalidation
-export const revalidate = 300; // 5 minutes
+// Enable ISR with revalidation - REMOVED since this is now a client component
 
 // Utility functions moved outside component
 const getJobBadge = (job: any) => {
@@ -43,7 +44,7 @@ const formatPostedDate = (dateString: string) => {
 };
 
 async function getFeaturedJobs() {
-  const supabase = await createClient();
+  const supabase = createClient();
   
   // Get 1 government job with company data
   const { data: govJobs } = await supabase
@@ -103,57 +104,76 @@ async function getFeaturedJobs() {
   return featuredJobs;
 }
 
-export default async function HomePage() {
-  const supabase = await createClient();
-  const featuredJobs = await getFeaturedJobs();
-  
-  // Get real stats from your database in parallel
-  const [jobsResult, companiesResult] = await Promise.all([
-    supabase
-      .from('job_listings_db')
-      .select('formatted_salary, is_remote', { count: 'exact' }),
+export default function HomePage() {
+  const [featuredJobs, setFeaturedJobs] = useState<any[]>([]);
+  const [totalJobs, setTotalJobs] = useState(0);
+  const [totalCompanies, setTotalCompanies] = useState(0);
+  const [avgSalary, setAvgSalary] = useState(150000);
+  const [remotePercentage, setRemotePercentage] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-    supabase
-      .from('company_db') // Fixed table name
-      .select('*', { count: 'exact' })
-  ]);
+  useEffect(() => {
+    async function loadData() {
+      const supabase = createClient();
+      
+      try {
+        // Get featured jobs
+        const jobs = await getFeaturedJobs();
+        setFeaturedJobs(jobs);
+        
+        // Get real stats from your database in parallel
+        const [jobsResult, companiesResult] = await Promise.all([
+          supabase
+            .from('job_listings_db')
+            .select('formatted_salary, is_remote', { count: 'exact' }),
 
-  const totalJobs = jobsResult.count || 0;
-  const totalCompanies = companiesResult.count || 0;
+          supabase
+            .from('company_db')
+            .select('*', { count: 'exact' })
+        ]);
 
-  // Calculate average salary from real data
-  const salaries = jobsResult.data?.filter((job: any) => job.formatted_salary)
-    .map((job: any) => {
-      const salary = job.formatted_salary.replace(/[^\d]/g, '');
-      return parseInt(salary);
-    })
-    .filter((salary: number) => salary > 50000) || [];
+        const jobCount = jobsResult.count || 0;
+        const companyCount = companiesResult.count || 0;
 
-  const avgSalary = salaries.length > 0
-    ? Math.round(salaries.reduce((a: number, b: number) => a + b, 0) / salaries.length)
-    : 150000;
+        // Calculate average salary from real data
+        const salaries = jobsResult.data?.filter((job: any) => job.formatted_salary)
+          .map((job: any) => {
+            const salary = job.formatted_salary.replace(/[^\d]/g, '');
+            return parseInt(salary);
+          })
+          .filter((salary: number) => salary > 50000) || [];
 
-  const remoteJobs = jobsResult.data?.filter((job: any) => job.is_remote).length || 0;
-  const remotePercentage = totalJobs > 0 ? Math.round((remoteJobs / totalJobs) * 100) : 0;
+        const calculatedAvgSalary = salaries.length > 0
+          ? Math.round(salaries.reduce((a: number, b: number) => a + b, 0) / salaries.length)
+          : 150000;
 
-  // Get initial jobs for JobDirectory component
-  const { data: initialJobs } = await supabase
-    .from('job_listings_db')
-    .select(`
-      JobID,
-      JobTitle,
-      Company,
-      Location,
-      formatted_salary,
-      slug,
-      ShortDescription,
-      PostedDate,
-      is_remote,
-      JobType,
-      company_id
-    `)
-    .order('PostedDate', { ascending: false })
-    .limit(24);
+        const remoteJobs = jobsResult.data?.filter((job: any) => job.is_remote).length || 0;
+        const calculatedRemotePercentage = jobCount > 0 ? Math.round((remoteJobs / jobCount) * 100) : 0;
+
+        setTotalJobs(jobCount);
+        setTotalCompanies(companyCount);
+        setAvgSalary(calculatedAvgSalary);
+        setRemotePercentage(calculatedRemotePercentage);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -421,8 +441,14 @@ export default async function HomePage() {
 
      {/* Featured Jobs Section */}
       {featuredJobs && featuredJobs.length > 0 && (
-        <section className="py-24 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section className="py-24 bg-white relative">
+          {/* Background Color */}
+          <div className="absolute inset-0 grid grid-cols-12 size-full">
+            <div className="col-span-full lg:col-span-7 lg:col-start-6 bg-gray-100 w-full h-5/6 rounded-xl sm:h-3/4 lg:h-full dark:bg-neutral-800"></div>
+          </div>
+          {/* End Background Color */}
+          
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="flex flex-col lg:flex-row gap-12 items-center">
               
               {/* Left side - Image */}
