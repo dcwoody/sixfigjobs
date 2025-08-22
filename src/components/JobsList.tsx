@@ -506,6 +506,11 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                           <img
                             src={company.company_logo}
                             alt={`${company.name} logo`}
+                            width={64}              
+                            height={64}             
+                            loading="lazy"
+                            decoding="async"
+                            referrerPolicy="no-referrer"
                             className="w-16 h-16 object-contain border border-gray-200 rounded-lg p-2 bg-white mr-4 flex-shrink-0"
                           />
                         ) : (
@@ -522,6 +527,7 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
                           <Link
                             href={`/jobs/${job.slug}`}
                             className="text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors block leading-tight"
+                            prefetch={false}
                           >
                             {job.JobTitle.replace(/\b\w+/g, (word) => {
                               const upperWords = ['IT', 'AI', 'ML', 'API', 'CEO', 'CTO', 'CFO', 'VP', 'HR', 'QA', 'DevOps', 'AWS', 'SaaS', 'B2B', 'B2C', 'UI', 'UX', 'SQL', 'PHP', 'CSS', 'HTML', 'JS', 'HTTP', 'HTTPS', 'REST', 'JSON', 'XML', 'CRM', 'ERP', 'SEO', 'SEM', 'PPC', 'ROI', 'KPI', 'LOB', 'SME', 'QC', 'R&D', 'P&L', 'M&A', 'IPO', 'B2G', 'G2B', 'G2C', 'C2C', 'P2P', 'IoT', 'AR', 'VR', 'EA'];

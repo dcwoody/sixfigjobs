@@ -114,6 +114,7 @@ export default async function HomePage() {
                   <form action="/jobs" method="GET" className="flex flex-col lg:flex-row gap-4">
                     <div className="flex-1 relative">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <label htmlFor="q" className="sr-only">Job Title</label>
                       <input
                         type="text"
                         name="q"
@@ -124,6 +125,7 @@ export default async function HomePage() {
 
                     <div className="relative lg:w-64">
                       <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <label htmlFor="q" className="sr-only">Location</label>
                       <input
                         type="text"
                         name="location"

@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
-<url><loc>https://sixfigjob.com/auth/error</loc><lastmod>2025-08-22T16:52:32.941Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://sixfigjob.com/about</loc><lastmod>2025-08-22T16:52:32.941Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://sixfigjob.com/auth/check-email</loc><lastmod>2025-08-22T16:52:32.941Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://sixfigjob.com/companies</loc><lastmod>2025-08-22T16:52:32.941Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://sixfigjob.com/contact</loc><lastmod>2025-08-22T16:52:32.941Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://sixfigjob.com/login</loc><lastmod>2025-08-22T16:52:32.941Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://sixfigjob.com/privacy</loc><lastmod>2025-08-22T16:52:32.941Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://sixfigjob.com/signout</loc><lastmod>2025-08-22T16:52:32.941Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://sixfigjob.com/profile</loc><lastmod>2025-08-22T16:52:32.942Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://sixfigjob.com/signup</loc><lastmod>2025-08-22T16:52:32.942Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://sixfigjob.com/terms</loc><lastmod>2025-08-22T16:52:32.942Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://sixfigjob.com/test2</loc><lastmod>2025-08-22T16:52:32.942Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://sixfigjob.com/unsubscribed</loc><lastmod>2025-08-22T16:52:32.942Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://sixfigjob.com/test-auth</loc><lastmod>2025-08-22T16:52:32.942Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://sixfigjob.com/admin/newsletter</loc><lastmod>2025-08-22T16:52:32.942Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://sixfigjob.com/auth/error</loc><lastmod>2025-08-22T18:16:23.963Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://sixfigjob.com/companies</loc><lastmod>2025-08-22T18:16:23.963Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://sixfigjob.com/auth/check-email</loc><lastmod>2025-08-22T18:16:23.963Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://sixfigjob.com/contact</loc><lastmod>2025-08-22T18:16:23.963Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://sixfigjob.com/login</loc><lastmod>2025-08-22T18:16:23.963Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://sixfigjob.com/privacy</loc><lastmod>2025-08-22T18:16:23.963Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://sixfigjob.com/profile</loc><lastmod>2025-08-22T18:16:23.963Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://sixfigjob.com/about</loc><lastmod>2025-08-22T18:16:23.963Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://sixfigjob.com/signout</loc><lastmod>2025-08-22T18:16:23.963Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://sixfigjob.com/signup</loc><lastmod>2025-08-22T18:16:23.963Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://sixfigjob.com/terms</loc><lastmod>2025-08-22T18:16:23.963Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://sixfigjob.com/test-auth</loc><lastmod>2025-08-22T18:16:23.963Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://sixfigjob.com/test2</loc><lastmod>2025-08-22T18:16:23.963Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://sixfigjob.com/admin/newsletter</loc><lastmod>2025-08-22T18:16:23.963Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://sixfigjob.com/unsubscribed</loc><lastmod>2025-08-22T18:16:23.963Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
 </urlset>
