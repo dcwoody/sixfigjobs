@@ -421,14 +421,8 @@ export default async function HomePage() {
 
      {/* Featured Jobs Section */}
       {featuredJobs && featuredJobs.length > 0 && (
-        <section className="py-24 bg-white relative">
-          {/* Background Color */}
-          <div className="absolute inset-0 grid grid-cols-12 size-full">
-            <div className="col-span-full lg:col-span-7 lg:col-start-6 bg-gray-100 w-full h-5/6 rounded-xl sm:h-3/4 lg:h-full dark:bg-neutral-800"></div>
-          </div>
-          {/* End Background Color */}
-          
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <section className="py-24 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col lg:flex-row gap-12 items-center">
               
               {/* Left side - Image */}
@@ -447,10 +441,10 @@ export default async function HomePage() {
               <div className="lg:w-1/2">
                 <div className="mb-8">
                   <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                    FEATURED JOBS
+                    Featured Jobs
                   </h2>
                   <p className="text-lg text-gray-600">
-                    PREMIUM POSITIONS FROM OUR TOP PARTNER COMPANIES
+                    Premium positions hand picked for you!
                   </p>
                 </div>
 
