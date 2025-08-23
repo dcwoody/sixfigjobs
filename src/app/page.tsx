@@ -45,7 +45,6 @@ function getJobBadge(job: any) {
   return null;
 }
 
-
 function isGovJob(job: any): boolean {
   const company = job.Company?.toLowerCase() || '';
   const title = job.JobTitle?.toLowerCase() || '';
@@ -56,29 +55,72 @@ function isGovJob(job: any): boolean {
          title.includes('federal');
 }
 
-
 async function getFeaturedJobs() {
   const supabase = await getServerSupabase();
 
-  // Single optimized query instead of 3 separate ones
+  // Get more jobs to ensure variety - use LEFT JOIN instead of INNER JOIN
   const { data: allJobs } = await supabase
     .from('job_listings_db')
-    .select(`*, company_db!inner(company_logo, name)`)
+    .select(`*, company_db(company_logo, name)`)
     .order('PostedDate', { ascending: false })
-    .limit(20); // Get more jobs to ensure we have variety
+    .limit(20);
 
-  // Handle null case and filter in memory (faster than multiple DB calls)
   if (!allJobs || allJobs.length === 0) {
     return [];
   }
 
-  // Filter and categorize jobs in JavaScript (much faster than DB queries)
-  const govJobs = allJobs.filter(job => isGovJob(job)).slice(0, 1);
-  const remoteJobs = allJobs.filter(job => job.is_remote && !isGovJob(job)).slice(0, 1);
-  const regularJobs = allJobs.filter(job => !job.is_remote && !isGovJob(job)).slice(0, 1);
+  // Separate jobs by category
+  const govJobs = allJobs.filter(job => isGovJob(job));
+  const remoteJobs = allJobs.filter(job => job.is_remote && !isGovJob(job));
+  const regularJobs = allJobs.filter(job => !job.is_remote && !isGovJob(job));
 
-  // Return up to 3 jobs, prioritizing variety
-  return [...regularJobs, ...remoteJobs, ...govJobs].slice(0, 3);
+  console.log('Job distribution:', {
+    total: allJobs.length,
+    government: govJobs.length,
+    remote: remoteJobs.length,
+    regular: regularJobs.length
+  });
+
+  // Build featured jobs array with fallback logic
+  const featuredJobs: any[] = [];
+
+  // Try to get one from each category
+  if (regularJobs.length > 0) {
+    featuredJobs.push(regularJobs[0]);
+  }
+
+  if (remoteJobs.length > 0) {
+    featuredJobs.push(remoteJobs[0]);
+  } else {
+    // Fallback: if no remote jobs, take another regular job
+    if (regularJobs.length > 1) {
+      featuredJobs.push(regularJobs[1]);
+    }
+  }
+
+  if (govJobs.length > 0) {
+    featuredJobs.push(govJobs[0]);
+  } else {
+    // Fallback: if no government jobs, take another available job
+    const remainingJobs = allJobs.filter(job => 
+      !featuredJobs.some(featured => featured.JobID === job.JobID)
+    );
+    if (remainingJobs.length > 0) {
+      featuredJobs.push(remainingJobs[0]);
+    }
+  }
+
+  // Fill remaining spots if we have fewer than 3 jobs
+  while (featuredJobs.length < 3 && featuredJobs.length < allJobs.length) {
+    const remainingJobs = allJobs.filter(job => 
+      !featuredJobs.some(featured => featured.JobID === job.JobID)
+    );
+    if (remainingJobs.length > 0) {
+      featuredJobs.push(remainingJobs[0]);
+    } else {
+      break;
+    }
+  }
 }
 
 export default async function HomePage() {
