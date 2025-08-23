@@ -45,37 +45,40 @@ function getJobBadge(job: any) {
   return null;
 }
 
+
+function isGovJob(job: any): boolean {
+  const company = job.Company?.toLowerCase() || '';
+  const title = job.JobTitle?.toLowerCase() || '';
+  return company.includes('government') || 
+         company.includes('federal') || 
+         company.includes('state') || 
+         title.includes('government') || 
+         title.includes('federal');
+}
+
+
 async function getFeaturedJobs() {
-  const supabase = await getServerSupabase(); // <-- FIX: await the client
+  const supabase = await getServerSupabase();
 
-  const { data: govJobs } = await supabase
+  // Single optimized query instead of 3 separate ones
+  const { data: allJobs } = await supabase
     .from('job_listings_db')
     .select(`*, company_db!inner(company_logo, name)`)
-    .or('Company.ilike.%government%,Company.ilike.%federal%,Company.ilike.%state%,JobTitle.ilike.%government%,JobTitle.ilike.%federal%')
     .order('PostedDate', { ascending: false })
-    .limit(1);
+    .limit(20); // Get more jobs to ensure we have variety
 
-  const { data: remoteJobs } = await supabase
-    .from('job_listings_db')
-    .select(`*, company_db!inner(company_logo, name)`)
-    .eq('is_remote', true)
-    .not('Company', 'ilike', '%government%')
-    .not('Company', 'ilike', '%federal%')
-    .not('JobTitle', 'ilike', '%government%')
-    .order('PostedDate', { ascending: false })
-    .limit(1);
+  // Handle null case and filter in memory (faster than multiple DB calls)
+  if (!allJobs || allJobs.length === 0) {
+    return [];
+  }
 
-  const { data: regularJobs } = await supabase
-    .from('job_listings_db')
-    .select(`*, company_db!inner(company_logo, name)`)
-    .eq('is_remote', false)
-    .not('Company', 'ilike', '%government%')
-    .not('Company', 'ilike', '%federal%')
-    .not('JobTitle', 'ilike', '%government%')
-    .order('PostedDate', { ascending: false })
-    .limit(1);
+  // Filter and categorize jobs in JavaScript (much faster than DB queries)
+  const govJobs = allJobs.filter(job => isGovJob(job)).slice(0, 1);
+  const remoteJobs = allJobs.filter(job => job.is_remote && !isGovJob(job)).slice(0, 1);
+  const regularJobs = allJobs.filter(job => !job.is_remote && !isGovJob(job)).slice(0, 1);
 
-  return ([...(regularJobs || []), ...(remoteJobs || []), ...(govJobs || [])] as any[]).slice(0, 3);
+  // Return up to 3 jobs, prioritizing variety
+  return [...regularJobs, ...remoteJobs, ...govJobs].slice(0, 3);
 }
 
 export default async function HomePage() {

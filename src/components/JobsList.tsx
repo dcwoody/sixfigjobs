@@ -9,6 +9,7 @@ import Footer from '@/components/Footer'
 import SaveJobButton from './SaveJobButton';
 import { Job, Company } from '@/types';
 
+
 interface JobsListProps {
   initialJobs: Job[];
   initialSearchParams: {
@@ -194,11 +195,11 @@ export default function JobsList({ initialJobs, initialSearchParams }: JobsListP
   };
 
   // Pagination
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    updateFiltersAndLoad(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+const handlePageChange = (page: number) => {
+  setCurrentPage(page);
+  updateFiltersAndLoad(page);
+  requestAnimationFrame(() => window.scrollTo(0, 0)); // no 'smooth'
+};
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

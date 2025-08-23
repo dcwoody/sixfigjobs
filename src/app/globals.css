@@ -33,3 +33,5 @@
     text-wrap: balance;
   }
 }
+
+.cv-auto { content-visibility: auto; contain-intrinsic-size: 1px 800px; }
