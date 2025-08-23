@@ -23,7 +23,8 @@ import {
   PlusIcon,
   MailIcon,
   CheckIcon,
-  XIcon
+  XIcon,
+  FileTextIcon
 } from 'lucide-react';
 
 interface UserProfile {
@@ -56,6 +57,15 @@ interface JobStats {
   avg_salary: string;
 }
 
+interface JobSuggestion {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  url: string;
+  matchScore: number;
+}
+
 interface WelcomeDashboardProps {
   initialSession: Session;
   initialProfile: UserProfile | null;
@@ -71,6 +81,11 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
   const [loading, setLoading] = useState(false);
   const [newsletterLoading, setNewsletterLoading] = useState(false);
   const [newsletterMessage, setNewsletterMessage] = useState('');
+  const [emailChange, setEmailChange] = useState('');
+  const [emailChangeMsg, setEmailChangeMsg] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetMsg, setResetMsg] = useState('');
+  const [jobSuggestions, setJobSuggestions] = useState<JobSuggestion[]>([]);
 
   useEffect(() => {
     // Use session.user consistently throughout
@@ -112,6 +127,57 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
 
     return () => subscription.unsubscribe();
   }, [session.user?.id, userProfile, router]);
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      setResetEmail(session.user.email);
+    }
+  }, [session?.user?.email]);
+
+  useEffect(() => {
+    const loadSuggestions = async () => {
+      try {
+        const res = await fetch('/api/jobs/suggestions');
+        if (res.ok) {
+          const data = await res.json();
+          setJobSuggestions(data.suggestions || []);
+        }
+      } catch (err) {
+        console.error('Failed to load job suggestions', err);
+      }
+    };
+    loadSuggestions();
+  }, []);
+
+  const handleChangeEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/user/change-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newEmail: emailChange }),
+      });
+      const data = await res.json();
+      setEmailChangeMsg(res.ok ? 'Verification email sent.' : data.error || 'Request failed.');
+    } catch (err) {
+      setEmailChangeMsg('Request failed.');
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/auth/request-password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail }),
+      });
+      const data = await res.json();
+      setResetMsg(res.ok ? 'If an account exists, a reset link was sent.' : data.error || 'Request failed.');
+    } catch (err) {
+      setResetMsg('Request failed.');
+    }
+  };
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -437,6 +503,29 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
               )}
             </div>
 
+              {/* Job Suggestions */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                  <BriefcaseIcon className="w-6 h-6 mr-2 text-blue-600" />
+                  Job Suggestions
+                </h2>
+                {jobSuggestions.length > 0 ? (
+                  <div className="space-y-4">
+                    {jobSuggestions.map((job) => (
+                      <div key={job.id} className="border border-gray-200 rounded-lg p-4">
+                        <a href={job.url} className="text-lg font-semibold text-gray-900 hover:text-blue-600">
+                          {job.title}
+                        </a>
+                        <p className="text-gray-600">{job.company} - {job.location}</p>
+                        <p className="text-sm text-gray-500">Match score: {Math.round(job.matchScore * 100)}%</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-600">No suggestions yet. Upload your resume to get personalized recommendations.</p>
+                )}
+              </div>
+
             {/* Sidebar */}
             <div className="space-y-6">
               
@@ -463,6 +552,17 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
                     <div>
                       <div className="font-medium">Job Preferences</div>
                       <div className="text-sm text-gray-600">Set your criteria and alerts</div>
+                    </div>
+                  </Link>
+
+                  <Link
+                    href="/preference/resume"
+                    className="flex items-center p-3 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    <FileTextIcon className="w-5 h-5 mr-3" />
+                    <div>
+                      <div className="font-medium">Resume Upload</div>
+                      <div className="text-sm text-gray-600">Add or update your resume</div>
                     </div>
                   </Link>
                 </div>
@@ -497,6 +597,21 @@ export default function WelcomeDashboard({ initialSession, initialProfile }: Wel
                     <p className="text-sm text-green-600">{newsletterMessage}</p>
                   )}
                 </div>
+              </div>
+
+              {/* Account Settings */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Settings</h3>
+                <form onSubmit={handleChangeEmail} className="space-y-2 mb-4">
+                  <input type="email" value={emailChange} onChange={(e) => setEmailChange(e.target.value)} className="w-full border p-2 rounded" placeholder="New email" required />
+                  <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">Change Email</button>
+                </form>
+                {emailChangeMsg && <p className="text-sm text-gray-600">{emailChangeMsg}</p>}
+                <form onSubmit={handleResetPassword} className="space-y-2 mt-4">
+                  <input type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} className="w-full border p-2 rounded" placeholder="Email" required />
+                  <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">Send Reset Link</button>
+                </form>
+                {resetMsg && <p className="text-sm text-gray-600">{resetMsg}</p>}
               </div>
 
               {/* Profile Completion */}
