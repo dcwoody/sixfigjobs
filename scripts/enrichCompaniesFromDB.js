@@ -586,7 +586,7 @@ class SupabaseWikipediaEnricher {
           case 'employees':
           case 'workforce': {
             const emp = value.match(/([\d,]+)/);
-            if (emp) infoboxData.employees = emp[1];
+            if (emp) infoboxData.size = emp[1];
             break;
           }
           case 'annual budget':
