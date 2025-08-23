@@ -69,7 +69,7 @@ async function getFeaturedJobs() {
     return [];
   }
 
-  // Separate jobs by category
+   // Separate jobs by category
   const govJobs = allJobs.filter(job => isGovJob(job));
   const remoteJobs = allJobs.filter(job => job.is_remote && !isGovJob(job));
   const regularJobs = allJobs.filter(job => !job.is_remote && !isGovJob(job));
@@ -121,6 +121,7 @@ async function getFeaturedJobs() {
       break;
     }
   }
+  return featuredJobs;
 }
 
 export default async function HomePage() {

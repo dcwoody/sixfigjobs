@@ -128,28 +128,38 @@ class SupabaseWikipediaEnricher {
     console.log(`✅ Loaded ${data.length} companies from database`);
     return data;
   }
+  
+  normalizeUpdates(updates) {
+  const u = { ...updates };
+  if (u.logo && !u.company_logo) {
+    u.company_logo = u.logo;
+  }
+  delete u.logo;
+  return u;
+}
 
   async updateCompanyInDB(companyId, updates) {
-    try {
-      const payload = {
-        ...updates,
-        enrichment_status: 'completed',
-        enrichment_date: new Date().toISOString(),
-        enrichment_fields_added: Object.keys(updates),
-      };
+  try {
+    const normalized = this.normalizeUpdates(updates);
+    const payload = {
+      ...normalized,
+      enrichment_status: 'completed',
+      enrichment_date: new Date().toISOString(),
+      enrichment_fields_added: Object.keys(normalized),
+    };
 
-      const { error } = await this.supabase
-        .from('company_db')
-        .update(payload)
-        .eq('id', companyId);
+    const { error } = await this.supabase
+      .from('company_db')
+      .update(payload)
+      .eq('id', companyId);
 
-      if (error) throw new Error(error.message);
-      return true;
-    } catch (err) {
-      console.error(`❌ Error updating company ${companyId}:`, err.message);
-      return false;
-    }
+    if (error) throw new Error(error.message);
+    return true;
+  } catch (err) {
+    console.error(`❌ Error updating company ${companyId}:`, err.message);
+    return false;
   }
+}
 
   // ---------- Wikipedia ----------
   async searchWikipedia(companyName) {
