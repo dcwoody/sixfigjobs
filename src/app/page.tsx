@@ -48,11 +48,11 @@ function getJobBadge(job: any) {
 function isGovJob(job: any): boolean {
   const company = job.Company?.toLowerCase() || '';
   const title = job.JobTitle?.toLowerCase() || '';
-  return company.includes('government') || 
-         company.includes('federal') || 
-         company.includes('state') || 
-         title.includes('government') || 
-         title.includes('federal');
+  return company.includes('government') ||
+    company.includes('federal') ||
+    company.includes('state') ||
+    title.includes('government') ||
+    title.includes('federal');
 }
 
 async function getFeaturedJobs() {
@@ -69,7 +69,7 @@ async function getFeaturedJobs() {
     return [];
   }
 
-   // Separate jobs by category
+  // Separate jobs by category
   const govJobs = allJobs.filter(job => isGovJob(job));
   const remoteJobs = allJobs.filter(job => job.is_remote && !isGovJob(job));
   const regularJobs = allJobs.filter(job => !job.is_remote && !isGovJob(job));
@@ -102,7 +102,7 @@ async function getFeaturedJobs() {
     featuredJobs.push(govJobs[0]);
   } else {
     // Fallback: if no government jobs, take another available job
-    const remainingJobs = allJobs.filter(job => 
+    const remainingJobs = allJobs.filter(job =>
       !featuredJobs.some(featured => featured.JobID === job.JobID)
     );
     if (remainingJobs.length > 0) {
@@ -112,7 +112,7 @@ async function getFeaturedJobs() {
 
   // Fill remaining spots if we have fewer than 3 jobs
   while (featuredJobs.length < 3 && featuredJobs.length < allJobs.length) {
-    const remainingJobs = allJobs.filter(job => 
+    const remainingJobs = allJobs.filter(job =>
       !featuredJobs.some(featured => featured.JobID === job.JobID)
     );
     if (remainingJobs.length > 0) {
@@ -132,142 +132,141 @@ export default async function HomePage() {
       {/* HERO */}
 /* Fixed Hero Section - Replace your existing hero section with this */
 
-<section
-  id="home"
-  className="relative overflow-hidden flex items-center py-24 md:py-36 min-h-[70vh] md:min-h-[85vh] bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900"
->
-  <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/10 to-slate-900/50" />
-  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/20 via-transparent to-blue-400/20" />
+      <section
+        id="home"
+        className="relative overflow-hidden flex items-center py-24 md:py-36 min-h-[70vh] md:min-h-[85vh] bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900"
+      >
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/10 to-slate-900/50" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/20 via-transparent to-blue-400/20" />
 
-  <div className="container mx-auto px-4">
-    <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-8 lg:gap-12 max-w-7xl mx-auto">
-      {/* Left Content */}
-      <div className="lg:col-span-6 order-2 lg:order-1 mt-10 lg:mt-0">
-        <div className="lg:pr-8">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 leading-tight">
-            Find Your{' '}
-            <span className="relative inline-block">
-              <span className="absolute inset-0 -skew-y-6 bg-blue-600 rounded-sm" aria-hidden />
-              <span className="relative px-2 text-white">$100k Job</span>
-            </span>
-            <br /> at Leading Companies.
-          </h1>
-
-          <p className="text-lg md:text-xl lg:text-2xl text-white/90 mb-8 leading-relaxed">
-            Discover exclusive opportunities at top companies. Join thousands of professionals who've found their dream careers with salaries starting at $100K+.
-          </p>
-
-          {/* Search card */}
-          <div className="mt-6 bg-white border-0 shadow-sm rounded-xl p-4">
-            <form action="/jobs" method="GET" className="flex flex-col lg:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <label htmlFor="q" className="sr-only">Job Title</label>
-                <input
-                  type="text"
-                  name="q"
-                  placeholder="Job title, company, or keyword..."
-                  className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
-                />
-              </div>
-
-              <div className="relative lg:w-64">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <label htmlFor="location" className="sr-only">Location</label>
-                <input
-                  type="text"
-                  name="location"
-                  placeholder="Location or 'Remote'"
-                  className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:scale-105 flex items-center justify-center lg:w-auto"
-              >
-                <Search className="w-6 h-6 mr-2" />
-                Search Jobs
-              </button>
-            </form>
-          </div>
-
-          <p className="mt-3 text-slate-300">
-            <span className="text-white font-medium">Popular Searches:</span> Designer, Developer, Web, iOS, PHP Senior Engineer
-          </p>
-        </div>
-      </div>
-
-      {/* Right Visuals - Fixed positioning and overflow */}
-      <div className="lg:col-span-6 order-1 lg:order-2 relative">
-        <div className="relative w-full max-w-lg mx-auto lg:max-w-none">
-          {/* Main large image container */}
-          <div className="relative">
-            <div className="rounded-xl shadow-lg overflow-hidden w-full max-w-sm lg:max-w-md xl:max-w-lg mx-auto lg:ml-auto">
-              <Image
-                src="/img/2.jpg"
-                alt="Modern interview"
-                width={500}
-                height={625}
-                className="h-auto w-full object-cover"
-                priority
-                placeholder="blur"
-                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyBYWV3Yah7x2xy05pCrsZpTSHmEQB4/9k="
-                sizes="(max-width: 768px) 300px, (max-width: 1024px) 400px, 500px"
-              />
-            </div>
-
-            {/* Floating avatar card - Positioned to stay within viewport */}
-            <div className="absolute -bottom-6 -right-4 lg:-right-8 xl:-right-12 p-4 rounded-lg shadow-lg bg-white max-w-[240px] z-10">
-              <h5 className="text-lg font-semibold text-gray-900 mb-3">More $100k jobs!</h5>
-              <ul className="relative flex items-center">
-                {Array.from({ length: 4 }).map((_, idx) => (
-                  <li key={idx} className="-ml-3 first:ml-0">
-                    <span className="inline-block size-10 rounded-full overflow-hidden border-4 border-white shadow-md">
-                      <svg viewBox="0 0 40 40" className="h-full w-full">
-                        <circle cx="20" cy="20" r="20" fill="currentColor" className="text-gray-200" />
-                        <circle cx="20" cy="15" r="6" fill="#bbb" />
-                        <rect x="6" y="23" width="28" height="12" rx="6" fill="#ccc" />
-                      </svg>
-                    </span>
-                  </li>
-                ))}
-                <li className="-ml-3">
-                  <span className="inline-flex size-9 items-center justify-center rounded-full bg-blue-600 text-white border-4 border-white shadow-md">
-                    <Plus className="size-4" />
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-8 lg:gap-12 max-w-7xl mx-auto">
+            {/* Left Content */}
+            <div className="lg:col-span-6 order-2 lg:order-1 mt-10 lg:mt-0">
+              <div className="lg:pr-8">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 leading-tight">
+                  Find Your{' '}
+                  <span className="relative inline-block">
+                    <span className="absolute inset-0 -skew-y-6 bg-blue-600 rounded-sm" aria-hidden />
+                    <span className="relative px-2 text-white">$100k Job</span>
                   </span>
-                </li>
-              </ul>
-            </div>
-          </div>
+                  <br /> at Leading Companies.
+                </h1>
 
-          {/* Lower-left image + bell notification */}
-          <div className="absolute -bottom-8 left-0 lg:-left-8 xl:-left-16">
-            <div className="rounded-xl border-4 border-white overflow-hidden w-48 lg:w-56 xl:w-64 shadow-lg">
-              <Image
-                src="/img/1.jpg"
-                alt="Interview"
-                width={320}
-                height={400}
-                className="h-auto w-full object-cover"
-                loading="lazy"
-                placeholder="blur"
-                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyBYWV3Yah7x2xy05pCrsZpTSHmEQB4/9k="
-                sizes="(max-width: 768px) 192px, (max-width: 1024px) 224px, 256px"
-              />
+                <p className="text-lg md:text-xl lg:text-2xl text-white/90 mb-8 leading-relaxed">
+                  Discover exclusive opportunities at top companies. Join thousands of professionals who've found their dream careers with salaries starting at $100K+.
+                </p>
+
+                {/* Search card */}
+                <div className="mt-6 bg-white border-0 shadow-sm rounded-xl p-4">
+                  <form action="/jobs" method="GET" className="flex flex-col lg:flex-row gap-4">
+                    <div className="flex-1 relative">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <label htmlFor="q" className="sr-only">Job Title</label>
+                      <input
+                        type="text"
+                        name="q"
+                        placeholder="Job title, company, or keyword..."
+                        className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                      />
+                    </div>
+
+                    <div className="relative lg:w-64">
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <label htmlFor="location" className="sr-only">Location</label>
+                      <input
+                        type="text"
+                        name="location"
+                        placeholder="Location or 'Remote'"
+                        className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:scale-105 flex items-center justify-center lg:w-auto"
+                    >
+                      <Search className="w-6 h-6 mr-2" />
+                      Search Jobs
+                    </button>
+                  </form>
+                </div>
+
+                <p className="mt-3 text-slate-300">
+                  <span className="text-white font-medium">Popular Searches:</span> Designer, Developer, Web, iOS, PHP Senior Engineer
+                </p>
+              </div>
             </div>
 
-            {/* Bell notification - Positioned to stay visible */}
-            <div className="absolute -top-4 -right-4 lg:-right-8 bg-white rounded-lg shadow-md px-4 py-3 flex items-center whitespace-nowrap">
-              <Bell className="text-amber-500 size-6" />
-              <p className="text-base font-semibold text-gray-900 ml-2">Job Alert!</p>
+            {/* Right visuals (hidden on mobile) */}
+            <div className="hidden md:block md:col-span-6 lg:col-span-5 order-1 md:order-2 [content-visibility:auto]">
+              <div className="relative">
+                <div className="relative flex justify-end">
+                  <div className="rounded-xl shadow-sm overflow-hidden lg:w-[400px] w-[280px]">
+                    <Image
+                      src="/img/2.jpg"
+                      alt="Modern interview"
+                      width={800}
+                      height={1000}
+                      className="h-auto w-full object-cover"
+                      priority
+                      placeholder="blur"
+                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyBYWV3Yah7x2xy05pCrsZpTSHmEQB4/9k="
+                      sizes="(max-width: 1024px) 280px, 400px"
+                    />
+                  </div>
+
+                  {/* Floating avatar card */}
+                  <div className="absolute lg:bottom-20 -bottom-24 xl:-right-20 lg:-right-10 right-2 p-4 rounded-lg shadow-md bg-white w-60 z-10">
+                    <h5 className="text-lg font-semibold text-gray-900 mb-3">More $100k jobs!</h5>
+                    <ul className="relative flex items-center">
+                      {Array.from({ length: 4 }).map((_, idx) => (
+                        <li key={idx} className="-ml-3 first:ml-0">
+                          {/* Lightweight SVG avatars (no network hit) */}
+                          <span className="inline-block size-10 rounded-full overflow-hidden border-4 border-white shadow-md">
+                            <svg viewBox="0 0 40 40" className="h-full w-full">
+                              <circle cx="20" cy="20" r="20" fill="currentColor" className="text-gray-200" />
+                              <circle cx="20" cy="15" r="6" fill="#bbb" />
+                              <rect x="6" y="23" width="28" height="12" rx="6" fill="#ccc" />
+                            </svg>
+                          </span>
+                        </li>
+                      ))}
+                      <li className="-ml-3">
+                        <span className="inline-flex size-9 items-center justify-center rounded-full bg-blue-600 text-white border-4 border-white shadow-md">
+                          <Plus className="size-4" />
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Lower-left image + bell chip */}
+                <div className="absolute -bottom-16 left-0 md:-left-5">
+                  <div className="rounded-xl border-8 border-white overflow-hidden lg:w-[280px] w-[200px] shadow-sm">
+                    <Image
+                      src="/img/1.jpg"
+                      alt="Interview"
+                      width={560}
+                      height={700}
+                      className="h-auto w-full object-cover"
+                      loading="lazy"
+                      placeholder="blur"
+                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyBYWV3Yah7x2xy05pCrsZpTSHmEQB4/9k="
+                      sizes="(max-width: 1024px) 200px, 280px"
+                    />
+                  </div>
+
+                  <div className="absolute -top-6 left-2 md:-left-10 bg-white rounded-lg shadow-md px-4 py-3 flex items-center w-max">
+                    <Bell className="text-amber-500 size-6" />
+                    <p className="text-base font-semibold text-gray-900 ml-2">Job Alert!</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-</section>
+      </section>
 
       {/* Featured Jobs */}
       {featuredJobs?.length ? (
