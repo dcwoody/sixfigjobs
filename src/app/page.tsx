@@ -129,9 +129,8 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* HERO */}
-/* Fixed Hero Section - Replace your existing hero section with this */
 
+    {/* HERO */}
       <section
         id="home"
         className="relative overflow-hidden flex items-center py-24 md:py-36 min-h-[70vh] md:min-h-[85vh] bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900"
@@ -140,11 +139,11 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/20 via-transparent to-blue-400/20" />
 
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-8 lg:gap-12 max-w-7xl mx-auto">
-            {/* Left Content */}
-            <div className="lg:col-span-6 order-2 lg:order-1 mt-10 lg:mt-0">
-              <div className="lg:pr-8">
-                <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 leading-tight">
+          <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-8 lg:gap-10">
+            {/* Left */}
+            <div className="md:col-span-6 lg:col-span-7 order-2 md:order-1 mt-10 md:mt-0">
+              <div className="lg:me-8">
+                <h1 className="text-5xl lg:text-7xl font-bold text-white mb-6 leading-tight">
                   Find Your{' '}
                   <span className="relative inline-block">
                     <span className="absolute inset-0 -skew-y-6 bg-blue-600 rounded-sm" aria-hidden />
@@ -153,11 +152,11 @@ export default async function HomePage() {
                   <br /> at Leading Companies.
                 </h1>
 
-                <p className="text-lg md:text-xl lg:text-2xl text-white/90 mb-8 leading-relaxed">
+                <p className="text-xl lg:text-2xl text-white/90 max-w-3xl mx-auto mb-8 leading-relaxed">
                   Discover exclusive opportunities at top companies. Join thousands of professionals who've found their dream careers with salaries starting at $100K+.
                 </p>
 
-                {/* Search card */}
+                {/* Search card (pure form, no client JS) */}
                 <div className="mt-6 bg-white border-0 shadow-sm rounded-xl p-4">
                   <form action="/jobs" method="GET" className="flex flex-col lg:flex-row gap-4">
                     <div className="flex-1 relative">
@@ -173,7 +172,7 @@ export default async function HomePage() {
 
                     <div className="relative lg:w-64">
                       <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                      <label htmlFor="location" className="sr-only">Location</label>
+                      <label htmlFor="q" className="sr-only">Location</label>
                       <input
                         type="text"
                         name="location"
